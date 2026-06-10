@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* gforest 디자인 토큰 — 기존 사이트 그린 계승 + 모던 톤 (목업 v1과 동일 팔레트) */
+@theme {
+  --color-forest-50: #effaf3;
+  --color-forest-100: #d7f0e2;
+  --color-forest-200: #b2e0c8;
+  --color-forest-300: #84cba9;
+  --color-forest-400: #54b187;
+  --color-forest-500: #2f9e6e;
+  --color-forest-600: #25855a;
+  --color-forest-700: #1d6845;
+  --color-forest-800: #175437;
+  --color-forest-900: #11402b;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo",
+    "Noto Sans KR", sans-serif;
+}
+
+/* 다크모드 미지원 (화면설계 v1.1 결정 #5) — 라이트 고정 */
+body {
+  background: #ffffff;
+  color: #1e293b; /* slate-800 */
+  font-family: var(--font-sans);
+}
