@@ -1,0 +1,109 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram id="gforest-erd" name="ERD v1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- auth.users (외부) -->
+        <mxCell id="users" value="auth.users (Supabase Auth)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="users1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="users"><mxGeometry y="28" width="200" height="26" as="geometry" /></mxCell>
+        <mxCell id="users2" value="email / encrypted_password" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="users"><mxGeometry y="54" width="200" height="26" as="geometry" /></mxCell>
+
+        <!-- profiles -->
+        <mxCell id="profiles" value="profiles" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="220" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="pf1" value="id  uuid  PK → auth.users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="profiles"><mxGeometry y="28" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="pf2" value="nickname  text  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="profiles"><mxGeometry y="54" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="pf3" value="role  app_role (pending~admin)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=1" vertex="1" parent="profiles"><mxGeometry y="80" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="pf4" value="name / avatar_path / bio" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="profiles"><mxGeometry y="106" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="pf5" value="legacy_member_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="profiles"><mxGeometry y="132" width="220" height="26" as="geometry" /></mxCell>
+
+        <!-- role_audit -->
+        <mxCell id="audit" value="role_audit" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#f8f8f8;strokeColor=#82b366;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="40" y="430" width="220" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="au1" value="user_id  FK → profiles" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="audit"><mxGeometry y="28" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="au2" value="old_role / new_role" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="audit"><mxGeometry y="54" width="220" height="26" as="geometry" /></mxCell>
+        <mxCell id="au3" value="changed_by / changed_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="audit"><mxGeometry y="80" width="220" height="26" as="geometry" /></mxCell>
+
+        <!-- boards -->
+        <mxCell id="boards" value="boards (38개 시드)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="430" y="40" width="250" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="bd1" value="id  uuid  PK / slug  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="boards"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="bd2" value="menu_group / sort_order" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="boards"><mxGeometry y="54" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="bd3" value="board_type: list|gallery|calendar|reservation" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="boards"><mxGeometry y="80" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="bd4" value="read_roles[]  (null=익명 공개)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=1" vertex="1" parent="boards"><mxGeometry y="106" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="bd5" value="write_roles[]" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=1" vertex="1" parent="boards"><mxGeometry y="132" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="bd6" value="legacy_mid  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="boards"><mxGeometry y="158" width="250" height="26" as="geometry" /></mxCell>
+
+        <!-- posts -->
+        <mxCell id="posts" value="posts" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="430" y="290" width="250" height="236" as="geometry" />
+        </mxCell>
+        <mxCell id="po1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po2" value="board_id  FK → boards" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="54" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po3" value="author_id  FK → profiles" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="80" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po4" value="title / content / is_notice / view_count" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="posts"><mxGeometry y="106" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po5" value="event_date / event_start / event_end" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="132" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po6" value="space_id  FK → spaces  (시간중복 EXCLUDE)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="158" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po7" value="deleted_at  (soft delete)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="184" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po8" value="legacy_document_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="posts"><mxGeometry y="210" width="250" height="26" as="geometry" /></mxCell>
+
+        <!-- spaces -->
+        <mxCell id="spaces" value="spaces (예약 공간)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="760" y="40" width="190" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="sp1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="spaces"><mxGeometry y="28" width="190" height="26" as="geometry" /></mxCell>
+        <mxCell id="sp2" value="name  UQ / color" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="spaces"><mxGeometry y="54" width="190" height="26" as="geometry" /></mxCell>
+        <mxCell id="sp3" value="is_active / sort_order" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="spaces"><mxGeometry y="80" width="190" height="26" as="geometry" /></mxCell>
+
+        <!-- comments -->
+        <mxCell id="comments" value="comments" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="760" y="290" width="230" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="cm1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="28" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="cm2" value="post_id  FK → posts" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="54" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="cm3" value="author_id  FK / parent_id  자기참조(1단계)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="80" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="cm4" value="content / deleted_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="comments"><mxGeometry y="106" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="cm5" value="legacy_comment_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="comments"><mxGeometry y="132" width="230" height="26" as="geometry" /></mxCell>
+
+        <!-- attachments -->
+        <mxCell id="attach" value="attachments" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="760" y="500" width="230" height="132" as="geometry" />
+        </mxCell>
+        <mxCell id="at1" value="id  uuid  PK / post_id  FK → posts" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="attach"><mxGeometry y="28" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="at2" value="storage_path  (Storage 버킷)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="attach"><mxGeometry y="54" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="at3" value="file_name / byte_size / mime_type" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="attach"><mxGeometry y="80" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="at4" value="legacy_file_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="attach"><mxGeometry y="106" width="230" height="26" as="geometry" /></mxCell>
+
+        <!-- 사이트 콘텐츠 그룹 -->
+        <mxCell id="content" value="사이트 콘텐츠 (admin 쓰기 / 공개 읽기)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="430" y="600" width="250" height="132" as="geometry" />
+        </mxCell>
+        <mxCell id="ct1" value="popups — 기간·재노출주기·순서" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="content"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="ct2" value="slides — D/M 이미지·링크·정렬" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="content"><mxGeometry y="54" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="ct3" value="static_pages — 정적 13페이지 (SCR-604 편집)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="content"><mxGeometry y="80" width="250" height="26" as="geometry" /></mxCell>
+
+        <!-- 관계 -->
+        <mxCell id="e1" value="1:1 가입 트리거" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERone;startArrow=ERone;html=1;fontSize=10" edge="1" parent="1" source="users" target="profiles"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10" edge="1" parent="1" source="profiles" target="audit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="1:N 작성" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10;exitX=1;exitY=0.5" edge="1" parent="1" source="profiles" target="posts"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10" edge="1" parent="1" source="boards" target="posts"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10" edge="1" parent="1" source="spaces" target="posts"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10" edge="1" parent="1" source="posts" target="comments"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10;exitX=1;exitY=0.8" edge="1" parent="1" source="posts" target="attach"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="parent_id (1단계)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=ERmany;startArrow=ERone;html=1;fontSize=10;dashed=1;exitX=1;exitY=0.3;entryX=1;entryY=0.1" edge="1" parent="1" source="comments" target="comments"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- 범례 -->
+        <mxCell id="legend" value="빨간 글씨 = legacy_* (XE ETL 멱등 매핑 키, unique)&#10;굵은 글씨 = 권한 모델 핵심 컬럼" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacing=6" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="280" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
