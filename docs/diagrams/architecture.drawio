@@ -1,0 +1,89 @@
+<mxfile host="app.diagrams.net" modified="2026-06-10T00:00:00.000Z" agent="claude-code" version="24.0.0">
+  <diagram id="gforest-arch" name="TO-BE Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="780" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 사용자 -->
+        <mxCell id="user" value="사용자 브라우저&#10;(학부모·회원·방문자)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- DNS -->
+        <mxCell id="dns" value="gforest.or.kr&#10;(DNS → Vercel, HTTPS 자동)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="255" y="120" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Vercel 컨테이너 -->
+        <mxCell id="vercel" value="Vercel (Hobby, 월 0원)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="280" y="190" width="220" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="nextjs" value="Next.js (App Router, TS)&#10;정적/ISR 페이지" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11" vertex="1" parent="vercel">
+          <mxGeometry x="20" y="40" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="actions-sv" value="Server Actions&#10;(글·댓글 쓰기 등 서버 로직)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11" vertex="1" parent="vercel">
+          <mxGeometry x="20" y="110" width="180" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase 컨테이너 -->
+        <mxCell id="supabase" value="Supabase Free — Seoul(ap-northeast-2)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;spacingTop=6" vertex="1" parent="1">
+          <mxGeometry x="610" y="150" width="250" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="pg" value="Postgres + RLS&#10;(posts / comments / profiles)&#10;권한: 공개 읽기 + 회원 쓰기" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
+          <mxGeometry x="20" y="40" width="210" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="auth" value="Auth&#10;(이메일/비밀번호, 카카오는 추후)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
+          <mxGeometry x="20" y="120" width="210" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="storage" value="Storage&#10;(첨부파일, 1GB 초과 시 R2 검토)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
+          <mxGeometry x="20" y="190" width="210" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub -->
+        <mxCell id="github" value="GitHub (dongyoub-sinn/gforest)&#10;코드 + supabase/migrations/*.sql" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="280" y="480" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gha" value="GitHub Actions&#10;① pg_dump 일 1회 백업&#10;② keep-alive ping 주 1회" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="610" y="480" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- 마이그레이션 (일회성) -->
+        <mxCell id="xe" value="기존 XE1 (MySQL 덤프)&#10;회원·게시글·댓글·첨부파일" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1" vertex="1" parent="1">
+          <mxGeometry x="610" y="40" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="etl" value="ETL 스크립트 (멱등, *_srl 매핑 보존)" style="text;html=1;align=center;fontSize=10;fontColor=#b85450" vertex="1" parent="1">
+          <mxGeometry x="840" y="70" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 엣지 -->
+        <mxCell id="e1" value="HTTPS" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="user" target="vercel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="supabase-js / @supabase/ssr&#10;(anon key + RLS)" style="endArrow=classic;startArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="vercel" target="supabase">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="push → 자동 배포" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="github" target="vercel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="cron" style="endArrow=classic;html=1;fontSize=10;exitX=0;exitY=0.5" edge="1" parent="1" source="gha" target="github">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="pg_dump / ping" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="gha" target="supabase">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="일회성 마이그레이션" style="endArrow=classic;html=1;dashed=1;fontSize=10;strokeColor=#b85450;fontColor=#b85450" edge="1" parent="1" source="xe" target="supabase">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="DNS" style="endArrow=classic;html=1;dashed=1;fontSize=10" edge="1" parent="1" source="dns" target="vercel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 비밀번호 재설정 메모 -->
+        <mxCell id="note1" value="비밀번호는 이전 불가(MD5) →&#10;전 회원 재설정 메일 발송" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="890" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
