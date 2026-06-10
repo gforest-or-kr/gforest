@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관리자 — 회원·역할 (목업)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>tailwind.config={theme:{extend:{colors:{forest:{50:'#effaf3',100:'#d7f0e2',500:'#2f9e6e',600:'#25855a',700:'#1d6845'}},fontFamily:{sans:['Pretendard','sans-serif']}}}}</script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
+    <a href="main.html" class="flex items-center gap-2 font-bold text-forest-700"><span class="w-8 h-8 rounded-xl bg-slate-800 text-white grid place-items-center">⚙</span> 관리자</a>
+    <span class="text-xs text-slate-400">gforest.or.kr</span>
+    <a href="main.html" class="ml-auto text-sm text-slate-500">사이트로 돌아가기 →</a>
+  </div>
+</header>
+
+<div class="max-w-6xl mx-auto px-4 py-6 grid lg:grid-cols-[200px_1fr] gap-6">
+  <!-- 관리 메뉴: D 좌측 / M 상단 가로 스크롤 -->
+  <nav class="flex lg:flex-col gap-1 overflow-x-auto text-sm font-medium -mx-4 px-4 lg:mx-0 lg:px-0">
+    <a class="shrink-0 px-3 py-2 rounded-xl bg-forest-600 text-white" href="#">회원·역할</a>
+    <a class="shrink-0 px-3 py-2 rounded-xl hover:bg-white text-slate-600" href="#">팝업 관리</a>
+    <a class="shrink-0 px-3 py-2 rounded-xl hover:bg-white text-slate-600" href="#">슬라이더 관리</a>
+    <a class="shrink-0 px-3 py-2 rounded-xl hover:bg-white text-slate-600" href="#">게시판 관리</a>
+    <a class="shrink-0 px-3 py-2 rounded-xl hover:bg-white text-slate-600" href="#">정적 페이지</a>
+  </nav>
+
+  <main>
+    <div class="flex items-center gap-2 mb-4">
+      <button class="bg-white border border-forest-200 text-forest-700 text-sm font-semibold px-4 py-2 rounded-xl">승인 대기 <span class="ml-1 bg-forest-600 text-white text-xs rounded-full px-1.5">3</span></button>
+      <button class="text-slate-500 text-sm font-medium px-4 py-2 rounded-xl hover:bg-white">전체 회원 312</button>
+      <input class="ml-auto hidden sm:block border border-slate-200 rounded-xl text-sm px-3 py-2 w-52 bg-white" placeholder="이름·이메일 검색">
+    </div>
+
+    <!-- 승인 대기 카드 -->
+    <section class="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100">
+      <div class="p-4 flex flex-wrap items-center gap-3">
+        <span class="w-10 h-10 rounded-full bg-forest-100 text-forest-700 grid place-items-center font-bold">박</span>
+        <div class="min-w-0"><p class="font-semibold">2하준_모 <span class="font-normal text-slate-400">박지은</span></p><p class="text-xs text-slate-400 truncate">jieun@gmail.com · 06.10 가입 · "2학년 하준이 엄마입니다"</p></div>
+        <div class="ml-auto flex items-center gap-2">
+          <select class="border border-slate-200 rounded-xl text-sm px-2.5 py-1.5"><option>일반회원</option><option>운영위</option><option>교사</option><option>학생</option></select>
+          <button class="bg-forest-600 text-white text-sm font-medium px-4 py-1.5 rounded-xl">승인</button>
+          <button class="text-slate-400 text-sm px-2">보류</button>
+        </div>
+      </div>
+      <div class="p-4 flex flex-wrap items-center gap-3">
+        <span class="w-10 h-10 rounded-full bg-sky-100 text-sky-700 grid place-items-center font-bold">최</span>
+        <div class="min-w-0"><p class="font-semibold">최선생 <span class="font-normal text-slate-400">최민서</span></p><p class="text-xs text-slate-400 truncate">minseo.t@gforest.or.kr · 06.09 가입 · "신규 담임교사입니다"</p></div>
+        <div class="ml-auto flex items-center gap-2">
+          <select class="border border-slate-200 rounded-xl text-sm px-2.5 py-1.5"><option>교사</option><option>일반회원</option></select>
+          <button class="bg-forest-600 text-white text-sm font-medium px-4 py-1.5 rounded-xl">승인</button>
+          <button class="text-slate-400 text-sm px-2">보류</button>
+        </div>
+      </div>
+      <div class="p-4 flex flex-wrap items-center gap-3">
+        <span class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 grid place-items-center font-bold">정</span>
+        <div class="min-w-0"><p class="font-semibold">9도윤 <span class="font-normal text-slate-400">정도윤</span></p><p class="text-xs text-slate-400 truncate">doyun9@naver.com · 06.08 가입 · "9학년 학생입니다"</p></div>
+        <div class="ml-auto flex items-center gap-2">
+          <select class="border border-slate-200 rounded-xl text-sm px-2.5 py-1.5"><option>학생</option><option>일반회원</option></select>
+          <button class="bg-forest-600 text-white text-sm font-medium px-4 py-1.5 rounded-xl">승인</button>
+          <button class="text-slate-400 text-sm px-2">보류</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 전체 회원 (요약 표) -->
+    <section class="mt-6 bg-white rounded-3xl border border-slate-200 p-4 overflow-x-auto">
+      <p class="font-bold text-sm mb-3 px-1">최근 회원</p>
+      <table class="w-full text-sm min-w-[560px]">
+        <thead><tr class="text-xs text-slate-400 border-b border-slate-100">
+          <th class="text-left font-medium py-2 pl-1">닉네임</th><th class="text-left font-medium">이름</th><th class="text-left font-medium">이메일</th><th class="text-left font-medium w-32">역할</th><th class="w-20"></th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          <tr><td class="py-2.5 pl-1 font-medium">6신연서_부</td><td>신동엽</td><td class="text-slate-500">castors@…</td><td><select class="border border-slate-200 rounded-lg text-xs px-2 py-1"><option>일반회원</option><option>운영위</option><option>교사</option><option>admin</option></select></td><td><button class="text-xs text-forest-600 font-medium">저장</button></td></tr>
+          <tr><td class="py-2.5 pl-1 font-medium">운영위원회</td><td>공용계정</td><td class="text-slate-500">op@…</td><td><select class="border border-slate-200 rounded-lg text-xs px-2 py-1"><option>운영위</option></select></td><td><button class="text-xs text-forest-600 font-medium">저장</button></td></tr>
+          <tr><td class="py-2.5 pl-1 font-medium">도서관지기</td><td>김라온</td><td class="text-slate-500">lib@…</td><td><select class="border border-slate-200 rounded-lg text-xs px-2 py-1"><option>일반회원</option></select></td><td><button class="text-xs text-forest-600 font-medium">저장</button></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gforest-web 목업 인덱스</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>tailwind.config={theme:{extend:{colors:{forest:{50:'#effaf3',600:'#25855a',700:'#1d6845'}},fontFamily:{sans:['Pretendard','sans-serif']}}}}</script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+<main class="max-w-3xl mx-auto px-4 py-12">
+  <h1 class="text-2xl font-bold">gforest-web HTML 목업 <span class="text-sm font-normal text-slate-400">v1 · 화면설계서 v1.1 기반</span></h1>
+  <p class="mt-2 text-sm text-slate-500">각 화면은 반응형입니다 — 브라우저 폭을 줄이면 모바일 레이아웃으로 전환됩니다. 모바일 프레임으로 보려면 📱 링크를 사용하세요.</p>
+  <ul class="mt-6 grid sm:grid-cols-2 gap-3">
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">메인 (SCR-100)</p><p class="text-xs text-slate-400">슬라이더·위젯·회원위젯·팝업</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="main.html">열기</a><a class="text-slate-400" href="phone.html?src=main.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">게시판 목록 (SCR-300)</p><p class="text-xs text-slate-400">D 테이블 / M 카드+FAB</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="board-list.html">열기</a><a class="text-slate-400" href="phone.html?src=board-list.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">게시글 본문 (SCR-310)</p><p class="text-xs text-slate-400">댓글·첨부·하단 입력바</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="post.html">열기</a><a class="text-slate-400" href="phone.html?src=post.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">글쓰기 (SCR-320)</p><p class="text-xs text-slate-400">경량 에디터·첨부·임시저장</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="write.html">열기</a><a class="text-slate-400" href="phone.html?src=write.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">학교일정표 (SCR-302)</p><p class="text-xs text-slate-400">월 그리드·선택일 패널</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="calendar.html">열기</a><a class="text-slate-400" href="phone.html?src=calendar.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">공간사용예약 (SCR-303)</p><p class="text-xs text-slate-400">공간 필터·중복 차단</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="reservation.html">열기</a><a class="text-slate-400" href="phone.html?src=reservation.html">📱</a></span></li>
+    <li class="bg-white rounded-2xl border border-slate-200 p-4 flex justify-between items-center"><div><p class="font-semibold">관리자 — 회원·역할 (SCR-600)</p><p class="text-xs text-slate-400">승인 대기·역할 변경</p></div><span class="text-sm space-x-2"><a class="text-forest-600 font-medium" href="admin.html">열기</a><a class="text-slate-400" href="phone.html?src=admin.html">📱</a></span></li>
+  </ul>
+</main>
+</body>
+</html>

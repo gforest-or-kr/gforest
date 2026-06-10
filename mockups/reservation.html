@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공간사용예약 (목업)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>tailwind.config={theme:{extend:{colors:{forest:{50:'#effaf3',100:'#d7f0e2',500:'#2f9e6e',600:'#25855a',700:'#1d6845'}},fontFamily:{sans:['Pretendard','sans-serif']}}}}</script>
+</head>
+<body class="bg-white text-slate-800 font-sans">
+
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-100">
+  <div class="max-w-6xl mx-auto px-4 h-14 lg:h-16 flex items-center gap-3">
+    <button class="lg:hidden p-2 -ml-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <a href="main.html" class="flex items-center gap-2 font-bold text-forest-700 text-lg"><span class="w-8 h-8 rounded-xl bg-forest-600 text-white grid place-items-center">숲</span><span class="hidden sm:block">푸른숲발도르프학교</span></a>
+    <div class="ml-auto"><span class="w-7 h-7 rounded-full bg-forest-100 text-forest-700 grid place-items-center text-xs font-bold inline-flex">신</span></div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 pb-16">
+  <div class="mt-6 mb-4 flex flex-wrap items-center gap-3">
+    <div><p class="text-xs text-slate-400 mb-0.5">운영위·교사</p><h1 class="text-2xl font-bold">공간사용예약</h1></div>
+    <div class="ml-auto flex items-center gap-2">
+      <select class="border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white"><option>전체 공간</option><option>강당</option><option>음악실</option><option>도서관</option><option>운동장</option></select>
+      <button class="hidden sm:block bg-forest-600 text-white text-sm font-medium px-4 py-2 rounded-xl">+ 예약하기</button>
+    </div>
+  </div>
+
+  <!-- 공간 범례 -->
+  <div class="flex flex-wrap gap-3 mb-4 text-xs">
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-forest-500"></span>강당</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>음악실</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>도서관</span>
+    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>운동장</span>
+  </div>
+
+  <div class="grid lg:grid-cols-[1fr_340px] gap-6">
+    <!-- 도트 캘린더 -->
+    <section>
+      <div class="flex items-center justify-center gap-4 mb-3 font-bold text-lg">
+        <button class="text-slate-300 px-2">◀</button> 2026년 6월 <button class="text-slate-300 px-2">▶</button>
+      </div>
+      <div class="grid grid-cols-7 text-center text-xs text-slate-400 font-medium mb-1">
+        <span class="text-red-400">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-400">토</span>
+      </div>
+      <div class="grid grid-cols-7 gap-1 text-sm text-center">
+        <div class="py-3 text-slate-300">31</div><div class="py-3">1</div><div class="py-3">2</div>
+        <div class="py-3">3<div class="flex justify-center gap-0.5 mt-1"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span></div></div>
+        <div class="py-3">4</div><div class="py-3">5</div><div class="py-3 text-blue-500">6</div>
+        <div class="py-3 text-red-400">7</div><div class="py-3">8</div>
+        <div class="py-3">9<div class="flex justify-center gap-0.5 mt-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span></div></div>
+        <div class="py-3">10</div><div class="py-3">11</div>
+        <div class="py-3 rounded-xl ring-2 ring-forest-500 bg-forest-50 font-bold">12<div class="flex justify-center gap-0.5 mt-1"><span class="w-1.5 h-1.5 rounded-full bg-forest-500"></span><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span></div></div>
+        <div class="py-3 text-blue-500">13</div>
+        <div class="py-3 text-red-400">14</div><div class="py-3">15</div><div class="py-3">16</div><div class="py-3">17</div>
+        <div class="py-3">18<div class="flex justify-center gap-0.5 mt-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span></div></div>
+        <div class="py-3">19</div><div class="py-3 text-blue-500">20</div>
+        <div class="py-3 text-red-400">21</div><div class="py-3">22</div><div class="py-3">23</div><div class="py-3">24</div><div class="py-3">25</div><div class="py-3">26</div><div class="py-3 text-blue-500">27</div>
+        <div class="py-3 text-red-400">28</div><div class="py-3">29</div><div class="py-3">30</div><div class="py-3 text-slate-300">1</div><div class="py-3 text-slate-300">2</div><div class="py-3 text-slate-300">3</div><div class="py-3 text-slate-300">4</div>
+      </div>
+    </section>
+
+    <!-- 선택일 예약 현황 + 등록 -->
+    <aside class="lg:border-l lg:border-slate-100 lg:pl-6">
+      <h2 class="font-bold mb-3">6월 12일 (금) 예약 현황</h2>
+      <ul class="space-y-2.5">
+        <li class="rounded-2xl border border-slate-100 p-4 flex gap-3">
+          <span class="w-1 rounded-full bg-forest-500"></span>
+          <div><p class="text-xs font-semibold text-slate-400">14:00 – 16:00 · 강당</p><p class="font-medium mt-0.5">요가 클래스</p><p class="text-xs text-slate-400 mt-0.5">12학년 졸업프로젝트</p></div>
+        </li>
+        <li class="rounded-2xl border border-slate-100 p-4 flex gap-3">
+          <span class="w-1 rounded-full bg-sky-500"></span>
+          <div><p class="text-xs font-semibold text-slate-400">16:00 – 18:00 · 음악실</p><p class="font-medium mt-0.5">오케스트라 연습</p><p class="text-xs text-slate-400 mt-0.5">푸른숲오케스트라</p></div>
+        </li>
+      </ul>
+
+      <!-- 예약 등록 폼 (중복 차단 데모) -->
+      <div class="mt-5 rounded-3xl bg-slate-50 p-5">
+        <p class="font-bold text-sm mb-3">+ 이 날짜에 예약하기</p>
+        <div class="space-y-2.5 text-sm">
+          <select class="w-full border border-slate-200 rounded-xl px-3 py-2.5 bg-white"><option>강당</option><option>음악실</option></select>
+          <div class="flex gap-2"><select class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 bg-white"><option>15:00</option></select><span class="self-center text-slate-400">~</span><select class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 bg-white"><option>17:00</option></select></div>
+          <input class="w-full border border-slate-200 rounded-xl px-3 py-2.5" placeholder="사용 목적">
+          <div class="rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs p-3 leading-relaxed">⚠ 강당은 14~16시에 이미 예약이 있습니다 (요가 클래스). 시간을 조정해 주세요.</div>
+          <button class="w-full bg-slate-300 text-white font-medium py-2.5 rounded-xl cursor-not-allowed">예약 등록</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

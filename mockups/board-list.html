@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>알려드립니다 — 게시판 목록 (목업)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script>tailwind.config={theme:{extend:{colors:{forest:{50:'#effaf3',100:'#d7f0e2',500:'#2f9e6e',600:'#25855a',700:'#1d6845'}},fontFamily:{sans:['Pretendard','sans-serif']}}}}</script>
+</head>
+<body class="bg-white text-slate-800 font-sans">
+
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-100">
+  <div class="max-w-6xl mx-auto px-4 h-14 lg:h-16 flex items-center gap-3">
+    <button class="lg:hidden p-2 -ml-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <a href="main.html" class="flex items-center gap-2 font-bold text-forest-700 text-lg"><span class="w-8 h-8 rounded-xl bg-forest-600 text-white grid place-items-center">숲</span><span class="hidden sm:block">푸른숲발도르프학교</span></a>
+    <nav class="hidden lg:flex items-center gap-1 ml-8 text-[15px] font-medium">
+      <a class="px-3 py-2 rounded-lg hover:bg-forest-50" href="#">학교소개</a>
+      <a class="px-3 py-2 rounded-lg bg-forest-50 text-forest-700" href="board-list.html">학교소식</a>
+      <a class="px-3 py-2 rounded-lg hover:bg-forest-50" href="#">커뮤니티</a>
+      <a class="px-3 py-2 rounded-lg hover:bg-forest-50" href="#">학부모·학생</a>
+      <a class="px-3 py-2 rounded-lg hover:bg-forest-50" href="reservation.html">운영위·교사</a>
+    </nav>
+    <div class="ml-auto flex items-center gap-1">
+      <button class="p-2 rounded-lg hover:bg-slate-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <span class="w-7 h-7 rounded-full bg-forest-100 text-forest-700 grid place-items-center text-xs font-bold">신</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 pb-24">
+  <!-- 게시판 헤더 -->
+  <div class="mt-6 mb-4 flex flex-wrap items-center gap-3">
+    <div>
+      <p class="text-xs text-slate-400 mb-0.5">학교소식</p>
+      <h1 class="text-2xl font-bold">알려드립니다</h1>
+    </div>
+    <div class="ml-auto hidden sm:flex items-center gap-2">
+      <select class="border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white"><option>제목+내용</option><option>제목</option><option>작성자</option></select>
+      <div class="relative"><input class="border border-slate-200 rounded-xl text-sm pl-3 pr-9 py-2 w-56" placeholder="검색어 입력">
+        <svg class="w-4.5 h-4.5 w-5 h-5 absolute right-2.5 top-2.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+      <a href="write.html" class="bg-forest-600 hover:bg-forest-700 text-white text-sm font-medium px-4 py-2 rounded-xl">글쓰기</a>
+    </div>
+    <button class="sm:hidden ml-auto p-2 rounded-lg bg-slate-50"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+  </div>
+
+  <!-- 고정 공지 -->
+  <div class="rounded-2xl bg-forest-50/80 border border-forest-100 divide-y divide-forest-100/60 mb-3">
+    <a href="post.html" class="flex items-center gap-3 px-4 py-3 text-sm">
+      <span class="shrink-0 text-[11px] font-bold text-forest-700 bg-white border border-forest-200 rounded-full px-2 py-0.5">공지</span>
+      <span class="font-medium truncate">2026학년도 여름방학 안내</span>
+      <span class="ml-auto text-xs text-slate-400 shrink-0">06.10</span>
+    </a>
+    <a href="post.html" class="flex items-center gap-3 px-4 py-3 text-sm">
+      <span class="shrink-0 text-[11px] font-bold text-forest-700 bg-white border border-forest-200 rounded-full px-2 py-0.5">공지</span>
+      <span class="font-medium truncate">개인정보처리방침 개정 안내</span>
+      <span class="ml-auto text-xs text-slate-400 shrink-0">05.28</span>
+    </a>
+  </div>
+
+  <!-- 데스크탑: 테이블 -->
+  <table class="hidden sm:table w-full text-sm">
+    <thead><tr class="text-xs text-slate-400 border-b border-slate-100">
+      <th class="text-left font-medium py-2.5 pl-2">제목</th><th class="w-28 font-medium">작성자</th><th class="w-20 font-medium">날짜</th><th class="w-16 font-medium">조회</th>
+    </tr></thead>
+    <tbody class="divide-y divide-slate-50">
+      <tr class="hover:bg-slate-50/60"><td class="py-3 pl-2"><a href="post.html" class="hover:text-forest-700">6월 학부모 전체모임 결과 공유 <b class="text-forest-600 font-semibold text-xs">[3]</b></a></td><td class="text-center text-slate-500">운영위원회</td><td class="text-center text-slate-400 text-xs">06.08</td><td class="text-center text-slate-400 text-xs">142</td></tr>
+      <tr class="hover:bg-slate-50/60"><td class="py-3 pl-2"><a href="post.html" class="hover:text-forest-700">도서관 여름 운영시간 변경 <span class="text-slate-300">📎</span></a></td><td class="text-center text-slate-500">도서관지기</td><td class="text-center text-slate-400 text-xs">06.05</td><td class="text-center text-slate-400 text-xs">98</td></tr>
+      <tr class="hover:bg-slate-50/60"><td class="py-3 pl-2"><a href="post.html" class="hover:text-forest-700">교실 환경 정비 봉사 신청 안내</a></td><td class="text-center text-slate-500">시설팀</td><td class="text-center text-slate-400 text-xs">06.03</td><td class="text-center text-slate-400 text-xs">76</td></tr>
+      <tr class="hover:bg-slate-50/60"><td class="py-3 pl-2"><a href="post.html" class="hover:text-forest-700">5월 살림살이 보고 <span class="text-slate-300">📎</span> <b class="text-forest-600 font-semibold text-xs">[1]</b></a></td><td class="text-center text-slate-500">회계팀</td><td class="text-center text-slate-400 text-xs">06.01</td><td class="text-center text-slate-400 text-xs">120</td></tr>
+      <tr class="hover:bg-slate-50/60"><td class="py-3 pl-2"><a href="post.html" class="hover:text-forest-700">신입 가족 환영 모임 사진 공유</a></td><td class="text-center text-slate-500">홍보팀</td><td class="text-center text-slate-400 text-xs">05.30</td><td class="text-center text-slate-400 text-xs">203</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 모바일: 카드 리스트 -->
+  <ul class="sm:hidden divide-y divide-slate-50">
+    <li><a href="post.html" class="block py-3.5 active:bg-slate-50">
+      <p class="font-medium leading-snug line-clamp-2">6월 학부모 전체모임 결과 공유</p>
+      <p class="mt-1 text-xs text-slate-400">운영위원회 · 06.08 · 조회 142 · <span class="text-forest-600 font-semibold">댓글 3</span></p></a></li>
+    <li><a href="post.html" class="block py-3.5 active:bg-slate-50">
+      <p class="font-medium leading-snug line-clamp-2">도서관 여름 운영시간 변경 📎</p>
+      <p class="mt-1 text-xs text-slate-400">도서관지기 · 06.05 · 조회 98</p></a></li>
+    <li><a href="post.html" class="block py-3.5 active:bg-slate-50">
+      <p class="font-medium leading-snug line-clamp-2">교실 환경 정비 봉사 신청 안내</p>
+      <p class="mt-1 text-xs text-slate-400">시설팀 · 06.03 · 조회 76</p></a></li>
+    <li><a href="post.html" class="block py-3.5 active:bg-slate-50">
+      <p class="font-medium leading-snug line-clamp-2">5월 살림살이 보고 📎</p>
+      <p class="mt-1 text-xs text-slate-400">회계팀 · 06.01 · 조회 120 · <span class="text-forest-600 font-semibold">댓글 1</span></p></a></li>
+    <li><a href="post.html" class="block py-3.5 active:bg-slate-50">
+      <p class="font-medium leading-snug line-clamp-2">신입 가족 환영 모임 사진 공유</p>
+      <p class="mt-1 text-xs text-slate-400">홍보팀 · 05.30 · 조회 203</p></a></li>
+    <li class="py-4 text-center text-sm text-slate-400">아래로 스크롤하면 더 불러옵니다 ↓</li>
+  </ul>
+
+  <!-- 데스크탑 페이징 -->
+  <div class="hidden sm:flex justify-center items-center gap-1 mt-6 text-sm">
+    <button class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:bg-slate-50">◀</button>
+    <button class="px-3 py-1.5 rounded-lg bg-forest-600 text-white font-medium">1</button>
+    <button class="px-3 py-1.5 rounded-lg hover:bg-slate-50">2</button>
+    <button class="px-3 py-1.5 rounded-lg hover:bg-slate-50">3</button>
+    <span class="px-1 text-slate-300">…</span>
+    <button class="px-3 py-1.5 rounded-lg hover:bg-slate-50">12</button>
+    <button class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:bg-slate-50">▶</button>
+  </div>
+</main>
+
+<!-- 모바일 FAB -->
+<a href="write.html" class="sm:hidden fixed bottom-6 right-5 z-40 w-14 h-14 rounded-full bg-forest-600 text-white shadow-lg shadow-forest-600/30 grid place-items-center" aria-label="글쓰기">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+</a>
+
+<footer class="border-t border-slate-100 bg-slate-50 mt-10"><div class="max-w-6xl mx-auto px-4 py-8 text-sm text-slate-500"><p class="font-semibold text-slate-700">푸른숲발도르프학교</p><p>경기도 광주시 퇴촌면 산수로 870-87 · 031-793-6591</p></div></footer>
+</body>
+</html>
