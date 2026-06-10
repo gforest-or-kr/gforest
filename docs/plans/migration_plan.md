@@ -61,6 +61,9 @@ XE1 MySQL 덤프에서 Supabase Postgres로 ETL 스크립트 작성:
 
 ## 5. 인프라 셋업 체크리스트
 
+> **(2026-06-11) 이 체크리스트는 Jira GFM 프로젝트로 이관됨** — 진행 상태는 Jira가 단일 진실이며,
+> Confluence 계획서 페이지는 Jira 매크로로 실시간 연동된다. 아래 목록은 최초 계획 기록용.
+
 - [ ] GitHub repo 생성 (코드 + 마이그레이션 SQL 모두 포함)
 - [ ] Supabase 프로젝트 생성 (Seoul 리전), URL/anon key 확보
 - [ ] `create-next-app` 스캐폴드 + `@supabase/supabase-js`, `@supabase/ssr`
