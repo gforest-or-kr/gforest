@@ -1,17 +1,213 @@
-export default function Home() {
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
+import { shortDate } from "@/lib/format";
+import PopupLayer from "@/components/popup-layer";
+
+// 회원 위젯 영역이 로그인 상태에 의존하므로 동적 렌더링 (screen_design SCR-100 ②')
+export const dynamic = "force-dynamic";
+
+type WidgetPost = {
+  id: string;
+  title: string;
+  created_at: string;
+  event_date: string | null;
+  boards: { slug: string } | null;
+};
+
+async function latestPosts(boardSlug: string, limit: number) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("posts")
+    .select("id, title, created_at, event_date, boards!inner(slug)")
+    .eq("boards.slug", boardSlug)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as WidgetPost[];
+}
+
+function PostList({ posts, slug, empty }: { posts: WidgetPost[]; slug: string; empty: string }) {
+  if (posts.length === 0)
+    return <p className="py-6 text-sm text-slate-400 text-center">{empty}</p>;
   return (
-    <main className="flex-1 grid place-items-center px-4">
-      <div className="text-center">
-        <span className="inline-grid w-14 h-14 place-items-center rounded-2xl bg-forest-600 text-white text-2xl font-bold">
-          숲
-        </span>
-        <h1 className="mt-4 text-2xl font-bold text-forest-700">
-          푸른숲발도르프학교
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          새 홈페이지를 준비하고 있습니다 — 스캐폴드 v0 (GFM-2)
-        </p>
+    <ul className="divide-y divide-slate-50">
+      {posts.map((p) => (
+        <li key={p.id} className="py-2.5 flex justify-between gap-3">
+          <Link href={`/boards/${slug}/${p.id}`} className="truncate hover:text-forest-700">
+            {p.title}
+          </Link>
+          <span className="text-xs text-slate-400 shrink-0">{shortDate(p.created_at)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Widget({
+  title,
+  moreHref,
+  moreLabel = "더보기 ›",
+  children,
+}: {
+  title: string;
+  moreHref: string;
+  moreLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-100 p-5 sm:p-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-lg">{title}</h3>
+        <Link className="text-sm text-forest-600 font-medium" href={moreHref}>
+          {moreLabel}
+        </Link>
       </div>
+      {children}
+    </div>
+  );
+}
+
+export default async function Home() {
+  const supabase = await createClient();
+  const profile = await getSessionProfile();
+  const isMember = !!profile && profile.role !== "pending";
+
+  const [notices, events, stories, exchanges, popupsRes] = await Promise.all([
+    latestPosts("notice", 4),
+    // 일정: 오늘 이후 다가오는 순
+    supabase
+      .from("posts")
+      .select("id, title, created_at, event_date, boards!inner(slug)")
+      .eq("boards.slug", "calendar")
+      .is("deleted_at", null)
+      .gte("event_date", new Date().toISOString().slice(0, 10))
+      .order("event_date", { ascending: true })
+      .limit(4)
+      .then((r) => (r.data ?? []) as WidgetPost[]),
+    latestPosts("story", 3),
+    latestPosts("exchange", 3),
+    supabase
+      .from("popups")
+      .select("id, title, body, link_url, dismiss_days")
+      .eq("is_active", true)
+      .lte("starts_at", new Date().toISOString())
+      .gte("ends_at", new Date().toISOString())
+      .order("sort_order"),
+  ]);
+
+  const memberPosts = isMember
+    ? await Promise.all([latestPosts("free", 3), latestPosts("parents", 3)])
+    : null;
+
+  return (
+    <main className="max-w-6xl mx-auto px-4 pb-16">
+      {/* ① 히어로 — 슬라이더 관리(SCR-602) 전 기본 배너 */}
+      <section className="mt-4 relative rounded-3xl overflow-hidden bg-gradient-to-br from-forest-600 to-forest-900 text-white">
+        <div className="aspect-[16/9] sm:aspect-[16/6] flex flex-col justify-end p-6 sm:p-10">
+          <p className="text-forest-100 text-sm font-medium mb-1">푸른숲발도르프학교</p>
+          <h2 className="text-2xl sm:text-4xl font-bold leading-snug">
+            아이와 어른이
+            <br className="sm:hidden" /> 함께 자라는 숲
+          </h2>
+          <Link
+            href="/intro/about"
+            className="mt-4 inline-flex w-fit items-center gap-1 bg-white/15 backdrop-blur px-4 py-2 rounded-full text-sm font-medium hover:bg-white/25"
+          >
+            학교 소개 보기 →
+          </Link>
+        </div>
+      </section>
+
+      {/* ②③ 공지 + 일정 */}
+      <section className="mt-6 grid lg:grid-cols-2 gap-4">
+        <Widget title="알려드립니다" moreHref="/boards/notice">
+          <PostList posts={notices} slug="notice" empty="아직 공지가 없습니다" />
+        </Widget>
+        <Widget title="다가오는 일정" moreHref="/boards/calendar" moreLabel="달력 보기 ›">
+          {events.length === 0 ? (
+            <p className="py-6 text-sm text-slate-400 text-center">예정된 일정이 없습니다</p>
+          ) : (
+            <ul className="space-y-2.5">
+              {events.map((e) => {
+                const d = new Date(e.event_date! + "T00:00:00+09:00");
+                return (
+                  <li key={e.id} className="flex items-center gap-3">
+                    <span className="w-12 shrink-0 text-center rounded-xl bg-forest-50 text-forest-700 text-xs font-bold py-1.5">
+                      {d.getMonth() + 1}.{d.getDate()}
+                      <br />
+                      {"일월화수목금토"[d.getDay()]}
+                    </span>
+                    <Link href={`/boards/calendar/${e.id}`} className="hover:text-forest-700 truncate">
+                      {e.title}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Widget>
+      </section>
+
+      {/* ④ 최신글 (공개) */}
+      <section className="mt-4 grid lg:grid-cols-2 gap-4">
+        <Widget title="학교이야기" moreHref="/boards/story">
+          <PostList posts={stories} slug="story" empty="아직 게시글이 없습니다" />
+        </Widget>
+        <Widget title="교류게시판" moreHref="/boards/exchange">
+          <PostList posts={exchanges} slug="exchange" empty="아직 게시글이 없습니다" />
+        </Widget>
+      </section>
+
+      {/* ②' 회원 위젯 — 로그인(승인) 회원에게만 */}
+      {memberPosts && (
+        <section className="mt-4 rounded-3xl bg-forest-50/70 border border-forest-100 p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="font-bold text-lg">우리 학교 소식</h3>
+            <span className="text-[11px] font-semibold bg-forest-600 text-white rounded-full px-2 py-0.5">
+              회원 전용
+            </span>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-x-8">
+            {(["free", "parents"] as const).map((slug, i) => (
+              <ul key={slug} className="divide-y divide-forest-100/60">
+                {memberPosts[i].length === 0 && (
+                  <li className="py-2.5 text-sm text-slate-400">아직 게시글이 없습니다</li>
+                )}
+                {memberPosts[i].map((p) => (
+                  <li key={p.id} className="py-2.5 flex justify-between gap-3">
+                    <Link href={`/boards/${slug}/${p.id}`} className="truncate hover:text-forest-700">
+                      <b className="text-forest-700 font-semibold mr-1.5">
+                        {slug === "free" ? "자유" : "학부모"}
+                      </b>
+                      {p.title}
+                    </Link>
+                    <span className="text-xs text-slate-400 shrink-0">{shortDate(p.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ⑤ 배너 */}
+      <section className="mt-4 grid sm:grid-cols-2 gap-3">
+        <Link
+          href="/intro/admission"
+          className="rounded-2xl bg-slate-50 hover:bg-forest-50 border border-slate-100 p-4 text-sm font-medium flex items-center justify-between"
+        >
+          신입·편입 전형안내 <span className="text-forest-600">→</span>
+        </Link>
+        <Link
+          href="/intro/location"
+          className="rounded-2xl bg-slate-50 hover:bg-forest-50 border border-slate-100 p-4 text-sm font-medium flex items-center justify-between"
+        >
+          오시는길 <span className="text-forest-600">→</span>
+        </Link>
+      </section>
+
+      <PopupLayer popups={popupsRes.data ?? []} />
     </main>
   );
 }
