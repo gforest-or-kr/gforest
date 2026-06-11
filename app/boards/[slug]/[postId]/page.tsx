@@ -44,13 +44,18 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
     .single();
   if (!post) notFound();
 
-  // 조회수 증가 (RPC, 실패 무시) + 댓글·이전/다음 병렬 조회
-  const [{ data: comments }, { data: prevPost }, { data: nextPost }] = await Promise.all([
+  // 조회수 증가 (RPC, 실패 무시) + 댓글·첨부·이전/다음 병렬 조회
+  const [{ data: comments }, { data: attachments }, { data: prevPost }, { data: nextPost }] = await Promise.all([
     supabase
       .from("comments")
       .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
       .eq("post_id", postId)
       .is("deleted_at", null)
+      .order("created_at"),
+    supabase
+      .from("attachments")
+      .select("id, file_name, byte_size, storage_path")
+      .eq("post_id", postId)
       .order("created_at"),
     supabase
       .from("posts")
@@ -110,9 +115,53 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
             📅 일정: {post.event_date}
           </p>
         )}
-        <div className="mt-6 pt-6 border-t border-slate-100 leading-relaxed whitespace-pre-wrap break-words [&_img]:max-w-full">
-          {post.content}
-        </div>
+        {post.legacy_document_srl ? (
+          // XE 이관 글 — ETL에서 sanitize된 HTML (이미지 반응형 강제)
+          <div
+            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_img]:max-w-full [&_img]:h-auto [&_p]:my-2"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        ) : (
+          <div className="mt-6 pt-6 border-t border-slate-100 leading-relaxed whitespace-pre-wrap break-words">
+            {post.content}
+          </div>
+        )}
+
+        {/* 첨부파일 — 서명 URL(1시간), 접근 권한은 storage RLS가 게시판 권한과 동일 강제 */}
+        {(attachments ?? []).length > 0 && (
+          <div className="mt-6 rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-semibold text-slate-500 mb-2">
+              📎 첨부 {(attachments ?? []).length}개
+            </p>
+            <ul className="space-y-1.5">
+              {await Promise.all(
+                (attachments ?? []).map(async (f) => {
+                  const { data: signed } = await supabase.storage
+                    .from("attachments")
+                    .createSignedUrl(f.storage_path, 3600);
+                  return (
+                    <li key={f.id} className="text-sm">
+                      {signed ? (
+                        <a
+                          href={signed.signedUrl}
+                          className="text-forest-700 hover:underline"
+                          download={f.file_name}
+                        >
+                          {f.file_name}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">{f.file_name} (권한 없음)</span>
+                      )}
+                      <span className="text-xs text-slate-400 ml-2">
+                        {(f.byte_size / 1024 / 1024).toFixed(2)}MB
+                      </span>
+                    </li>
+                  );
+                }),
+              )}
+            </ul>
+          </div>
+        )}
       </article>
 
       {/* 댓글 */}
