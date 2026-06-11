@@ -53,8 +53,8 @@ for slug, posts in data["boards"].items():
                          "Content-Type": mime, "x-upsert": "true"})
             try:
                 urllib.request.urlopen(req)
-            except urllib.error.HTTPError as e:
-                print(f"  업로드 실패 {f['name']}: {e.read()[:100]}"); fail += 1; continue
+            except Exception as e:
+                print(f"  업로드 실패 {f['name']}: {e}"); fail += 1; time.sleep(2); continue
             name_q = f["name"].replace("'", "''"); path_q = path.replace("'", "''")
             psql(
                 "insert into public.attachments (post_id, uploader_id, storage_path, file_name, byte_size, mime_type, legacy_file_srl)\n"
