@@ -80,6 +80,14 @@ export default function HeaderNav({ menu, profile }: Props) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
+            {profile?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="hidden lg:block text-sm font-medium px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                관리
+              </Link>
+            )}
             {profile ? (
               <Link
                 href="/me"
@@ -164,6 +172,15 @@ export default function HeaderNav({ menu, profile }: Props) {
 
           {profile && (
             <div className="border-t border-slate-100 mt-3 pt-3">
+              {profile.role === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setDrawerOpen(false)}
+                  className="block p-3 font-medium"
+                >
+                  관리자
+                </Link>
+              )}
               <button className="p-3 text-slate-500 w-full text-left" onClick={logout}>
                 로그아웃
               </button>
