@@ -35,6 +35,8 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
+          # 러너 기본 pg_dump(16)보다 17이 우선되도록 PATH 선두에 추가
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
 
       - name: pg_dump (public + auth 스키마)
         env:
