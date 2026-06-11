@@ -1,0 +1,93 @@
+# 일일 DB 백업 (GFM-6)
+# Supabase Free는 자동 백업이 없다 — pg_dump 후 "복원 검증까지" 통과해야 성공으로 친다 (CLAUDE.md 운영 원칙 1)
+# 필요 시크릿: SUPABASE_DB_URL (세션 풀러 URL, 비밀번호 포함)
+# 주의: GitHub는 repo가 60일간 활동이 없으면 schedule 워크플로를 자동 비활성화한다 — 방학 등 장기 무커밋 시 Actions 탭에서 재활성화 필요
+name: db-backup
+
+on:
+  schedule:
+    - cron: "0 18 * * *" # 매일 03:00 KST
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      verify-db:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: verify
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: PostgreSQL 17 클라이언트 설치 (서버 버전과 일치 필수)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -sSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: pg_dump (public + auth 스키마)
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_dump "$DB_URL" -Fc --no-owner --no-privileges -n public -n auth -f backup.dump
+          ls -la backup.dump
+          # 복원 검증 비교용 원본 행 수
+          psql "$DB_URL" -tA -f - <<'SQL' > source_counts.txt
+          select 'boards='   || count(*) from public.boards
+          union all select 'posts='    || count(*) from public.posts
+          union all select 'profiles=' || count(*) from public.profiles
+          union all select 'comments=' || count(*) from public.comments
+          union all select 'users='    || count(*) from auth.users
+          order by 1;
+          SQL
+          cat source_counts.txt
+
+      - name: 복원 검증 (스크래치 DB에 pg_restore 후 행 수 비교)
+        env:
+          VERIFY_URL: postgresql://postgres:verify@localhost:55432/postgres
+        run: |
+          # -n public 덤프에는 CREATE EXTENSION이 없으므로 사전 설치 + Supabase 역할 스텁
+          psql "$VERIFY_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          create extension if not exists btree_gist;
+          do $$ begin
+            if not exists (select from pg_roles where rolname='anon') then create role anon nologin; end if;
+            if not exists (select from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
+            if not exists (select from pg_roles where rolname='service_role') then create role service_role nologin; end if;
+          end $$;
+          SQL
+          # "CREATE SCHEMA public 중복" 1건만 무해한 오류로 허용
+          pg_restore -d "$VERIFY_URL" --no-owner --no-privileges backup.dump 2> restore_err.txt || true
+          if grep 'errors ignored on restore: ' restore_err.txt | grep -qv ': 1$'; then
+            echo "::error::복원 중 예상 밖 오류 발생"; cat restore_err.txt; exit 1
+          fi
+          psql "$VERIFY_URL" -tA -f - <<'SQL' > restored_counts.txt
+          select 'boards='   || count(*) from public.boards
+          union all select 'posts='    || count(*) from public.posts
+          union all select 'profiles=' || count(*) from public.profiles
+          union all select 'comments=' || count(*) from public.comments
+          union all select 'users='    || count(*) from auth.users
+          order by 1;
+          SQL
+          echo "--- 원본 / 복원본"; paste source_counts.txt restored_counts.txt
+          diff source_counts.txt restored_counts.txt \
+            && echo "복원 검증 통과" \
+            || { echo "::error::원본과 복원본 행 수 불일치"; exit 1; }
+
+      - name: 백업 아티팩트 업로드 (30일 보관)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup.dump
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,25 @@
+# 일시정지 방지 ping (GFM-6)
+# Supabase Free는 7일 무활동 시 DB가 정지된다 — REST 쿼리로 실제 DB 활동을 만든다 (CLAUDE.md 운영 원칙 2)
+# publishable 키는 브라우저에 노출되는 공개값이라 하드코딩해도 안전
+# 주의: repo가 60일간 활동이 없으면 schedule이 자동 비활성화됨 — 방학 전 확인
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "0 0 * * 1,4" # 월·목 09:00 KST (주 2회 — 7일 한도 대비 여유)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: boards 테이블 조회로 DB 활동 발생
+        run: |
+          APIKEY="sb_publishable_me1eT3XUIFPYzesLEj3ZTA_o1AQKEc0"
+          body=$(curl -sf \
+            "https://ifqgenuuwuxiqndpcjea.supabase.co/rest/v1/boards?select=slug&limit=1" \
+            -H "apikey: $APIKEY" -H "Authorization: Bearer $APIKEY")
+          echo "응답: $body"
+          # 빈 배열이면 DB가 비었거나 권한 문제 — 실패 처리
+          [ "$body" != "[]" ] && [ -n "$body" ] || { echo "::error::keep-alive 응답 이상"; exit 1; }
