@@ -44,8 +44,8 @@ for slug, posts in data["boards"].items():
             if not blob or len(blob) < 100 or blob[:6] == b"<!DOCT":
                 print(f"  다운로드 실패: {f['name']}"); fail += 1; continue
             mime = mimetypes.guess_type(f["name"])[0] or "application/octet-stream"
-            safe = re.sub(r"[^\w.\-가-힣 ]", "_", f["name"])[:80]
-            path = f"legacy/{f['file_srl']}/{safe}"
+            ext = re.sub(r"[^A-Za-z0-9.]", "", f["name"].rsplit(".", 1)[-1])[:8] if "." in f["name"] else "bin"
+            path = f"legacy/{f['file_srl']}/file.{ext}"  # Storage 키는 ASCII만 — 원본명은 DB file_name에
             req = urllib.request.Request(
                 f"{SUPA}/storage/v1/object/attachments/{urllib.parse.quote(path)}",
                 data=blob, method="POST",
