@@ -3,6 +3,40 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  MAX_FILE_COUNT,
+  MAX_FILE_SIZE,
+  validateFile,
+  type AttachmentMeta,
+} from "@/lib/attachments";
+
+// 폼 hidden input(JSON)의 첨부 메타를 파싱·재검증한다. 권한은 attachments_insert RLS가 최종 강제.
+function parseAttachments(raw: unknown, userId: string): AttachmentMeta[] {
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((it): it is AttachmentMeta => {
+      if (!it || typeof it !== "object") return false;
+      const m = it as Record<string, unknown>;
+      return (
+        typeof m.storage_path === "string" &&
+        typeof m.file_name === "string" &&
+        typeof m.byte_size === "number" &&
+        typeof m.mime_type === "string" &&
+        m.storage_path.startsWith(`${userId}/`) && // 본인 uid 프리픽스
+        m.byte_size > 0 &&
+        m.byte_size <= MAX_FILE_SIZE &&
+        validateFile(m.file_name, m.byte_size) === null
+      );
+    })
+    .slice(0, MAX_FILE_COUNT);
+}
 
 // 권한 검사는 RLS가 강제한다 — 여기서는 insert/update 결과만 처리 (CLAUDE.md 원칙 3)
 
@@ -44,6 +78,22 @@ export async function createPost(slug: string, formData: FormData) {
       `/boards/${slug}/write?error=${encodeURIComponent("등록에 실패했습니다. 쓰기 권한을 확인해 주세요")}`,
     );
   }
+
+  // 첨부 메타 행 일괄 insert — 실패해도 글은 이미 생성됐으므로 롤백/중단하지 않는다
+  const files = parseAttachments(formData.get("attachments"), user.id);
+  if (files.length > 0) {
+    await supabase.from("attachments").insert(
+      files.map((f) => ({
+        post_id: post.id,
+        uploader_id: user.id,
+        storage_path: f.storage_path,
+        file_name: f.file_name,
+        byte_size: f.byte_size,
+        mime_type: f.mime_type,
+      })),
+    );
+  }
+
   revalidatePath(`/boards/${slug}`);
   redirect(`/boards/${slug}/${post.id}`);
 }
