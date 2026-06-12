@@ -60,7 +60,7 @@
         </mxCell>
 
         <!-- Discord -->
-        <mxCell id="discord" value="💬 Discord 알림 채널&#10;push·PR | 배포 ✅🚨 | 백업·keep-alive 실패 🚨 | 사이트 다운 🔴" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="discord" value="💬 Discord 알림 채널&#10;배포 ✅🚨 | 백업·keep-alive 실패 🚨 | 사이트 다운 🔴" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="330" y="640" width="660" height="70" as="geometry" />
         </mxCell>
 
@@ -114,11 +114,6 @@
             <mxPoint x="36" y="0" as="offset" />
             <Array as="points"><mxPoint x="1080" y="465" /><mxPoint x="1080" y="125" /></Array>
           </mxGeometry>
-        </mxCell>
-
-        <!-- GitHub → Discord : 왼쪽 아래 -->
-        <mxCell id="e8" value="repo 웹훅 — push·PR 알림" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5865f2;fontSize=11;exitX=0.2;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gh" target="discord">
-          <mxGeometry x="0.35" relative="1" as="geometry"><mxPoint x="-52" y="0" as="offset" /></mxGeometry>
         </mxCell>
         <!-- Actions → Discord -->
         <mxCell id="e9" value="워크플로 알림 — 배포 결과·실패" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5865f2;fontSize=11;exitX=0.6;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gh" target="discord">
