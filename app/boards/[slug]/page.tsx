@@ -25,15 +25,42 @@ export default async function BoardPage({
   const page = Math.max(1, Number(pageParam) || 1);
 
   const supabase = await createClient();
-  const [profile, { data: board }] = await Promise.all([
-    getSessionProfile(),
-    supabase.from("boards").select("*").eq("slug", slug).eq("is_active", true).single(),
-  ]);
+
+  // 모든 쿼리를 slug 조인으로 1회 왕복에 병렬 실행 (GFM-30 — 워터폴 제거)
+  let listQuery = supabase
+    .from("posts")
+    .select(
+      "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count), boards!inner(slug)",
+      { count: "exact" },
+    )
+    .eq("boards.slug", slug)
+    .is("deleted_at", null)
+    .eq("is_notice", false)
+    .order("created_at", { ascending: false })
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+
+  const [profile, { data: board }, { data: notices }, { data: posts, count }] =
+    await Promise.all([
+      getSessionProfile(),
+      supabase.from("boards").select("*").eq("slug", slug).eq("is_active", true).single(),
+      q
+        ? Promise.resolve({ data: [] as never[] })
+        : supabase
+            .from("posts")
+            .select("id, title, created_at, boards!inner(slug)")
+            .eq("boards.slug", slug)
+            .is("deleted_at", null)
+            .eq("is_notice", true)
+            .order("created_at", { ascending: false })
+            .limit(5),
+      listQuery,
+    ]);
   if (!board) notFound();
 
   const role = profile?.role ?? null;
 
-  // UI 노출 제어 — 실제 차단은 RLS (권한 없으면 아래 쿼리도 빈 결과)
+  // UI 노출 제어 — 실제 차단은 RLS (권한 없으면 위 posts 쿼리도 빈 결과)
   if (!canReadBoard(board.read_roles, role)) {
     return (
       <main className="max-w-6xl mx-auto px-4">
@@ -49,34 +76,6 @@ export default async function BoardPage({
 
   const canWrite =
     !!role && (role === "admin" || board.write_roles.includes(role));
-
-  // 고정 공지 + 일반 글 (검색 시 공지 숨김)
-  let listQuery = supabase
-    .from("posts")
-    .select(
-      "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count)",
-      { count: "exact" },
-    )
-    .eq("board_id", board.id)
-    .is("deleted_at", null)
-    .eq("is_notice", false)
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-  if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
-
-  const [{ data: notices }, { data: posts, count }] = await Promise.all([
-    q
-      ? Promise.resolve({ data: [] as never[] })
-      : supabase
-          .from("posts")
-          .select("id, title, created_at")
-          .eq("board_id", board.id)
-          .is("deleted_at", null)
-          .eq("is_notice", true)
-          .order("created_at", { ascending: false })
-          .limit(5),
-    listQuery,
-  ]);
 
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
   const rows = (posts ?? []).map((p) => ({

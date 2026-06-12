@@ -15,9 +15,17 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const { slug, postId } = await params;
   const supabase = await createClient();
 
-  const [profile, { data: board }] = await Promise.all([
+  // 프로필·게시판·글을 1회 왕복에 병렬 조회 (GFM-30 — 워터폴 제거)
+  const [profile, { data: board }, { data: post }] = await Promise.all([
     getSessionProfile(),
     supabase.from("boards").select("*").eq("slug", slug).single(),
+    supabase
+      .from("posts")
+      .select("*, author:profiles(id, nickname), boards!inner(slug)")
+      .eq("id", postId)
+      .eq("boards.slug", slug)
+      .is("deleted_at", null)
+      .single(),
   ]);
   if (!board) notFound();
 
@@ -35,13 +43,6 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
     );
   }
 
-  const { data: post } = await supabase
-    .from("posts")
-    .select("*, author:profiles(id, nickname)")
-    .eq("id", postId)
-    .eq("board_id", board.id)
-    .is("deleted_at", null)
-    .single();
   if (!post) notFound();
 
   // 조회수 증가 (RPC, 실패 무시) + 댓글·첨부·이전/다음 병렬 조회
