@@ -34,8 +34,9 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getUser()는 토큰 만료 시 자동 갱신을 트리거한다 — 제거하지 말 것
-  await supabase.auth.getUser();
+  // getClaims(): JWT 로컬 검증(ES256+JWKS 캐시) — 만료 시에만 갱신 네트워크 호출.
+  // 매 요청 Auth 서버를 왕복하던 getUser() 대비 ~100ms 절감 (GFM-29)
+  await supabase.auth.getClaims();
 
   return supabaseResponse;
 }

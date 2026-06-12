@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/header";
+import HeaderShell from "@/components/header-shell";
 import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
@@ -25,7 +27,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <Header />
+        {/* 헤더(인증 조회)가 첫 페인트를 막지 않도록 스트리밍 (GFM-29) */}
+        <Suspense fallback={<HeaderShell />}>
+          <Header />
+        </Suspense>
         <div className="flex-1">{children}</div>
         <Footer />
       </body>
