@@ -99,9 +99,17 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           ← {board.name}
         </Link>
         {(isAuthor || isAdmin) && (
-          <form action={deletePostAction}>
-            <button className="text-slate-400 hover:text-red-500 px-2 py-1">삭제</button>
-          </form>
+          <div className="flex items-center gap-1">
+            <Link
+              href={`/boards/${slug}/${postId}/edit`}
+              className="text-slate-400 hover:text-forest-700 px-2 py-1"
+            >
+              수정
+            </Link>
+            <form action={deletePostAction}>
+              <button className="text-slate-400 hover:text-red-500 px-2 py-1">삭제</button>
+            </form>
+          </div>
         )}
       </div>
 
