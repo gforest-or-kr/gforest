@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { shortDate } from "@/lib/format";
 import PopupLayer from "@/components/popup-layer";
+import HeroSlider, { type Slide } from "@/components/hero-slider";
 
 // 회원 위젯이 로그인 상태에 의존하므로 동적 렌더링 + Suspense 스트리밍 (GFM-29)
 export const dynamic = "force-dynamic";
@@ -204,25 +205,56 @@ async function Popups() {
   return <PopupLayer popups={data ?? []} />;
 }
 
+// ① 히어로 — 활성 슬라이드가 있으면 슬라이더, 없으면 정적 폴백
+async function Hero() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("slides")
+    .select("id, title, subtitle, link_url, image_desktop_path, image_mobile_path")
+    .eq("is_active", true)
+    .order("sort_order");
+
+  const slides: Slide[] = (data ?? []).map((s) => ({
+    id: s.id,
+    title: s.title,
+    subtitle: s.subtitle,
+    link_url: s.link_url,
+    desktopUrl: supabase.storage.from("site").getPublicUrl(s.image_desktop_path).data.publicUrl,
+    mobileUrl: supabase.storage.from("site").getPublicUrl(s.image_mobile_path).data.publicUrl,
+  }));
+
+  if (slides.length > 0) return <HeroSlider slides={slides} />;
+
+  // 폴백 — 활성 슬라이드 0개일 때 정적 그라데이션 히어로
+  return (
+    <section className="mt-4 relative rounded-3xl overflow-hidden bg-gradient-to-br from-forest-600 to-forest-900 text-white">
+      <div className="aspect-[16/9] sm:aspect-[16/6] flex flex-col justify-end p-6 sm:p-10">
+        <p className="text-forest-100 text-sm font-medium mb-1">푸른숲발도르프학교</p>
+        <h2 className="text-2xl sm:text-4xl font-bold leading-snug">
+          아이와 어른이
+          <br className="sm:hidden" /> 함께 자라는 숲
+        </h2>
+        <Link
+          href="/intro/about"
+          className="mt-4 inline-flex w-fit items-center gap-1 bg-white/15 backdrop-blur px-4 py-2 rounded-full text-sm font-medium hover:bg-white/25"
+        >
+          학교 소개 보기 →
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   return (
     <main className="max-w-6xl mx-auto px-4 pb-16">
-      {/* ① 히어로 — 정적이라 즉시 페인트 */}
-      <section className="mt-4 relative rounded-3xl overflow-hidden bg-gradient-to-br from-forest-600 to-forest-900 text-white">
-        <div className="aspect-[16/9] sm:aspect-[16/6] flex flex-col justify-end p-6 sm:p-10">
-          <p className="text-forest-100 text-sm font-medium mb-1">푸른숲발도르프학교</p>
-          <h2 className="text-2xl sm:text-4xl font-bold leading-snug">
-            아이와 어른이
-            <br className="sm:hidden" /> 함께 자라는 숲
-          </h2>
-          <Link
-            href="/intro/about"
-            className="mt-4 inline-flex w-fit items-center gap-1 bg-white/15 backdrop-blur px-4 py-2 rounded-full text-sm font-medium hover:bg-white/25"
-          >
-            학교 소개 보기 →
-          </Link>
-        </div>
-      </section>
+      <Suspense
+        fallback={
+          <div className="mt-4 rounded-3xl overflow-hidden bg-slate-100 aspect-[16/9] sm:aspect-[16/6] animate-pulse" />
+        }
+      >
+        <Hero />
+      </Suspense>
 
       <section className="mt-6 grid lg:grid-cols-2 gap-4">
         <Suspense
