@@ -93,3 +93,11 @@ jobs:
           path: backup.dump
           retention-days: 30
           if-no-files-found: error
+
+      - name: 실패 시 Discord 알림 (백업 실패는 묻히면 안 됨)
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" -H "Content-Type: application/json" -d "{
+            \"username\": \"gforest-bot\",
+            \"content\": \"🚨 **DB 백업 실패** — 덤프 또는 복원 검증 단계에서 실패했습니다. 오늘 자 백업이 없습니다.\n실행 로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+          }"

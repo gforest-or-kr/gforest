@@ -1,0 +1,30 @@
+# Vercel 배포 결과 Discord 알림 (GFM-12)
+# Vercel의 GitHub 연동이 만드는 deployment_status 이벤트를 받아 성공/실패를 채널에 전달
+name: deploy-notify
+
+on:
+  deployment_status:
+
+jobs:
+  notify:
+    # 같은 배포에 빌드 중간 상태(pending 등)가 여러 번 오므로 최종 상태만 알림
+    if: github.event.deployment_status.state == 'success' || github.event.deployment_status.state == 'failure' || github.event.deployment_status.state == 'error'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Discord 알림
+        env:
+          STATE: ${{ github.event.deployment_status.state }}
+          TARGET_URL: ${{ github.event.deployment_status.environment_url }}
+          ENV_NAME: ${{ github.event.deployment.environment }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          if [ "$STATE" = "success" ]; then
+            ICON="✅"; LABEL="배포 성공"
+          else
+            ICON="🚨"; LABEL="배포 실패"
+          fi
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" -H "Content-Type: application/json" -d "{
+            \"username\": \"gforest-bot\",
+            \"content\": \"$ICON **$LABEL** ($ENV_NAME) — \`${SHA:0:7}\`\n${TARGET_URL:-로그: ${{ github.server_url }}/${{ github.repository }}/deployments}\"
+          }"

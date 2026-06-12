@@ -23,3 +23,11 @@ jobs:
           echo "응답: $body"
           # 빈 배열이면 DB가 비었거나 권한 문제 — 실패 처리
           [ "$body" != "[]" ] && [ -n "$body" ] || { echo "::error::keep-alive 응답 이상"; exit 1; }
+
+      - name: 실패 시 Discord 알림
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" -H "Content-Type: application/json" -d "{
+            \"username\": \"gforest-bot\",
+            \"content\": \"🚨 **keep-alive 실패** — Supabase가 일시정지됐거나 응답 이상. 7일 내 미해결 시 DB가 정지됩니다.\n실행 로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+          }"
