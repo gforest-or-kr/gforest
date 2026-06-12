@@ -40,7 +40,8 @@ def parse_post(mid, srl):
 
     post = {
         "srl": int(srl),
-        "title": ihtml.unescape(re.sub(r"\s+", " ", t.group(1))).strip()[:200],
+        "title": ihtml.unescape(re.sub(r"\s+", " ", re.sub(
+            r"</?(span|b|strong|font|em|i|u|s|div|p|a|br)\b[^>]*/?>", "", t.group(1), flags=re.I))).strip()[:200],  # XE는 제목에 스타일 태그 허용 — 텍스트만 추출
         "date": d.group(1).strip() if d else None,
         "member_srl": int(a.group(1)) if a else None,
         "nickname": ihtml.unescape(a.group(2)).strip() if a else "옛글",
