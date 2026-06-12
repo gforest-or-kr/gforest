@@ -98,6 +98,54 @@ export async function createPost(slug: string, formData: FormData) {
   redirect(`/boards/${slug}/${post.id}`);
 }
 
+export async function updatePost(slug: string, postId: string, formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+  const eventDate = String(formData.get("event_date") ?? "") || null;
+  if (!title || !content) {
+    redirect(
+      `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("제목과 내용을 입력해 주세요")}`,
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}/edit`)}`);
+
+  // board_type 확인 — calendar 게시판만 event_date 반영 (createPost와 동일 규칙)
+  const { data: board } = await supabase
+    .from("boards")
+    .select("id, board_type")
+    .eq("slug", slug)
+    .single();
+  if (!board) redirect("/");
+
+  const { data: updated, error } = await supabase
+    .from("posts")
+    .update({
+      title,
+      content,
+      event_date: board.board_type === "calendar" ? eventDate : null,
+    })
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .select("id"); // 활성 글은 posts_select에 남으므로 성공 시 행 반환(createPost 패턴)
+
+  // RLS가 0행을 걸러도 .update()는 에러를 주지 않으므로 반환 행 수를 직접 검증한다.
+  if (error || !updated || updated.length === 0) {
+    redirect(
+      `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("수정에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
+
+  revalidatePath(`/boards/${slug}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
+  redirect(`/boards/${slug}/${postId}`);
+}
+
 export async function createComment(slug: string, postId: string, formData: FormData) {
   const content = String(formData.get("content") ?? "").trim();
   const parentId = String(formData.get("parent_id") ?? "") || null;
@@ -120,12 +168,37 @@ export async function createComment(slug: string, postId: string, formData: Form
 
 export async function deletePost(slug: string, postId: string) {
   const supabase = await createClient();
-  // soft delete — RLS가 본인/admin만 허용
-  await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
+
+  // soft delete — RLS(posts_update)가 본인/admin만 허용한다.
+  const { error } = await supabase
     .from("posts")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", postId);
+    .eq("id", postId)
+    .is("deleted_at", null);
+
+  // .update()는 RLS가 0행을 걸러도 에러를 주지 않으므로 결과를 직접 검증한다.
+  // soft-delete된 행은 posts_select(deleted_at is null)에서 사라지므로 update의
+  // RETURNING/.select()로는 성공 행을 되돌려 받을 수 없다(= createPost의 insert+select가
+  // 동작하는 이유의 반대). 따라서 "여전히 보이는 글이 남아 있는가"를 재조회로 확인한다.
+  const { data: stillVisible } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error || stillVisible) {
+    redirect(
+      `/boards/${slug}/${postId}?error=${encodeURIComponent("삭제에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
+
   revalidatePath(`/boards/${slug}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
   redirect(`/boards/${slug}`);
 }
 
