@@ -99,8 +99,71 @@
 3. **자체 구축으로 전환을 검토할 트리거**: 광고/후원 모금 도입 결정(Hobby 약관), 사진 용량이 정책으로 감당 불가(Supabase Pro $25 vs Lightsail $12 비교 시점), 또는 두 플랫폼의 무료 정책 대폭 축소. 그 경우 **Lightsail $12 올인원**이 자체 구축 중 최적 (EC2+RDS 분리는 이 규모에서 성능 이점 없이 3배 비용).
 4. 이식성 원칙(표준 Postgres, `pg_dump` 탈출 가능)을 지키면 A→B 전환 비용은 낮게 유지된다 — 지금 서버리스로 시작하는 것이 잠금(lock-in) 리스크를 키우지 않는다.
 
+---
+
+# 보강 (2026-06-12): t3급 EC2 · ECS · dev–prd 2환경
+
+> 조합 논의에서 제기된 ① t3급 인스턴스 기준 비교 ② ECS 컨테이너 구성 ③ dev–prd 분리 운영을 추가 조사.
+> 단가는 AWS 공식 Price List API(서울)에서 직접 추출 (EC2 2026-06-10, ECS 06-03, RDS 06-12 발행분).
+
+## 7. t3급 인스턴스 단가 (서울, 온디맨드)
+
+| 인스턴스 | vCPU / 메모리 | 시간당 | 월(730h) | 비고 |
+|---|---|---|---|---|
+| t3.micro | 2 / 1GiB | $0.0130 | $9.49 | Next.js 빌드 OOM 위험 (1GB) |
+| **t3.small** | 2 / 2GiB | $0.0260 | **$18.98** | 단일 운영 최소 사양 |
+| t3.medium | 2 / 4GiB | $0.0520 | $37.96 | dev+prd 동거 시 현실 사양 |
+| t4g.small (ARM) | 2 / 2GiB | $0.0208 | $15.18 | t3 대비 **-20%** (동급) |
+
+t3(x86)는 t4g(ARM) 대비 정확히 20% 비싸다. Docker 멀티아치 빌드가 가능하면 t4g가 항상 우위이며, t3를 고르는 실익은 "x86 전용 바이너리 의존"이 있을 때뿐이다. 여기에 공통 부대비용: EBS gp3 $0.0912/GB-월, **퍼블릭 IPv4 $3.65/월**.
+
+## 8. C안: ECS 컨테이너 구성
+
+### 구성별 월 비용 (Next.js + Postgres 1세트 상시 구동, 서울)
+
+| 구성 | 내역 | 월 합계 | 연간 |
+|---|---|---|---|
+| C-1. Fargate + RDS + **ALB** | Fargate(0.5vCPU/1GB) $20.72 + RDS db.t4g.micro $20.87 + ALB $16.43+LCU + IPv4×2 $7.30 + ECR/로그 ~$1 | **~$67** | ~$800 (약 110만원) |
+| C-2. Fargate + RDS, ALB 생략 | 태스크에 퍼블릭 IP 직접 부여 | **~$46** (ARM ~$42) | ~$550 |
+| C-3. ECS on EC2 (t3.small) + RDS | EC2 $18.98 + EBS $2.74 + IPv4 $3.65 + RDS $20.87 + 로그 ~$1 | **~$47** | ~$560 |
+
+- ECS 자체(컨트롤 플레인)는 무료 — 비용은 전부 컴퓨팅·네트워크에서 발생
+- C-2의 함정: Fargate 태스크 ENI는 **재배포마다 퍼블릭 IP가 바뀌고 EIP를 붙일 수 없다** → DNS 자동 갱신 장치가 필요해 운영용으로는 비권장. 사실상 ALB($16.43+IPv4 2개)가 강제되는 구조
+- C-3은 t3.small 2GiB에 ECS 에이전트 + Next.js 컨테이너가 빠듯 — 실질 t3.medium(+$19/월) 압박
+
+### ECS 운영 부담 (사실 관계)
+
+- **최소 관리 리소스 8~10개**: VPC/서브넷/보안그룹, 클러스터, 태스크 정의, 서비스, ALB·타깃그룹, ECR, IAM 역할 2종, CloudWatch 로그 그룹 + CI 파이프라인(빌드→ECR push→서비스 업데이트)
+- 상시 서비스(desired ≥ 1)는 **cold start 없음** — 이 점은 Vercel Hobby보다 낫다. 단 배포 시 이미지 pull 포함 수십 초~수 분
+- rolling 배포 기본 제공(무중단), 로그는 CloudWatch $0.76/GB 수집
+- B안(EC2 직접 운영) 대비 OS 패치 부담은 줄지만(Fargate), **네트워크·IAM·컨테이너 빌드 파이프라인 지식이 필수** — 인수인계 난도는 오히려 높아진다
+
+### 평가
+
+ECS가 주는 것(컨테이너 표준화, 무중단 배포, IaC 친화)은 **여러 서비스를 운영하는 팀**의 가치다. 단일 커뮤니티 사이트 1개에서는:
+- 비용: 최소 **$46~67/월** — Lightsail($13)의 3.5~5배, 서버리스($0) 대비 연 60~80만원
+- 복잡도: 자체 구축 중 최고 — "전담 인력 없음" 전제와 정면 충돌
+
+## 9. dev–prd 2환경 운영 비교
+
+| 방식 | dev 환경 구현 | 추가 비용 |
+|---|---|---|
+| **A. 서버리스 (현 구성)** | ① PR마다 Vercel **preview deployment 자동 생성** (Hobby 포함) ② Supabase **Free 2번째 프로젝트**를 dev DB로 (마이그레이션 SQL 재적용으로 동일 스키마 재현 — 스키마는 코드가 단일 진실이라 가능) | **$0** |
+| A'. Supabase Branching | PR마다 DB 브랜치 자동 생성 | Pro $25/월 + $0.01344/브랜치-시간 — 이 규모 과함 |
+| C. ECS | dev 전용 태스크+RDS 분리 시 **×2** (~$92~134/월). dev를 야간 중지(desired=0, RDS stop)해도 ×1.3~1.5 | +$46~67 |
+| B. EC2 단일 호스트 | 같은 인스턴스에 docker-compose로 dev 동거 (×1) — 단 메모리 압박으로 t3.medium 업사이즈 가능성 | +$0~19 |
+
+**서버리스 구성은 dev–prd 분리가 사실상 공짜**라는 점이 추가로 드러난다: preview deployment(앱) + Free 2번째 프로젝트(DB)로 충분하고, 환경변수만 preview 스코프에 dev DB를 지정하면 된다. 유일한 주의점은 dev 프로젝트도 7일 무활동 정지가 별도 적용된다는 것(개인 슬롯 점유 포함).
+
+## 10. 결론 보강
+
+1. **t3급·ECS 어느 조합도 기존 권고(서버리스 유지)를 뒤집지 못한다.** ECS는 연 60~110만원 + 가장 높은 운영 복잡도(리소스 10개·CI 파이프라인·IAM)로, "전담 인력 없는 조합" 전제와 가장 거리가 멀다. cold start 부재라는 단일 이점은 keep-alive로 대체 가능한 문제에 대한 과투자다.
+2. 자체 구축 전환 트리거가 발동하더라도 권고 순서는 **Lightsail 올인원($13) → EC2+RDS → ECS** 순. ECS는 사이트가 여러 개로 늘거나 운영 주체가 기술 조직화될 때만 재검토.
+3. dev–prd 분리는 지금 구성에서 **추가 비용 없이 가능** (Vercel preview + Supabase Free 2호 프로젝트) — 별도 인프라 결정이 필요 없는 사안이다.
+
 ## 출처
 
 - Vercel: [Limits](https://vercel.com/docs/limits) · [Hobby Plan](https://vercel.com/docs/plans/hobby) · [Fair Use](https://vercel.com/docs/limits/fair-use-guidelines) · [Regions](https://vercel.com/docs/regions) · [Function Region](https://vercel.com/docs/functions/configuring-functions/region) · [Fluid Compute](https://vercel.com/docs/fluid-compute) · [Scale to One](https://vercel.com/blog/scale-to-one-how-fluid-solves-cold-starts)
 - Supabase: [Pricing](https://supabase.com/pricing) · [Compute and Disk](https://supabase.com/docs/guides/platform/compute-and-disk) · [90일 복구 정책](https://github.com/orgs/supabase/discussions/27497) · [리전 정렬 실측기](https://dongho.oopy.io/api-서버와-데이터베이스-간-네트워크-지연-문제-해결기)
 - AWS: [Lightsail 요금](https://aws.amazon.com/lightsail/pricing/) · [EC2 온디맨드](https://aws.amazon.com/ec2/pricing/on-demand/) · [RDS PostgreSQL](https://aws.amazon.com/rds/postgresql/pricing/) · [IPv4 유료화](https://aws.amazon.com/blogs/aws/new-aws-public-ipv4-address-charge-public-ip-insights/) · [프리티어 개편](https://aws.amazon.com/blogs/aws/aws-free-tier-update-new-customers-can-get-started-and-explore-aws-with-up-to-200-in-credits/) · [버스터블 크레딧](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-credits-baseline-concepts.html) · [1GB Next.js 빌드 OOM](https://betterstack.com/community/guides/scaling-nodejs/fix-nextjs-build-failures/)
+- 보강(ECS·dev-prd): [AWS Price List Bulk API ap-northeast-2 offer](https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/index.json) (EC2 06-10·ECS 06-03·RDS 06-12 발행) · [ECS Pricing](https://aws.amazon.com/ecs/pricing/) · [Fargate task networking](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-task-networking.html) · [Supabase Branching/Pricing](https://supabase.com/pricing) · [Vercel Hobby preview](https://vercel.com/docs/plans/hobby)
