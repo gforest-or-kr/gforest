@@ -49,3 +49,5 @@ docs/
 ## 라이선스 / 운영
 
 비영리 학부모조합 내부 프로젝트입니다. 광고·상업적 사용 불가(Vercel Hobby 약관).
+
+> Maintained with Maestro 🤖
