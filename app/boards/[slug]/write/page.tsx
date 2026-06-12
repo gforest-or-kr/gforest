@@ -3,10 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { createPost } from "../actions";
+import AttachmentField from "@/components/attachment-field";
 
 export const dynamic = "force-dynamic";
 
-// SCR-320 글쓰기 — 1차: 텍스트 작성 (WYSIWYG 에디터·파일 첨부는 후속)
+// SCR-320 글쓰기 — 텍스트 작성 + 파일 첨부 (WYSIWYG 에디터는 후속)
 export default async function WritePage({
   params,
   searchParams,
@@ -75,6 +76,8 @@ export default async function WritePage({
           placeholder="내용을 입력하세요"
           className="mt-4 w-full leading-relaxed outline-none resize-y min-h-[40vh]"
         />
+
+        <AttachmentField />
       </form>
     </main>
   );

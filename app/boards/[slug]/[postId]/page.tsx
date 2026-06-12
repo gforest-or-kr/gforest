@@ -55,7 +55,7 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
       .order("created_at"),
     supabase
       .from("attachments")
-      .select("id, file_name, byte_size, storage_path")
+      .select("id, file_name, byte_size, storage_path, mime_type")
       .eq("post_id", postId)
       .order("created_at"),
     supabase
@@ -140,6 +140,7 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
                   const { data: signed } = await supabase.storage
                     .from("attachments")
                     .createSignedUrl(f.storage_path, 3600);
+                  const isImage = f.mime_type?.startsWith("image/");
                   return (
                     <li key={f.id} className="text-sm">
                       {signed ? (
@@ -156,6 +157,15 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
                       <span className="text-xs text-slate-400 ml-2">
                         {(f.byte_size / 1024 / 1024).toFixed(2)}MB
                       </span>
+                      {signed && isImage && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={signed.signedUrl}
+                          alt={f.file_name}
+                          loading="lazy"
+                          className="mt-2 max-w-full h-auto rounded-xl"
+                        />
+                      )}
                     </li>
                   );
                 }),
