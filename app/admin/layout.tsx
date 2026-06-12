@@ -28,6 +28,12 @@ export default async function AdminLayout({
           >
             메인 슬라이더
           </Link>
+          <Link
+            href="/admin/popups"
+            className="px-3 py-1.5 rounded-lg hover:bg-forest-50 font-medium"
+          >
+            메인 팝업
+          </Link>
         </nav>
       </div>
       {children}
