@@ -6,13 +6,21 @@ import { canReadBoard } from "@/lib/menu";
 import { fullDate, shortDate } from "@/lib/format";
 import AccessNotice from "@/components/access-notice";
 import { createComment, deleteComment, deletePost } from "../actions";
+import DeletePostButton from "./delete-post-button";
 
 export const dynamic = "force-dynamic";
 
 type Params = { slug: string; postId: string };
 
-export default async function PostPage({ params }: { params: Promise<Params> }) {
+export default async function PostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { slug, postId } = await params;
+  const { error } = await searchParams;
   const supabase = await createClient();
 
   // 프로필·게시판·글을 1회 왕복에 병렬 조회 (GFM-30 — 워터폴 제거)
@@ -98,12 +106,12 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
         <Link href={`/boards/${slug}`} className="text-slate-500 hover:text-forest-700">
           ← {board.name}
         </Link>
-        {(isAuthor || isAdmin) && (
-          <form action={deletePostAction}>
-            <button className="text-slate-400 hover:text-red-500 px-2 py-1">삭제</button>
-          </form>
-        )}
+        {(isAuthor || isAdmin) && <DeletePostButton action={deletePostAction} />}
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 text-red-600 text-sm px-3 py-2">{error}</div>
+      )}
 
       <article>
         <h1 className="text-2xl font-bold leading-snug">{post.title}</h1>

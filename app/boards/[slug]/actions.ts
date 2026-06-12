@@ -70,12 +70,27 @@ export async function createComment(slug: string, postId: string, formData: Form
 
 export async function deletePost(slug: string, postId: string) {
   const supabase = await createClient();
-  // soft delete — RLS가 본인/admin만 허용
-  await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
+
+  // soft delete — RLS가 본인/admin만 허용. 권한 분기는 DB가 강제하므로 결과(count)만 판정.
+  // soft delete된 행은 posts_select(deleted_at is null)를 통과하지 못해 .select()는 0행을
+  // 돌려주므로 데이터가 아닌 count로 성공을 판정한다.
+  const { error, count } = await supabase
     .from("posts")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", postId);
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", postId)
+    .is("deleted_at", null); // 멱등성: 이미 삭제된 글 재삭제 방지
+
+  if (error || !count) {
+    redirect(
+      `/boards/${slug}/${postId}?error=${encodeURIComponent("삭제에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
   revalidatePath(`/boards/${slug}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
   redirect(`/boards/${slug}`);
 }
 
