@@ -1,0 +1,96 @@
+<mxfile host="app.diagrams.net" modified="2026-06-12T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="cicd" id="cicd-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1160" pageHeight="780" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 개발자 -->
+        <mxCell id="dev" value="👩‍💻 개발자 (협업자 누구나)&#10;git push main / Pull Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub -->
+        <mxCell id="gh" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#24292f;verticalAlign=top;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="40" width="300" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="ghTitle" value="GitHub — dongyoub-sinn/gforest (private)" style="text;html=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="345" y="50" width="280" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="repo" value="main 브랜치&#10;(코드·스키마 SQL·워크플로 = 단일 진실)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="350" y="80" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="wfDeploy" value="⚙️ Actions: deploy&#10;main push=production / PR=preview&#10;vercel pull → build → deploy --prebuilt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="350" y="170" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wfBackup" value="⚙️ Actions: db-backup (매일 03:00 KST)&#10;pg_dump → 스크래치 DB 복원 → 행수 대조&#10;→ 아티팩트 30일 보관" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="350" y="260" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wfKeep" value="⚙️ Actions: keep-alive (월·목 09:00)&#10;REST 쿼리로 DB 활동 발생 (7일 정지 방지)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="350" y="350" width="260" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Vercel -->
+        <mxCell id="vercel" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#000000;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="710" y="60" width="240" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="vercelTitle" value="▲ Vercel Hobby — 서울(icn1) 고정" style="text;html=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="725" y="70" width="220" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="prod" value="Production&#10;gforest.vercel.app" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="725" y="100" width="210" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="preview" value="Preview (PR마다 고유 URL,&#10;PR 코멘트로 자동 안내)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="725" y="175" width="210" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase -->
+        <mxCell id="supa" value="🟩 Supabase Free — Seoul&#10;Postgres + RLS · Auth · Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="300" width="240" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Discord -->
+        <mxCell id="discord" value="💬 Discord 알림 채널&#10;push·PR / 배포 ✅🚨 / 백업·keep-alive 실패 🚨" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="560" width="620" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- 백업 아티팩트 -->
+        <mxCell id="artifact" value="📦 백업 아티팩트&#10;(GitHub, 30일)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="270" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- 화살표 -->
+        <mxCell id="e1" value="push / PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#24292f;fontSize=11;" edge="1" parent="1" source="dev" target="repo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="트리거" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;" edge="1" parent="1" source="repo" target="wfDeploy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="토큰 배포 (author 무관)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#1d6845;fontSize=11;fontStyle=1;" edge="1" parent="1" source="wfDeploy" target="prod">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3b" value="PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;dashed=1;fontSize=11;" edge="1" parent="1" source="wfDeploy" target="preview">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="런타임 쿼리 (RLS)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=11;" edge="1" parent="1" source="prod" target="supa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="pg_dump (풀러)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;" edge="1" parent="1" source="wfBackup" target="supa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="ping" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;" edge="1" parent="1" source="wfKeep" target="supa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;fontSize=11;" edge="1" parent="1" source="wfBackup" target="artifact">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="repo 웹훅 (push·PR)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5865f2;fontSize=11;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="gh" target="discord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="배포 결과 / 실패 알림" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5865f2;fontSize=11;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="gh" target="discord">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
