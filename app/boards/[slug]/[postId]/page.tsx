@@ -106,7 +106,17 @@ export default async function PostPage({
         <Link href={`/boards/${slug}`} className="text-slate-500 hover:text-forest-700">
           ← {board.name}
         </Link>
-        {(isAuthor || isAdmin) && <DeletePostButton action={deletePostAction} />}
+        {(isAuthor || isAdmin) && (
+          <div className="flex items-center gap-1">
+            <Link
+              href={`/boards/${slug}/${postId}/edit`}
+              className="text-slate-400 hover:text-forest-700 px-2 py-1"
+            >
+              수정
+            </Link>
+            <DeletePostButton action={deletePostAction} />
+          </div>
+        )}
       </div>
 
       {error && (

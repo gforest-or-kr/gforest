@@ -98,6 +98,54 @@ export async function createPost(slug: string, formData: FormData) {
   redirect(`/boards/${slug}/${post.id}`);
 }
 
+export async function updatePost(slug: string, postId: string, formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+  const eventDate = String(formData.get("event_date") ?? "") || null;
+  if (!title || !content) {
+    redirect(
+      `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("제목과 내용을 입력해 주세요")}`,
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}/edit`)}`);
+
+  // board_type 확인 — calendar 게시판만 event_date 반영 (createPost와 동일 규칙)
+  const { data: board } = await supabase
+    .from("boards")
+    .select("id, board_type")
+    .eq("slug", slug)
+    .single();
+  if (!board) redirect("/");
+
+  const { data: updated, error } = await supabase
+    .from("posts")
+    .update({
+      title,
+      content,
+      event_date: board.board_type === "calendar" ? eventDate : null,
+    })
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .select("id"); // 활성 글은 posts_select에 남으므로 성공 시 행 반환(createPost 패턴)
+
+  // RLS가 0행을 걸러도 .update()는 에러를 주지 않으므로 반환 행 수를 직접 검증한다.
+  if (error || !updated || updated.length === 0) {
+    redirect(
+      `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("수정에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
+
+  revalidatePath(`/boards/${slug}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
+  redirect(`/boards/${slug}/${postId}`);
+}
+
 export async function createComment(slug: string, postId: string, formData: FormData) {
   const content = String(formData.get("content") ?? "").trim();
   const parentId = String(formData.get("parent_id") ?? "") || null;
