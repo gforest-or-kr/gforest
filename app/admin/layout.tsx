@@ -22,6 +22,12 @@ export default async function AdminLayout({
           <Link href="/admin" className="px-3 py-1.5 rounded-lg hover:bg-forest-50 font-medium">
             회원·역할
           </Link>
+          <Link
+            href="/admin/slides"
+            className="px-3 py-1.5 rounded-lg hover:bg-forest-50 font-medium"
+          >
+            메인 슬라이더
+          </Link>
         </nav>
       </div>
       {children}
