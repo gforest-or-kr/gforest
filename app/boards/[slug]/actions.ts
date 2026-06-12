@@ -120,12 +120,37 @@ export async function createComment(slug: string, postId: string, formData: Form
 
 export async function deletePost(slug: string, postId: string) {
   const supabase = await createClient();
-  // soft delete — RLS가 본인/admin만 허용
-  await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
+
+  // soft delete — RLS(posts_update)가 본인/admin만 허용한다.
+  const { error } = await supabase
     .from("posts")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", postId);
+    .eq("id", postId)
+    .is("deleted_at", null);
+
+  // .update()는 RLS가 0행을 걸러도 에러를 주지 않으므로 결과를 직접 검증한다.
+  // soft-delete된 행은 posts_select(deleted_at is null)에서 사라지므로 update의
+  // RETURNING/.select()로는 성공 행을 되돌려 받을 수 없다(= createPost의 insert+select가
+  // 동작하는 이유의 반대). 따라서 "여전히 보이는 글이 남아 있는가"를 재조회로 확인한다.
+  const { data: stillVisible } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("id", postId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error || stillVisible) {
+    redirect(
+      `/boards/${slug}/${postId}?error=${encodeURIComponent("삭제에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
+
   revalidatePath(`/boards/${slug}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
   redirect(`/boards/${slug}`);
 }
 
