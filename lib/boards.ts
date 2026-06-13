@@ -25,6 +25,24 @@ export function getBoardMeta(slug: string) {
   )();
 }
 
+// 공개 게시판(read_roles is null) slug 목록 — generateStaticParams용. 공개 게시판만
+// 빌드 시 정적 프리렌더해 prefetch가 작동하게 한다. 권한 게시판은 dynamicParams로 동적.
+export function getPublicBoardSlugs() {
+  return unstable_cache(
+    async (): Promise<string[]> => {
+      const supabase = publicClient();
+      const { data } = await supabase
+        .from("boards")
+        .select("slug")
+        .is("read_roles", null)
+        .eq("is_active", true);
+      return (data ?? []).map((b) => b.slug);
+    },
+    ["public-board-slugs"],
+    { revalidate: 600, tags: ["menu"] },
+  )();
+}
+
 // 공개 게시판 목록 + 고정 공지 — 글 작성/수정/삭제 시 태그 무효화하므로 revalidate는 백업 TTL.
 export function getPublicBoardList(slug: string, page: number, pageSize: number) {
   return unstable_cache(
