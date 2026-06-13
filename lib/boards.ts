@@ -75,3 +75,57 @@ export function getPublicBoardList(slug: string, page: number, pageSize: number)
     { revalidate: 60, tags: [`board:${slug}`] },
   )();
 }
+
+// 공개 게시판 글 상세 — 본문·댓글·첨부메타·이전/다음을 한 묶음으로 캐시(ISR).
+// 댓글 작성/삭제·글 수정 시 revalidateTag(`post:${postId}`)로 즉시 무효화한다.
+// 첨부 "서명 URL"은 만료가 있어 여기 넣지 않고, page에서 메타로 그때 생성한다(ISR 주기 < 1시간).
+export function getPostDetail(slug: string, postId: string) {
+  return unstable_cache(
+    async () => {
+      const supabase = publicClient();
+      const { data: post } = await supabase
+        .from("posts")
+        .select("*, author:profiles(id, nickname), boards!inner(slug)")
+        .eq("id", postId)
+        .eq("boards.slug", slug)
+        .is("deleted_at", null)
+        .single();
+      if (!post) return null;
+      const [{ data: comments }, { data: attachments }, { data: prevPost }, { data: nextPost }] =
+        await Promise.all([
+          supabase
+            .from("comments")
+            .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
+            .eq("post_id", postId)
+            .is("deleted_at", null)
+            .order("created_at"),
+          supabase
+            .from("attachments")
+            .select("id, file_name, byte_size, storage_path, mime_type")
+            .eq("post_id", postId)
+            .order("created_at"),
+          supabase
+            .from("posts")
+            .select("id, title")
+            .eq("board_id", post.board_id)
+            .is("deleted_at", null)
+            .lt("created_at", post.created_at)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("posts")
+            .select("id, title")
+            .eq("board_id", post.board_id)
+            .is("deleted_at", null)
+            .gt("created_at", post.created_at)
+            .order("created_at")
+            .limit(1)
+            .maybeSingle(),
+        ]);
+      return { post, comments: comments ?? [], attachments: attachments ?? [], prevPost, nextPost };
+    },
+    ["post-detail", slug, postId],
+    { revalidate: 300, tags: [`post:${postId}`, `board:${slug}`] },
+  )();
+}
