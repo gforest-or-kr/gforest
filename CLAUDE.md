@@ -19,6 +19,7 @@
 6. **모바일 퍼스트 단일 반응형**: 별도 모바일 마크업 금지. 탭 타겟 44px+, 호버 의존 금지. 다크모드 미지원(확정). 디자인 토큰은 `app/globals.css`의 forest 팔레트
 7. **서울 리전 고정**: `vercel.json`의 `regions: ["icn1"]`을 제거하지 말 것 — 함수↔DB 리전 불일치는 전 페이지 +1초 지연의 최다 원인
 8. **이미지는 클라이언트 리사이즈(장변 1600px) 후 업로드**: Storage 1GB·egress 5GB/월이 가장 먼저 닿는 한도다
+9. **렌더링 = 정적 셸 + 클라 개인화. layout과 ISR(●) 페이지에서 쿠키를 읽지 말 것**: `app/layout.tsx`가 포함하는 서버 컴포넌트(특히 `Header`)나 ISR로 만들 페이지가 `cookies()`/`headers()`/`getSessionProfile()`(쿠키 기반) 등 요청 스코프 동적 API를 호출하면, 그 페이지가 동적으로 끌려 내려가고 ISR 페이지는 **런타임에 `DYNAMIC_SERVER_USAGE`로 500**이 된다. **dev·`next build`는 통과하고 프로덕션에서만 터지므로** 특히 위험하다. 로그인 상태·역할 같은 개인화는 클라이언트(`createClient().auth.getClaims()` + `useEffect`)에서 가져온다 — 예: `Header`(서버, 공개 메뉴만) → `HeaderNav`(클라, 세션). 상세·재현법·CI 게이트는 `docs/design/rendering.md` 참조
 
 ## 개발 워크플로
 
@@ -39,4 +40,5 @@
 
 - XE 레거시 데이터의 `legacy_*` 컬럼(unique)은 ETL 멱등성의 키 — 삭제·변경 금지
 - 운영위/교사/학생 게시판 권한 경계는 XE 관리자 확인(GFM-9) 전까지 추정값 (`supabase/seed.sql` 주석 참조)
-- 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마)
+- 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마), `design/rendering.md`(렌더링 전략·ISR 함정·CI 게이트)
+- ISR/렌더 관련 변경 후엔 `scripts/isr-smoke.sh`로 글 상세 200을 확인할 것(배포 CI가 자동 실행하지만 로컬 선검증 권장). dev 서버로는 ISR 오류가 안 잡힌다 — `next build && next start`로 봐야 한다
