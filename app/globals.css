@@ -13,8 +13,9 @@
   --color-forest-800: #175437;
   --color-forest-900: #11402b;
 
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo",
-    "Noto Sans KR", sans-serif;
+  /* 시스템 폰트 스택 — 웹폰트 전송 0. 각 OS 기본 한글 폰트로 렌더 (#25) */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic",
+    system-ui, "Noto Sans KR", "Segoe UI", sans-serif;
 }
 
 /* 닫힌 오프캔버스 모바일 메뉴(fixed + translate-x-full)가
