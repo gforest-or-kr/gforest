@@ -1,25 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { MenuGroup } from "@/lib/menu";
-import { ROLE_LABEL } from "@/lib/menu";
+import { buildMenu, ROLE_LABEL } from "@/lib/menu";
+import type { getMenuData } from "@/lib/menu-data";
 import type { Database } from "@/lib/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+type Props = Awaited<ReturnType<typeof getMenuData>>;
 
-type Props = {
-  menu: MenuGroup[];
-  profile: { nickname: string; role: AppRole } | null;
-};
-
-export default function HeaderNav({ menu, profile }: Props) {
+export default function HeaderNav({ boards, staticPages }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null); // 데스크탑 드롭다운 (클릭 토글 — 호버 의존 금지)
+  const [profile, setProfile] = useState<{ nickname: string; role: AppRole } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  // 개인화(세션 role)는 클라에서 — layout이 쿠키를 안 읽어 페이지 ISR이 가능해진다.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getClaims();
+      const uid = data?.claims?.sub;
+      if (!uid) return;
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("nickname, role")
+        .eq("id", uid)
+        .single();
+      if (active && p) setProfile({ nickname: p.nickname, role: p.role });
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // role 기반 메뉴 필터(권한 게시판 등)도 클라에서 — 비로그인 메뉴로 시작해 hydration 후 확장
+  const menu = buildMenu(boards, staticPages, profile?.role ?? null);
 
   async function logout() {
     await createClient().auth.signOut();
