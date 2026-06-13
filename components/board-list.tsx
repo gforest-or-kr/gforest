@@ -110,6 +110,7 @@ export default async function BoardList({
             <Link
               key={n.id}
               href={`/boards/${slug}/${n.id}`}
+              prefetch
               className="flex items-center gap-3 px-4 py-3 text-sm"
             >
               <span className="shrink-0 text-[11px] font-bold text-forest-700 bg-white border border-forest-200 rounded-full px-2 py-0.5">
@@ -144,7 +145,7 @@ export default async function BoardList({
               {rows.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/60">
                   <td className="py-3 pl-2">
-                    <Link href={`/boards/${slug}/${p.id}`} className="hover:text-forest-700">
+                    <Link href={`/boards/${slug}/${p.id}`} prefetch className="hover:text-forest-700">
                       {p.title}
                       {p.fileCount > 0 && <span className="text-slate-300 ml-1">📎</span>}
                       {p.commentCount > 0 && (
@@ -166,7 +167,7 @@ export default async function BoardList({
           <ul className="sm:hidden divide-y divide-slate-50">
             {rows.map((p) => (
               <li key={p.id}>
-                <Link href={`/boards/${slug}/${p.id}`} className="block py-3.5 active:bg-slate-50">
+                <Link href={`/boards/${slug}/${p.id}`} prefetch className="block py-3.5 active:bg-slate-50">
                   <p className="font-medium leading-snug line-clamp-2">
                     {p.title}
                     {p.fileCount > 0 && " 📎"}
