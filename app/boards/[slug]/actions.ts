@@ -145,6 +145,7 @@ export async function updatePost(slug: string, postId: string, formData: FormDat
   revalidatePath(`/boards/${slug}`);
   revalidatePath(`/boards/${slug}/${postId}`);
   revalidateTag(`board:${slug}`, "max"); // 공개 게시판 목록 캐시 무효화 (제목 변경 즉시 반영)
+  revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (본문/제목 변경 즉시 반영)
   redirect(`/boards/${slug}/${postId}`);
 }
 
@@ -166,6 +167,7 @@ export async function createComment(slug: string, postId: string, formData: Form
     parent_id: parentId,
   });
   revalidatePath(`/boards/${slug}/${postId}`);
+  revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (댓글 즉시 반영)
 }
 
 export async function deletePost(slug: string, postId: string) {
@@ -212,4 +214,5 @@ export async function deleteComment(slug: string, postId: string, commentId: str
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", commentId);
   revalidatePath(`/boards/${slug}/${postId}`);
+  revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (댓글 삭제 즉시 반영)
 }
