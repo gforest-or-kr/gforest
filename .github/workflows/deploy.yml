@@ -38,6 +38,18 @@ jobs:
           npx vercel pull --yes --environment=${{ github.event_name == 'push' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
           npx vercel build ${{ github.event_name == 'push' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
 
+      # ISR 스모크 게이트 — 배포 '직전'에 prod 빌드(next build → next start)로 글 상세 200을 검증.
+      # dev/preview에선 안 잡히고 프로덕션 ISR 런타임에서만 터지는 500(DYNAMIC_SERVER_USAGE 등)을
+      # 여기서 막는다. 실패하면 이 스텝에서 잡이 죽어 아래 '배포'가 실행되지 않는다.
+      - name: ISR 스모크 게이트 (글 상세 200)
+        env:
+          SMOKE_PORT: "3100"
+        run: |
+          # vercel pull이 받은 env를 next build/start가 읽도록 로드
+          envfile=$(ls .vercel/.env.*.local 2>/dev/null | head -1 || true)
+          if [ -n "$envfile" ]; then set -a; . "$envfile"; set +a; fi
+          bash scripts/isr-smoke.sh
+
       - name: 배포
         id: deploy
         run: |
