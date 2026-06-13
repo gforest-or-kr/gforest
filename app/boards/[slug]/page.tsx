@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { canReadBoard } from "@/lib/menu";
+import { getBoardMeta, getPublicBoardList } from "@/lib/boards";
 import { shortDate } from "@/lib/format";
 import AccessNotice from "@/components/access-notice";
 
@@ -24,43 +25,13 @@ export default async function BoardPage({
   const { page: pageParam, q } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const supabase = await createClient();
-
-  // 모든 쿼리를 slug 조인으로 1회 왕복에 병렬 실행 (GFM-30 — 워터폴 제거)
-  let listQuery = supabase
-    .from("posts")
-    .select(
-      "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count), boards!inner(slug)",
-      { count: "exact" },
-    )
-    .eq("boards.slug", slug)
-    .is("deleted_at", null)
-    .eq("is_notice", false)
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-  if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
-
-  const [profile, { data: board }, { data: notices }, { data: posts, count }] =
-    await Promise.all([
-      getSessionProfile(),
-      supabase.from("boards").select("*").eq("slug", slug).eq("is_active", true).single(),
-      q
-        ? Promise.resolve({ data: [] as never[] })
-        : supabase
-            .from("posts")
-            .select("id, title, created_at, boards!inner(slug)")
-            .eq("boards.slug", slug)
-            .is("deleted_at", null)
-            .eq("is_notice", true)
-            .order("created_at", { ascending: false })
-            .limit(5),
-      listQuery,
-    ]);
+  // 개인화(profile/canWrite)는 쿠키를 읽으므로 동적. 게시판 메타는 공개라 캐시(getBoardMeta).
+  const [profile, board] = await Promise.all([getSessionProfile(), getBoardMeta(slug)]);
   if (!board) notFound();
 
   const role = profile?.role ?? null;
 
-  // UI 노출 제어 — 실제 차단은 RLS (권한 없으면 위 posts 쿼리도 빈 결과)
+  // UI 노출 제어 — 실제 차단은 RLS (아래 데이터 쿼리도 권한 없으면 빈 결과)
   if (!canReadBoard(board.read_roles, role)) {
     return (
       <main className="max-w-6xl mx-auto px-4">
@@ -77,8 +48,56 @@ export default async function BoardPage({
   const canWrite =
     !!role && (role === "admin" || board.write_roles.includes(role));
 
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
-  const rows = (posts ?? []).map((p) => ({
+  // 데이터 출처 분기: 공개+비검색은 캐시 경로(getPublicBoardList), 그 외는 RLS 동적 경로.
+  // 두 경로의 select 문자열이 동일하므로 캐시 페처의 반환 타입을 공통 타입으로 재사용한다.
+  type ListData = Awaited<ReturnType<typeof getPublicBoardList>>;
+  let notices: ListData["notices"];
+  let posts: ListData["posts"];
+  let count: number;
+
+  if (board.read_roles === null && !q) {
+    // 공개 게시판 목록 — anon RLS가 전체를 정확히 반환, unstable_cache로 매 요청 왕복 제거.
+    const data = await getPublicBoardList(slug, page, PAGE_SIZE);
+    notices = data.notices;
+    posts = data.posts;
+    count = data.count;
+  } else {
+    // 게이트 게시판 또는 검색(?q=) — 기존 RLS 동적 경로(쿠키/세션 기반)로 폴백.
+    const supabase = await createClient();
+    let listQuery = supabase
+      .from("posts")
+      .select(
+        "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count), boards!inner(slug)",
+        { count: "exact" },
+      )
+      .eq("boards.slug", slug)
+      .is("deleted_at", null)
+      .eq("is_notice", false)
+      .order("created_at", { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+
+    const [{ data: noticeRows }, { data: postRows, count: postCount }] =
+      await Promise.all([
+        q
+          ? Promise.resolve({ data: [] as never[] })
+          : supabase
+              .from("posts")
+              .select("id, title, created_at, boards!inner(slug)")
+              .eq("boards.slug", slug)
+              .is("deleted_at", null)
+              .eq("is_notice", true)
+              .order("created_at", { ascending: false })
+              .limit(5),
+        listQuery,
+      ]);
+    notices = noticeRows ?? [];
+    posts = postRows ?? [];
+    count = postCount ?? 0;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const rows = posts.map((p) => ({
     ...p,
     nickname: (p.author as { nickname: string } | null)?.nickname ?? "알 수 없음",
     commentCount: (p.comments as unknown as { count: number }[])[0]?.count ?? 0,
