@@ -53,7 +53,9 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
         style={{ scrollbarWidth: "none" }}
         className="flex overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
       >
-        {slides.map((s) => {
+        {slides.map((s, i) => {
+          // 첫 슬라이드 = LCP 후보 → 우선 로드. 이후 슬라이드는 자동롤링 전까지 불필요 → 지연 (#20)
+          const eager = i === 0;
           const inner = (
             <div className="relative w-full">
               {/* next/image 미도입(스펙) — 공개 URL 직접 출력 */}
@@ -61,12 +63,16 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
               <img
                 src={s.desktopUrl}
                 alt={s.title}
+                fetchPriority={eager ? "high" : undefined}
+                loading={eager ? "eager" : "lazy"}
                 className="hidden sm:block w-full aspect-[16/6] object-cover"
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={s.mobileUrl}
                 alt={s.title}
+                fetchPriority={eager ? "high" : undefined}
+                loading={eager ? "eager" : "lazy"}
                 className="sm:hidden w-full aspect-[16/9] object-cover"
               />
               {(s.title || s.subtitle) && (
