@@ -32,13 +32,18 @@ npm run dev                        # http://localhost:3000
 app/            Next.js App Router 페이지
 lib/supabase/   Supabase 클라이언트 (browser/server/middleware)
 supabase/       마이그레이션 SQL + 시드 (스키마의 단일 진실)
+scripts/        운영 스크립트 (isr-smoke.sh = 배포 전 ISR 글 상세 200 검증)
 mockups/        화면설계 기반 HTML 목업 (python3 -m http.server로 열람)
 docs/
 ├─ plans/       마이그레이션 계획서
 ├─ research/    기존 사이트 분석·권한 매트릭스·호스팅 비교
-├─ design/      화면설계서·DB 스키마 설계
+├─ design/      화면설계서·DB 스키마 설계·렌더링 전략(rendering.md)
 └─ diagrams/    draw.io 원본 (아키텍처·ERD)
 ```
+
+> ⚠️ **렌더링 변경 전 필독**: `app/layout.tsx`(특히 `Header`)나 ISR 페이지에서 쿠키를
+> 읽으면 **프로덕션에서만 500**이 난다(dev·빌드는 통과). 규칙과 재현법은
+> [`docs/design/rendering.md`](./docs/design/rendering.md) 참조.
 
 ## 협업
 
