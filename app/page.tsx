@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { shortDate } from "@/lib/format";
-import PopupLayer from "@/components/popup-layer";
+import PopupLayer from "@/components/popup-layer-client";
 import HeroSlider, { type Slide } from "@/components/hero-slider";
 
 // 회원 위젯이 로그인 상태에 의존하므로 동적 렌더링 + Suspense 스트리밍 (GFM-29)
