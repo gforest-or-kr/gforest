@@ -50,6 +50,7 @@ docs/
 - **이슈/진행 관리**: [Jira GFM 프로젝트](https://gforest.atlassian.net/jira/software/projects/GFM/boards/1) — 모든 작업은 이슈로 추적
 - **설계 문서**: [Confluence 푸른숲-웹-마이그레이션](https://gforest.atlassian.net/wiki/spaces/gforestMigration/overview) — 계획·분석·화면설계
 - **개발 원칙**: [CLAUDE.md](./CLAUDE.md) — 기술·운영 원칙과 워크플로 (기여 전 필독)
+- **협업 실무 (온보딩)**: [docs/conventions/](./docs/conventions/README.md) — 다른 세션·새 팀원이 맥락을 이어받는 how-to (Jira·Confluence 작성, CI/CD 구조, 코드 패턴)
 
 ## 라이선스 / 운영
 

@@ -3,6 +3,8 @@
 푸른숲발도르프학교(gforest.or.kr) 홈페이지 재구축 — XE1 → Next.js + Supabase.
 **최우선 가치: 유지보수에 손이 덜 가는 구조.** 운영 주체는 전담 인력이 없는 비영리 학부모조합이며, 월 0원(무료 티어) 운영이 목표다.
 
+> **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것** — 여러 세션(maestro 등)·팀원이 repo 접근만으로 맥락을 이어받는 협업 실무(how-to) 허브다. 이 CLAUDE.md는 *원칙*, `docs/conventions/`는 *작성법*: Jira 전환·Confluence 작성([atlassian.md](docs/conventions/atlassian.md)) / CI·CD 구조([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)).
+
 ## 스택
 
 - Next.js (App Router, TypeScript, Tailwind v4) + Vercel Hobby
@@ -40,5 +42,6 @@
 
 - XE 레거시 데이터의 `legacy_*` 컬럼(unique)은 ETL 멱등성의 키 — 삭제·변경 금지
 - 운영위/교사/학생 게시판 권한 경계는 XE 관리자 확인(GFM-9) 전까지 추정값 (`supabase/seed.sql` 주석 참조)
+- 협업 실무(Jira·Confluence 작성·CI/CD·코드 패턴)는 `docs/conventions/` 참조 — 다른 세션·팀원 온보딩 허브
 - 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마), `design/rendering.md`(렌더링 전략·ISR 함정·CI 게이트)
 - ISR/렌더 관련 변경 후엔 `scripts/isr-smoke.sh`로 글 상세 200을 확인할 것(배포 CI가 자동 실행하지만 로컬 선검증 권장). dev 서버로는 ISR 오류가 안 잡힌다 — `next build && next start`로 봐야 한다
