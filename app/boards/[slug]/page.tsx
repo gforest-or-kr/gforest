@@ -1,19 +1,22 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getSessionProfile } from "@/lib/auth";
-import { canReadBoard } from "@/lib/menu";
-import { getBoardMeta, getPublicBoardList } from "@/lib/boards";
-import { shortDate } from "@/lib/format";
-import AccessNotice from "@/components/access-notice";
+import { getBoardMeta, getPublicBoardSlugs } from "@/lib/boards";
+import WriteButton from "@/components/write-button";
+import BoardList from "@/components/board-list";
+import BoardListSkeleton from "@/components/board-list-skeleton";
 
-export const dynamic = "force-dynamic";
-
-const PAGE_SIZE = 20;
+// 공개 게시판은 정적 프리렌더(prefetch 작동). 권한 게시판은 목록에서 쿠키를 읽어 동적 렌더된다.
+export async function generateStaticParams() {
+  const slugs = await getPublicBoardSlugs();
+  return slugs.map((slug) => ({ slug }));
+}
 
 type Params = { slug: string };
 type SearchParams = { page?: string; q?: string };
 
+// 셸(헤더/제목/검색/글쓰기)은 쿠키를 읽지 않아 정적이다. 개인화(글쓰기 버튼)는 클라이언트
+// (WriteButton)로, 데이터 목록은 Suspense 안(BoardList)에서 스트리밍한다 — 클릭 시 셸이
+// prefetch로 즉시 뜨고 목록만 채워지므로 "딜레이 후 이동"이 "즉시 셸 + 목록 채움"이 된다.
 export default async function BoardPage({
   params,
   searchParams,
@@ -22,91 +25,12 @@ export default async function BoardPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { slug } = await params;
-  const { page: pageParam, q } = await searchParams;
-  const page = Math.max(1, Number(pageParam) || 1);
-
-  // 개인화(profile/canWrite)는 쿠키를 읽으므로 동적. 게시판 메타는 공개라 캐시(getBoardMeta).
-  const [profile, board] = await Promise.all([getSessionProfile(), getBoardMeta(slug)]);
+  const board = await getBoardMeta(slug);
   if (!board) notFound();
-
-  const role = profile?.role ?? null;
-
-  // UI 노출 제어 — 실제 차단은 RLS (아래 데이터 쿼리도 권한 없으면 빈 결과)
-  if (!canReadBoard(board.read_roles, role)) {
-    return (
-      <main className="max-w-6xl mx-auto px-4">
-        <AccessNotice
-          boardName={board.name}
-          readRoles={board.read_roles ?? []}
-          loggedIn={!!profile}
-          returnTo={`/boards/${slug}`}
-        />
-      </main>
-    );
-  }
-
-  const canWrite =
-    !!role && (role === "admin" || board.write_roles.includes(role));
-
-  // 데이터 출처 분기: 공개+비검색은 캐시 경로(getPublicBoardList), 그 외는 RLS 동적 경로.
-  // 두 경로의 select 문자열이 동일하므로 캐시 페처의 반환 타입을 공통 타입으로 재사용한다.
-  type ListData = Awaited<ReturnType<typeof getPublicBoardList>>;
-  let notices: ListData["notices"];
-  let posts: ListData["posts"];
-  let count: number;
-
-  if (board.read_roles === null && !q) {
-    // 공개 게시판 목록 — anon RLS가 전체를 정확히 반환, unstable_cache로 매 요청 왕복 제거.
-    const data = await getPublicBoardList(slug, page, PAGE_SIZE);
-    notices = data.notices;
-    posts = data.posts;
-    count = data.count;
-  } else {
-    // 게이트 게시판 또는 검색(?q=) — 기존 RLS 동적 경로(쿠키/세션 기반)로 폴백.
-    const supabase = await createClient();
-    let listQuery = supabase
-      .from("posts")
-      .select(
-        "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count), boards!inner(slug)",
-        { count: "exact" },
-      )
-      .eq("boards.slug", slug)
-      .is("deleted_at", null)
-      .eq("is_notice", false)
-      .order("created_at", { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-    if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
-
-    const [{ data: noticeRows }, { data: postRows, count: postCount }] =
-      await Promise.all([
-        q
-          ? Promise.resolve({ data: [] as never[] })
-          : supabase
-              .from("posts")
-              .select("id, title, created_at, boards!inner(slug)")
-              .eq("boards.slug", slug)
-              .is("deleted_at", null)
-              .eq("is_notice", true)
-              .order("created_at", { ascending: false })
-              .limit(5),
-        listQuery,
-      ]);
-    notices = noticeRows ?? [];
-    posts = postRows ?? [];
-    count = postCount ?? 0;
-  }
-
-  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-  const rows = posts.map((p) => ({
-    ...p,
-    nickname: (p.author as { nickname: string } | null)?.nickname ?? "알 수 없음",
-    commentCount: (p.comments as unknown as { count: number }[])[0]?.count ?? 0,
-    fileCount: (p.attachments as unknown as { count: number }[])[0]?.count ?? 0,
-  }));
 
   return (
     <main className="max-w-6xl mx-auto px-4 pb-24">
-      {/* 게시판 헤더 */}
+      {/* 정적 셸 */}
       <div className="mt-6 mb-4 flex flex-wrap items-center gap-3">
         <div>
           <p className="text-xs text-slate-400 mb-0.5">{board.menu_group}</p>
@@ -116,152 +40,20 @@ export default async function BoardPage({
           <form className="flex items-center gap-2" action={`/boards/${slug}`}>
             <input
               name="q"
-              defaultValue={q ?? ""}
               className="border border-slate-200 rounded-xl text-sm px-3 py-2 w-36 sm:w-56"
               placeholder="제목+내용 검색"
             />
           </form>
-          {canWrite && (
-            <Link
-              href={`/boards/${slug}/write`}
-              className="hidden sm:block bg-forest-600 hover:bg-forest-700 text-white text-sm font-medium px-4 py-2 rounded-xl"
-            >
-              글쓰기
-            </Link>
-          )}
+          <WriteButton slug={slug} writeRoles={board.write_roles} variant="header" />
         </div>
       </div>
 
-      {q && (
-        <p className="mb-3 text-sm text-slate-500">
-          &lsquo;{q}&rsquo; 검색 결과 {count ?? 0}건{" "}
-          <Link href={`/boards/${slug}`} className="text-forest-600 font-medium ml-1">
-            전체 보기
-          </Link>
-        </p>
-      )}
+      {/* 동적 목록 — Suspense 스트리밍 (정밀 스켈레톤 fallback) */}
+      <Suspense fallback={<BoardListSkeleton />}>
+        <BoardList slug={slug} board={board} searchParams={searchParams} />
+      </Suspense>
 
-      {/* 고정 공지 */}
-      {(notices ?? []).length > 0 && (
-        <div className="rounded-2xl bg-forest-50/80 border border-forest-100 divide-y divide-forest-100/60 mb-3">
-          {(notices ?? []).map((n) => (
-            <Link
-              key={n.id}
-              href={`/boards/${slug}/${n.id}`}
-              className="flex items-center gap-3 px-4 py-3 text-sm"
-            >
-              <span className="shrink-0 text-[11px] font-bold text-forest-700 bg-white border border-forest-200 rounded-full px-2 py-0.5">
-                공지
-              </span>
-              <span className="font-medium truncate">{n.title}</span>
-              <span className="ml-auto text-xs text-slate-400 shrink-0">
-                {shortDate(n.created_at)}
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      {rows.length === 0 ? (
-        <div className="py-20 text-center text-slate-400 text-sm">
-          {q ? "검색 결과가 없습니다" : "아직 게시글이 없습니다"}
-          {!q && canWrite && (
-            <p className="mt-3">
-              <Link href={`/boards/${slug}/write`} className="text-forest-600 font-medium">
-                첫 글을 작성해 보세요 →
-              </Link>
-            </p>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* 데스크탑: 테이블 */}
-          <table className="hidden sm:table w-full text-sm">
-            <thead>
-              <tr className="text-xs text-slate-400 border-b border-slate-100">
-                <th className="text-left font-medium py-2.5 pl-2">제목</th>
-                <th className="w-28 font-medium">작성자</th>
-                <th className="w-20 font-medium">날짜</th>
-                <th className="w-16 font-medium">조회</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {rows.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/60">
-                  <td className="py-3 pl-2">
-                    <Link href={`/boards/${slug}/${p.id}`} className="hover:text-forest-700">
-                      {p.title}
-                      {p.fileCount > 0 && <span className="text-slate-300 ml-1">📎</span>}
-                      {p.commentCount > 0 && (
-                        <b className="text-forest-600 font-semibold text-xs ml-1">
-                          [{p.commentCount}]
-                        </b>
-                      )}
-                    </Link>
-                  </td>
-                  <td className="text-center text-slate-500">{p.nickname}</td>
-                  <td className="text-center text-slate-400 text-xs">{shortDate(p.created_at)}</td>
-                  <td className="text-center text-slate-400 text-xs">{p.view_count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* 모바일: 카드 리스트 */}
-          <ul className="sm:hidden divide-y divide-slate-50">
-            {rows.map((p) => (
-              <li key={p.id}>
-                <Link href={`/boards/${slug}/${p.id}`} className="block py-3.5 active:bg-slate-50">
-                  <p className="font-medium leading-snug line-clamp-2">
-                    {p.title}
-                    {p.fileCount > 0 && " 📎"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {p.nickname} · {shortDate(p.created_at)} · 조회 {p.view_count}
-                    {p.commentCount > 0 && (
-                      <span className="text-forest-600 font-semibold"> · 댓글 {p.commentCount}</span>
-                    )}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* 페이징 */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-1 mt-6 text-sm">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((n) => Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
-                .map((n, i, arr) => (
-                  <span key={n} className="flex items-center gap-1">
-                    {i > 0 && arr[i - 1] !== n - 1 && <span className="px-1 text-slate-300">…</span>}
-                    <Link
-                      href={`/boards/${slug}?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                      className={`px-3 py-1.5 rounded-lg ${
-                        n === page ? "bg-forest-600 text-white font-medium" : "hover:bg-slate-50"
-                      }`}
-                    >
-                      {n}
-                    </Link>
-                  </span>
-                ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* 모바일 FAB */}
-      {canWrite && (
-        <Link
-          href={`/boards/${slug}/write`}
-          className="sm:hidden fixed bottom-6 right-5 z-40 w-14 h-14 rounded-full bg-forest-600 text-white shadow-lg shadow-forest-600/30 grid place-items-center"
-          aria-label="글쓰기"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-          </svg>
-        </Link>
-      )}
+      <WriteButton slug={slug} writeRoles={board.write_roles} variant="fab" />
     </main>
   );
 }
