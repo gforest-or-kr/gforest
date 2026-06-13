@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-// Pretendard self-host — 외부 CDN 렌더 블로킹 제거, Next가 동일 오리진 엣지에서 서빙 (GFM-30)
-import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+// 폰트는 시스템 폰트 스택 사용 (globals.css --font-sans). 한글 웹폰트(Pretendard ~283KB)
+// 전송이 모바일 저속망에서 최대 병목이라 제거 — 전송 0, OS 기본 한글 폰트로 렌더 (#25)
 import "./globals.css";
 import Header from "@/components/header";
 import HeaderShell from "@/components/header-shell";
