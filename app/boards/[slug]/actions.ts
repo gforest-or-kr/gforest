@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -95,7 +95,6 @@ export async function createPost(slug: string, formData: FormData) {
   }
 
   revalidatePath(`/boards/${slug}`);
-  revalidateTag(`board:${slug}`); // 공개 게시판 목록 캐시 무효화 (lib/boards.ts)
   redirect(`/boards/${slug}/${post.id}`);
 }
 
@@ -144,7 +143,6 @@ export async function updatePost(slug: string, postId: string, formData: FormDat
 
   revalidatePath(`/boards/${slug}`);
   revalidatePath(`/boards/${slug}/${postId}`);
-  revalidateTag(`board:${slug}`); // 공개 게시판 목록 캐시 무효화 (제목 변경 즉시 반영)
   redirect(`/boards/${slug}/${postId}`);
 }
 
@@ -201,7 +199,6 @@ export async function deletePost(slug: string, postId: string) {
 
   revalidatePath(`/boards/${slug}`);
   revalidatePath(`/boards/${slug}/${postId}`);
-  revalidateTag(`board:${slug}`); // 공개 게시판 목록 캐시 무효화 (삭제 글 즉시 사라짐)
   redirect(`/boards/${slug}`);
 }
 
