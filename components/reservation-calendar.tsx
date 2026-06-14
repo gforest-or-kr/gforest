@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-// SCR-303 공간사용예약 — 공간 필터 + 월 달력(공간색 도트/칩) + 선택일 예약 현황 + 예약하기.
+// SCR-303 공간사용예약 — 공간 필터 + 월 달력(공간색 도트/칩) + 달력 아래 '이달 전체 예약 목록'.
 // 예약 = posts(space_id, event_start, event_end). 시각은 KST로 표시한다.
 type Rsv = {
   id: string;
   title: string;
-  start: string; // ISO timestamptz
+  start: string;
   end: string | null;
   spaceId: string | null;
   spaceName: string | null;
@@ -21,9 +21,13 @@ const WD = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const cellKey = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const KST = "Asia/Seoul";
-const dateKST = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: KST }); // YYYY-MM-DD
+const dateKST = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: KST });
 const timeKST = (iso: string) =>
   new Date(iso).toLocaleTimeString("ko-KR", { timeZone: KST, hour: "2-digit", minute: "2-digit", hour12: false });
+function dateLabel(key: string) {
+  const [y, m, d] = key.split("-").map(Number);
+  return `${m}월 ${d}일 (${WD[new Date(y, m - 1, d).getDay()]})`;
+}
 
 export default function ReservationCalendar({
   reservations,
@@ -40,7 +44,8 @@ export default function ReservationCalendar({
   const todayKey = today.toLocaleDateString("en-CA", { timeZone: KST });
   const [cur, setCur] = useState({ y: today.getFullYear(), m: today.getMonth() });
   const [sel, setSel] = useState(todayKey);
-  const [space, setSpace] = useState<string | null>(null); // null = 전체
+  const [space, setSpace] = useState<string | null>(null);
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const filtered = useMemo(
     () => (space ? reservations.filter((r) => r.spaceId === space) : reservations),
@@ -62,14 +67,24 @@ export default function ReservationCalendar({
     });
   }, [cur]);
 
+  // 이달 예약 — 날짜별 그룹(시간순)
+  const monthGroups = useMemo(() => {
+    const prefix = `${cur.y}-${pad(cur.m + 1)}-`;
+    const keys = Object.keys(byDate).filter((k) => k.startsWith(prefix)).sort();
+    return keys.map((date) => ({ date, items: byDate[date] }));
+  }, [byDate, cur]);
+
   const move = (delta: number) =>
     setCur((c) => {
       const dt = new Date(c.y, c.m + delta, 1);
       return { y: dt.getFullYear(), m: dt.getMonth() };
     });
 
-  const selRsvs = byDate[sel] ?? [];
-  // 선택일의 공간별 색 도트(중복 공간 제거)
+  const selectDay = (key: string) => {
+    setSel(key);
+    requestAnimationFrame(() => dayRefs.current[key]?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  };
+
   const dotsOf = (k: string) => {
     const seen = new Map<string, string>();
     for (const r of byDate[k] ?? []) if (r.spaceId) seen.set(r.spaceId, r.spaceColor ?? "#2f9e6e");
@@ -130,7 +145,7 @@ export default function ReservationCalendar({
           return (
             <button
               key={c.key}
-              onClick={() => setSel(c.key)}
+              onClick={() => selectDay(c.key)}
               className={`min-h-[46px] sm:min-h-[92px] bg-white p-1 sm:p-1.5 flex flex-col items-center sm:items-stretch gap-1 ${c.inMonth ? "" : "bg-slate-50/50"} ${isSel ? "ring-2 ring-forest-500 ring-inset" : ""}`}
             >
               <span className={`text-xs sm:text-sm grid place-items-center w-6 h-6 rounded-full sm:self-start ${isToday ? "bg-forest-600 text-white font-bold" : c.inMonth ? "text-slate-700" : "text-slate-300"}`}>
@@ -138,13 +153,11 @@ export default function ReservationCalendar({
               </span>
               {rsvs.length > 0 && (
                 <>
-                  {/* 모바일: 공간색 도트 */}
                   <span className="sm:hidden flex gap-0.5">
                     {dotsOf(c.key).map((color, i) => (
                       <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                     ))}
                   </span>
-                  {/* 데스크탑: 시간+공간 칩 */}
                   <div className="hidden sm:flex flex-col gap-0.5 w-full min-w-0">
                     {rsvs.slice(0, 2).map((r) => (
                       <span key={r.id} className="truncate text-[11px] leading-tight rounded px-1 py-0.5 text-white" style={{ backgroundColor: r.spaceColor ?? "#2f9e6e" }}>
@@ -160,35 +173,49 @@ export default function ReservationCalendar({
         })}
       </div>
 
-      {/* 선택일 예약 현황 */}
-      <div className="mt-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold">{Number(sel.slice(5, 7))}월 {Number(sel.slice(8, 10))}일 예약</h3>
+      {/* 이달 전체 예약 목록 */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">{cur.m + 1}월 전체 예약</h3>
           {canWrite && (
             <Link href={`/boards/${slug}/write?date=${sel}`} className="text-sm font-medium text-forest-600 hover:text-forest-700">
               + 예약하기
             </Link>
           )}
         </div>
-        {selRsvs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate-400">예약이 없습니다</p>
+        {monthGroups.length === 0 ? (
+          <p className="py-8 text-center text-sm text-slate-400">이달은 예약이 없습니다</p>
         ) : (
-          <ul className="space-y-2">
-            {selRsvs.map((r) => (
-              <li key={r.id}>
-                <Link href={`/boards/${slug}/${r.id}`} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3 hover:bg-slate-50">
-                  <span className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: r.spaceColor ?? "#2f9e6e" }} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold tabular-nums">
-                      {timeKST(r.start)}{r.end ? `~${timeKST(r.end)}` : ""}
-                      <span className="ml-2 font-medium" style={{ color: r.spaceColor ?? undefined }}>{r.spaceName}</span>
-                    </p>
-                    <p className="text-sm text-slate-600 truncate">{r.title}{r.nickname ? ` · ${r.nickname}` : ""}</p>
-                  </div>
-                </Link>
-              </li>
+          <div className="space-y-1">
+            {monthGroups.map((g) => (
+              <div
+                key={g.date}
+                ref={(el) => { dayRefs.current[g.date] = el; }}
+                className={`rounded-2xl px-2 py-1.5 ${g.date === sel ? "bg-forest-50" : ""}`}
+              >
+                <p className="text-sm font-semibold text-slate-500 px-1 flex items-center gap-2">
+                  {dateLabel(g.date)}
+                  {g.date === todayKey && <span className="text-[11px] font-bold bg-forest-600 text-white rounded-full px-2 py-0.5">오늘</span>}
+                </p>
+                <ul className="mt-1 space-y-1.5">
+                  {g.items.map((r) => (
+                    <li key={r.id}>
+                      <Link href={`/boards/${slug}/${r.id}`} className="flex items-center gap-3 rounded-xl border border-slate-100 p-2.5 hover:bg-slate-50">
+                        <span className="w-1.5 h-9 rounded-full shrink-0" style={{ backgroundColor: r.spaceColor ?? "#2f9e6e" }} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold tabular-nums">
+                            {timeKST(r.start)}{r.end ? `~${timeKST(r.end)}` : ""}
+                            <span className="ml-2 font-medium" style={{ color: r.spaceColor ?? undefined }}>{r.spaceName}</span>
+                          </p>
+                          <p className="text-sm text-slate-600 truncate">{r.title}{r.nickname ? ` · ${r.nickname}` : ""}</p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>
