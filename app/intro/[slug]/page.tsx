@@ -68,7 +68,8 @@ export default async function IntroPage({
           <h1 className="text-2xl font-bold">{page.title}</h1>
           {page.content ? (
             <div
-              className="mt-6 leading-relaxed prose-img:max-w-full [&_img]:max-w-full [&_img]:h-auto whitespace-pre-wrap break-words"
+              // 고정폭 래퍼·표·이미지가 모바일 폭을 넘지 않도록 모든 자손을 컨테이너 폭으로 제한
+              className="mt-6 leading-relaxed [&_*]:max-w-full [&_img]:h-auto [&_table]:block [&_table]:overflow-x-auto whitespace-pre-wrap break-words"
               // XE 이관 콘텐츠는 정제된 HTML — ETL에서 sanitize 후 저장
               dangerouslySetInnerHTML={{ __html: page.content }}
             />

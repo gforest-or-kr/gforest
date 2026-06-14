@@ -147,7 +147,10 @@ export default async function PostPage({
         )}
         {post.legacy_document_srl ? (
           <div
-            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_img]:max-w-full [&_img]:h-auto [&_p]:my-2"
+            // 레거시(XE/네이버) 본문은 고정폭 래퍼(div width:520px·layout table)와 인라인 width
+            // 이미지를 품는다. 이미지만 잡으면 래퍼가 그대로 넘치므로 [&_*]:max-w-full로 모든
+            // 자손을 컨테이너 폭으로 제한한다. 데이터 표는 자체 가로 스크롤(block+overflow)로.
+            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_*]:max-w-full [&_img]:h-auto [&_p]:my-2 [&_table]:block [&_table]:overflow-x-auto"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
         ) : (
