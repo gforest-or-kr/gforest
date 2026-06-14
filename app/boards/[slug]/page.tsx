@@ -1,10 +1,15 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getBoardMeta, getPublicBoardSlugs, getCalendarEvents } from "@/lib/boards";
+import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth";
+import { canReadBoard } from "@/lib/menu";
 import WriteButton from "@/components/write-button";
 import BoardList from "@/components/board-list";
 import BoardListSkeleton from "@/components/board-list-skeleton";
 import CalendarView from "@/components/calendar-view";
+import ReservationCalendar from "@/components/reservation-calendar";
+import AccessNotice from "@/components/access-notice";
 
 // 공개 게시판은 정적 프리렌더(prefetch 작동). 권한 게시판은 목록에서 쿠키를 읽어 동적 렌더된다.
 export async function generateStaticParams() {
@@ -40,6 +45,53 @@ export default async function BoardPage({
         </div>
         <CalendarView events={events} slug={slug} />
         <WriteButton slug={slug} writeRoles={board.write_roles} variant="fab" />
+      </main>
+    );
+  }
+
+  // 공간사용예약(SCR-303)도 달력으로. 회원 전용이라 세션(RLS)으로 읽는다 → 동적 렌더.
+  if (board.board_type === "reservation") {
+    const profile = await getSessionProfile();
+    if (!canReadBoard(board.read_roles, profile?.role ?? null)) {
+      return (
+        <main className="max-w-4xl mx-auto px-4">
+          <AccessNotice boardName={board.name} readRoles={board.read_roles ?? []} loggedIn={!!profile} returnTo={`/boards/${slug}`} />
+        </main>
+      );
+    }
+    const supabase = await createClient();
+    const [{ data: rows }, { data: spaces }] = await Promise.all([
+      supabase
+        .from("posts")
+        .select("id, title, event_start, event_end, space_id, spaces(name, color), author:profiles(nickname), boards!inner(slug)")
+        .eq("boards.slug", slug)
+        .is("deleted_at", null)
+        .not("event_start", "is", null)
+        .order("event_start", { ascending: true }),
+      supabase.from("spaces").select("id, name, color").eq("is_active", true).order("sort_order"),
+    ]);
+    const reservations = (rows ?? []).map((r) => {
+      const sp = r.spaces as { name: string; color: string } | null;
+      const au = r.author as { nickname: string } | null;
+      return {
+        id: r.id as string,
+        title: r.title as string,
+        start: r.event_start as string,
+        end: (r.event_end as string | null) ?? null,
+        spaceId: (r.space_id as string | null) ?? null,
+        spaceName: sp?.name ?? null,
+        spaceColor: sp?.color ?? null,
+        nickname: au?.nickname ?? null,
+      };
+    });
+    const canWrite = !!profile && (profile.role === "admin" || board.write_roles.includes(profile.role));
+    return (
+      <main className="max-w-4xl mx-auto px-4 pb-24">
+        <div className="mt-6 mb-4">
+          <p className="text-xs text-slate-400 mb-0.5">{board.menu_group}</p>
+          <h1 className="text-2xl font-bold">{board.name}</h1>
+        </div>
+        <ReservationCalendar reservations={reservations} spaces={spaces ?? []} slug={slug} canWrite={canWrite} />
       </main>
     );
   }
