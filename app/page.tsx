@@ -36,7 +36,8 @@ function PostList({ posts, slug, empty }: { posts: WidgetPost[]; slug: string; e
     <ul className="divide-y divide-slate-50">
       {posts.map((p) => (
         <li key={p.id} className="py-2.5 flex justify-between gap-3">
-          <Link href={`/boards/${slug}/${p.id}`} className="truncate hover:text-forest-700">
+          {/* min-w-0: flex 자식은 기본 min-width:auto라 긴 제목이 안 줄어들어 칼럼을 넓힌다 → truncate가 듣게 한다 */}
+          <Link href={`/boards/${slug}/${p.id}`} className="min-w-0 truncate hover:text-forest-700">
             {p.title}
           </Link>
           <span className="text-xs text-slate-400 shrink-0">{shortDate(p.created_at)}</span>
@@ -58,7 +59,8 @@ function Widget({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-100 p-5 sm:p-6">
+    // min-w-0: 그리드 칼럼이 내부 콘텐츠 때문에 늘어나지 않게 (긴 제목 대비)
+    <div className="min-w-0 rounded-3xl border border-slate-100 p-5 sm:p-6">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-lg">{title}</h3>
         <Link className="text-sm text-forest-600 font-medium" href={moreHref}>
@@ -118,7 +120,7 @@ async function NewsWidgets() {
                     <br />
                     {"일월화수목금토"[d.getDay()]}
                   </span>
-                  <Link href={`/boards/calendar/${e.id}`} className="hover:text-forest-700 truncate">
+                  <Link href={`/boards/calendar/${e.id}`} className="min-w-0 hover:text-forest-700 truncate">
                     {e.title}
                   </Link>
                 </li>
@@ -170,13 +172,13 @@ async function MemberWidget() {
       </div>
       <div className="grid sm:grid-cols-2 gap-x-8">
         {(["free", "parents"] as const).map((slug, i) => (
-          <ul key={slug} className="divide-y divide-forest-100/60">
+          <ul key={slug} className="min-w-0 divide-y divide-forest-100/60">
             {memberPosts[i].length === 0 && (
               <li className="py-2.5 text-sm text-slate-400">아직 게시글이 없습니다</li>
             )}
             {memberPosts[i].map((p) => (
               <li key={p.id} className="py-2.5 flex justify-between gap-3">
-                <Link href={`/boards/${slug}/${p.id}`} className="truncate hover:text-forest-700">
+                <Link href={`/boards/${slug}/${p.id}`} className="min-w-0 truncate hover:text-forest-700">
                   <b className="text-forest-700 font-semibold mr-1.5">
                     {slug === "free" ? "자유" : "학부모"}
                   </b>
