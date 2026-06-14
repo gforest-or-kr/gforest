@@ -76,6 +76,30 @@ export function getPublicBoardList(slug: string, page: number, pageSize: number)
   )();
 }
 
+// 캘린더형 게시판(board_type=calendar)의 일정 — event_date 있는 글만. 학교 일정은 소수라
+// 전체를 가져와 클라에서 월 이동을 즉시 처리한다. 글 작성/삭제 시 board:slug 태그로 무효화.
+export function getCalendarEvents(slug: string) {
+  return unstable_cache(
+    async () => {
+      const supabase = publicClient();
+      const { data } = await supabase
+        .from("posts")
+        .select("id, title, event_date, boards!inner(slug)")
+        .eq("boards.slug", slug)
+        .is("deleted_at", null)
+        .not("event_date", "is", null)
+        .order("event_date", { ascending: true });
+      return (data ?? []).map((p) => ({
+        id: p.id as string,
+        title: p.title as string,
+        date: p.event_date as string, // 'YYYY-MM-DD'
+      }));
+    },
+    ["calendar-events", slug],
+    { revalidate: 300, tags: [`board:${slug}`] },
+  )();
+}
+
 // 공개 게시판 글 상세 — 본문·댓글·첨부메타·이전/다음을 한 묶음으로 캐시(ISR).
 // 댓글 작성/삭제·글 수정 시 revalidateTag(`post:${postId}`)로 즉시 무효화한다.
 // 첨부 "서명 URL"은 만료가 있어 여기 넣지 않고, page에서 메타로 그때 생성한다(ISR 주기 < 1시간).

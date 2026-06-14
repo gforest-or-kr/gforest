@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getBoardMeta, getPublicBoardSlugs } from "@/lib/boards";
+import { getBoardMeta, getPublicBoardSlugs, getCalendarEvents } from "@/lib/boards";
 import WriteButton from "@/components/write-button";
 import BoardList from "@/components/board-list";
 import BoardListSkeleton from "@/components/board-list-skeleton";
+import CalendarView from "@/components/calendar-view";
 
 // 공개 게시판은 정적 프리렌더(prefetch 작동). 권한 게시판은 목록에서 쿠키를 읽어 동적 렌더된다.
 export async function generateStaticParams() {
@@ -27,6 +28,21 @@ export default async function BoardPage({
   const { slug } = await params;
   const board = await getBoardMeta(slug);
   if (!board) notFound();
+
+  // 캘린더형 게시판은 목록 대신 월 달력(SCR-302)으로 렌더. 공개 데이터라 쿠키 미사용 → ISR 안전.
+  if (board.board_type === "calendar") {
+    const events = await getCalendarEvents(slug);
+    return (
+      <main className="max-w-4xl mx-auto px-4 pb-24">
+        <div className="mt-6 mb-4">
+          <p className="text-xs text-slate-400 mb-0.5">{board.menu_group}</p>
+          <h1 className="text-2xl font-bold">{board.name}</h1>
+        </div>
+        <CalendarView events={events} slug={slug} />
+        <WriteButton slug={slug} writeRoles={board.write_roles} variant="fab" />
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-4 pb-24">
