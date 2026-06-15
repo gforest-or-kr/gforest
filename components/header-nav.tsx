@@ -19,22 +19,30 @@ export default function HeaderNav({ boards, staticPages }: Props) {
   const router = useRouter();
 
   // 개인화(세션 role)는 클라에서 — layout이 쿠키를 안 읽어 페이지 ISR이 가능해진다.
+  // 헤더는 layout에 상주해 클라 네비게이션에도 remount되지 않으므로, 1회 검사가 아니라
+  // onAuthStateChange를 '구독'해야 로그인/로그아웃이 즉시 반영된다(최초 1회는 INITIAL_SESSION으로 처리).
   useEffect(() => {
     let active = true;
-    (async () => {
-      const supabase = createClient();
-      const { data } = await supabase.auth.getClaims();
-      const uid = data?.claims?.sub;
-      if (!uid) return;
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("nickname, role")
-        .eq("id", uid)
-        .single();
-      if (active && p) setProfile({ nickname: p.nickname, role: p.role });
-    })();
+    const supabase = createClient();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id;
+      if (!uid) {
+        if (active) setProfile(null);
+        return;
+      }
+      // 콜백 안에서 supabase를 직접 await하면 인증 락과 엉킬 수 있어 다음 틱으로 미룬다
+      setTimeout(async () => {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("nickname, role")
+          .eq("id", uid)
+          .single();
+        if (active) setProfile(p ? { nickname: p.nickname, role: p.role } : null);
+      }, 0);
+    });
     return () => {
       active = false;
+      sub.subscription.unsubscribe();
     };
   }, []);
 
