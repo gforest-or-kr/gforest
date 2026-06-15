@@ -67,11 +67,15 @@ jobs:
 
       - name: Discord 알림 (성공)
         if: success() && github.event_name == 'push'
+        env:
+          MSG: ${{ github.event.head_commit.message }}
         run: |
-          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" -H "Content-Type: application/json" -d "{
-            \"username\": \"gforest-bot\",
-            \"content\": \"✅ **배포 성공** (production) — \`${GITHUB_SHA:0:7}\`\nhttps://gforest.vercel.app\"
-          }"
+          # 커밋 메시지 첫 줄만, 100자 초과 시 축약. jq로 안전하게 이스케이프(따옴표·백틱 등)
+          title=$(printf '%s' "$MSG" | head -n1)
+          if [ "${#title}" -gt 100 ]; then title="${title:0:100}…"; fi
+          jq -n --arg sha "${GITHUB_SHA:0:7}" --arg msg "$title" \
+            '{username:"gforest-bot", content:("✅ **배포 성공** (production) — `" + $sha + "`\n" + $msg)}' \
+            | curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" -H "Content-Type: application/json" -d @-
 
       - name: Discord 알림 (실패)
         if: failure()
