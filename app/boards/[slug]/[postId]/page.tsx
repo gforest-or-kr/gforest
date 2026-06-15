@@ -1,72 +1,17 @@
-import { Suspense } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { publicClient } from "@/lib/supabase/public";
-import { getSessionProfile } from "@/lib/auth";
-import { canReadBoard } from "@/lib/menu";
 import { getBoardMeta, getPostDetail } from "@/lib/boards";
-import { fullDate } from "@/lib/format";
-import AccessNotice from "@/components/access-notice";
-import ViewCounter from "@/components/view-counter";
-import PostActions from "@/components/post-actions";
-import CommentSection from "@/components/comment-section";
-import PostError from "@/components/post-error";
-import { deletePost } from "../actions";
+import PostView from "@/components/post-view";
+import MemberPostLoader from "@/components/member-post-loader";
 
-// 이 라우트는 공개 글과 권한(회원) 글을 모두 서빙한다. 권한 글은 RLS 위해 쿠키를 읽어야
-// 하는데, ISR(revalidate) 라우트에서 쿠키를 읽으면 프로덕션 500(DYNAMIC_SERVER_USAGE)이 난다
-// (docs/design/rendering.md). 그래서 동적 렌더로 둔다 — 공개 글 속도는 getPostDetail의
-// 데이터 캐시(revalidate 300 + 태그 무효화)가 유지하고, 첨부 서명 URL은 매 렌더마다 신선하다.
-export const dynamic = "force-dynamic";
-
-type Detail = NonNullable<Awaited<ReturnType<typeof getPostDetail>>>;
-
-// 권한 게시판 글 — 쿠키 세션(RLS)으로 동적 조회. getPostDetail(publicClient)은 anon이라
-// 권한 글을 못 읽으므로 별도 경로.
-async function fetchPostDynamic(slug: string, postId: string): Promise<Detail | null> {
-  const supabase = await createClient();
-  const { data: post } = await supabase
-    .from("posts")
-    .select("*, author:profiles(id, nickname), boards!inner(slug)")
-    .eq("id", postId)
-    .eq("boards.slug", slug)
-    .is("deleted_at", null)
-    .single();
-  if (!post) return null;
-  const [{ data: comments }, { data: attachments }, { data: prevPost }, { data: nextPost }] =
-    await Promise.all([
-      supabase
-        .from("comments")
-        .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
-        .eq("post_id", postId)
-        .is("deleted_at", null)
-        .order("created_at"),
-      supabase
-        .from("attachments")
-        .select("id, file_name, byte_size, storage_path, mime_type")
-        .eq("post_id", postId)
-        .order("created_at"),
-      supabase
-        .from("posts")
-        .select("id, title")
-        .eq("board_id", post.board_id)
-        .is("deleted_at", null)
-        .lt("created_at", post.created_at)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("posts")
-        .select("id, title")
-        .eq("board_id", post.board_id)
-        .is("deleted_at", null)
-        .gt("created_at", post.created_at)
-        .order("created_at")
-        .limit(1)
-        .maybeSingle(),
-    ]);
-  return { post, comments: comments ?? [], attachments: attachments ?? [], prevPost, nextPost };
+// 정적 셸 + 클라 개인화 패턴(docs/design/rendering.md, 모바일 속도 개선 기록):
+// 페이지는 쿠키를 읽지 않아 ISR(●)로 유지 → router cache·prefetch가 살아 연속 전환이 즉시화된다.
+//  - 공개 게시판 글: 서버에서 getPostDetail(anon)로 렌더 → 엣지 캐시.
+//  - 권한(회원) 게시판 글: 쿠키를 서버에서 읽으면 ISR이 깨지므로(프로덕션 500), 본문은
+//    MemberPostLoader(클라)가 브라우저 세션(RLS)으로 가져와 렌더한다.
+export const revalidate = 300; // 첨부 서명 URL(1시간)보다 짧게
+export async function generateStaticParams() {
+  return []; // 온디맨드 ISR — 첫 방문 시 생성·캐시
 }
 
 export default async function PostPage({
@@ -78,143 +23,48 @@ export default async function PostPage({
   const board = await getBoardMeta(slug);
   if (!board) notFound();
 
-  let detail: Detail | null;
-  let signer: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof publicClient>;
-
-  if (board.read_roles === null) {
-    detail = await getPostDetail(slug, postId); // ISR 캐시
-    signer = publicClient();
-  } else {
-    const profile = await getSessionProfile();
-    if (!canReadBoard(board.read_roles, profile?.role ?? null)) {
-      return (
-        <main className="max-w-3xl mx-auto px-4">
-          <AccessNotice
-            boardName={board.name}
-            readRoles={board.read_roles ?? []}
-            loggedIn={!!profile}
-            returnTo={`/boards/${slug}/${postId}`}
-          />
-        </main>
-      );
-    }
-    detail = await fetchPostDynamic(slug, postId);
-    signer = await createClient();
+  // 권한 게시판: 페이지는 쿠키를 안 읽고, 본문만 클라에서 세션으로 로드 (ISR 유지)
+  if (board.read_roles !== null) {
+    return (
+      <MemberPostLoader
+        slug={slug}
+        postId={postId}
+        boardName={board.name}
+        readRoles={board.read_roles}
+        writeRoles={board.write_roles}
+      />
+    );
   }
 
+  // 공개 게시판: 서버에서 anon으로 렌더 (ISR 엣지 캐시)
+  const detail = await getPostDetail(slug, postId);
   if (!detail || !detail.post) notFound();
   const { post, comments, attachments, prevPost, nextPost } = detail;
-  const author = post.author as { id: string; nickname: string } | null;
 
-  // 첨부 서명 URL — ISR 주기(300s) < 서명 만료(1시간)이라 항상 유효
+  const signer = publicClient();
   const signed = await Promise.all(
     attachments.map(async (f) => {
       const { data } = await signer.storage.from("attachments").createSignedUrl(f.storage_path, 3600);
-      return { ...f, url: data?.signedUrl ?? null };
+      return {
+        id: f.id, file_name: f.file_name, byte_size: f.byte_size, mime_type: f.mime_type, url: data?.signedUrl ?? null,
+      };
     }),
   );
 
-  const deletePostAction = deletePost.bind(null, slug, postId);
-
   return (
-    <main className="max-w-3xl mx-auto px-4 pb-24">
-      <div className="mt-6 mb-4 flex items-center justify-between text-sm">
-        <Link href={`/boards/${slug}`} className="text-slate-500 hover:text-forest-700">
-          ← {board.name}
-        </Link>
-        <PostActions
-          slug={slug}
-          postId={postId}
-          authorId={author?.id ?? null}
-          deleteAction={deletePostAction}
-        />
-      </div>
-
-      <Suspense fallback={null}>
-        <PostError />
-      </Suspense>
-
-      <article>
-        <h1 className="text-2xl font-bold leading-snug">{post.title}</h1>
-        <p className="mt-2 text-sm text-slate-400">
-          {author?.nickname ?? "알 수 없음"} · {fullDate(post.created_at)} · 조회{" "}
-          <ViewCounter postId={postId} baseCount={post.view_count} />
-        </p>
-        {post.event_date && (
-          <p className="mt-2 inline-block rounded-xl bg-forest-50 text-forest-700 text-sm font-semibold px-3 py-1.5">
-            📅 일정: {post.event_date}
-          </p>
-        )}
-        {post.legacy_document_srl ? (
-          <div
-            // 레거시(XE/네이버) 본문은 고정폭 래퍼(div width:520px·layout table)와 인라인 width
-            // 이미지를 품는다. 이미지만 잡으면 래퍼가 그대로 넘치므로 [&_*]:max-w-full로 모든
-            // 자손을 컨테이너 폭으로 제한한다. 데이터 표는 자체 가로 스크롤(block+overflow)로.
-            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_*]:max-w-full [&_img]:h-auto [&_p]:my-2 [&_table]:block [&_table]:overflow-x-auto"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
-        ) : (
-          <div className="mt-6 pt-6 border-t border-slate-100 leading-relaxed whitespace-pre-wrap break-words">
-            {post.content}
-          </div>
-        )}
-
-        {signed.length > 0 && (
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4">
-            <p className="text-xs font-semibold text-slate-500 mb-2">📎 첨부 {signed.length}개</p>
-            <ul className="space-y-1.5">
-              {signed.map((f) => {
-                const isImage = f.mime_type?.startsWith("image/");
-                return (
-                  <li key={f.id} className="text-sm">
-                    {f.url ? (
-                      <a href={f.url} className="text-forest-700 hover:underline" download={f.file_name}>
-                        {f.file_name}
-                      </a>
-                    ) : (
-                      <span className="text-slate-400">{f.file_name} (권한 없음)</span>
-                    )}
-                    <span className="text-xs text-slate-400 ml-2">
-                      {(f.byte_size / 1024 / 1024).toFixed(2)}MB
-                    </span>
-                    {f.url && isImage && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={f.url}
-                        alt={f.file_name}
-                        loading="lazy"
-                        className="mt-2 max-w-full h-auto rounded-xl"
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </article>
-
-      <CommentSection
-        slug={slug}
-        postId={postId}
-        comments={comments}
-        writeRoles={board.write_roles}
-      />
-
-      <nav className="mt-10 border-t border-slate-100 divide-y divide-slate-50 text-sm">
-        {nextPost && (
-          <Link href={`/boards/${slug}/${nextPost.id}`} className="flex gap-3 py-3 hover:text-forest-700">
-            <span className="text-slate-400 shrink-0">다음글 ▲</span>
-            <span className="truncate">{nextPost.title}</span>
-          </Link>
-        )}
-        {prevPost && (
-          <Link href={`/boards/${slug}/${prevPost.id}`} className="flex gap-3 py-3 hover:text-forest-700">
-            <span className="text-slate-400 shrink-0">이전글 ▼</span>
-            <span className="truncate">{prevPost.title}</span>
-          </Link>
-        )}
-      </nav>
-    </main>
+    <PostView
+      slug={slug}
+      boardName={board.name}
+      writeRoles={board.write_roles}
+      post={{
+        id: post.id, title: post.title, content: post.content, view_count: post.view_count,
+        created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
+      }}
+      author={post.author as { id: string; nickname: string } | null}
+      attachments={signed}
+      comments={comments as Parameters<typeof PostView>[0]["comments"]}
+      prevPost={prevPost ?? null}
+      nextPost={nextPost ?? null}
+    />
   );
 }
