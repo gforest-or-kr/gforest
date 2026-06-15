@@ -1,18 +1,23 @@
 import { notFound } from "next/navigation";
-import { publicClient } from "@/lib/supabase/public";
+import { createClient } from "@/lib/supabase/server";
 import { getBoardMeta, getPostDetail } from "@/lib/boards";
-import PostView from "@/components/post-view";
-import MemberPostLoader from "@/components/member-post-loader";
+import { getSessionProfile } from "@/lib/auth";
+import { canReadBoard } from "@/lib/menu";
+import AccessNotice from "@/components/access-notice";
+import PostView, { type PostViewData } from "@/components/post-view";
 
-// 정적 셸 + 클라 개인화 패턴(docs/design/rendering.md, 모바일 속도 개선 기록):
-// 페이지는 쿠키를 읽지 않아 ISR(●)로 유지 → router cache·prefetch가 살아 연속 전환이 즉시화된다.
-//  - 공개 게시판 글: 서버에서 getPostDetail(anon)로 렌더 → 엣지 캐시.
-//  - 권한(회원) 게시판 글: 쿠키를 서버에서 읽으면 ISR이 깨지므로(프로덕션 500), 본문은
-//    MemberPostLoader(클라)가 브라우저 세션(RLS)으로 가져와 렌더한다.
-export const revalidate = 300; // 첨부 서명 URL(1시간)보다 짧게
+// 공개글·회원글을 한 라우트에서 모두 "서버 렌더"한다. 핵심: 라우트에 revalidate를 두지 않는다.
+//  - 공개 게시판 글: 쿠키를 안 읽어 정적 생성(●) → 엣지 캐시·prefetch (연속 전환 즉시).
+//  - 권한(회원) 게시판 글: 쿠키(세션)를 읽어 동적 SSR → DB 한 번에 렌더(XE처럼 빠름, 클라 워터폴 없음).
+//    같은 라우트지만 cookies 사용 여부로 Next가 요청별로 정적/동적을 자동 결정한다.
+//    (revalidate를 두면 ISR로 강제돼 회원글의 쿠키 읽기가 프로덕션 500 — docs/design/rendering.md)
+// 신선도: 글 편집·댓글 시 revalidateTag('post:id')가 공개 정적글을 무효화한다(시간 revalidate 불필요).
+// 첨부 서명 URL은 본문에 박지 않고 /dl/{id} 프록시로 빼서, 정적 캐시가 만료 URL을 동결하지 않게 한다.
 export async function generateStaticParams() {
-  return []; // 온디맨드 ISR — 첫 방문 시 생성·캐시
+  return []; // 온디맨드 — 첫 방문 시 공개글은 생성·캐시, 회원글은 동적 SSR
 }
+
+type Att = PostViewData["attachments"][number];
 
 export default async function PostPage({
   params,
@@ -23,48 +28,87 @@ export default async function PostPage({
   const board = await getBoardMeta(slug);
   if (!board) notFound();
 
-  // 권한 게시판: 페이지는 쿠키를 안 읽고, 본문만 클라에서 세션으로 로드 (ISR 유지)
-  if (board.read_roles !== null) {
-    return (
-      <MemberPostLoader
-        slug={slug}
-        postId={postId}
-        boardName={board.name}
-        readRoles={board.read_roles}
-        writeRoles={board.write_roles}
-      />
-    );
+  let data: Omit<PostViewData, "slug" | "boardName" | "writeRoles">;
+
+  if (board.read_roles === null) {
+    // 공개글 — anon + 캐시(정적)
+    const detail = await getPostDetail(slug, postId);
+    if (!detail || !detail.post) notFound();
+    data = {
+      post: pick(detail.post),
+      author: detail.post.author as PostViewData["author"],
+      attachments: (detail.attachments as Att[]) ?? [],
+      comments: detail.comments as PostViewData["comments"],
+      prevPost: detail.prevPost ?? null,
+      nextPost: detail.nextPost ?? null,
+    };
+  } else {
+    // 회원글 — 세션(RLS)으로 동적 SSR
+    const profile = await getSessionProfile();
+    if (!canReadBoard(board.read_roles, profile?.role ?? null)) {
+      return (
+        <main className="max-w-3xl mx-auto px-4">
+          <AccessNotice
+            boardName={board.name}
+            readRoles={board.read_roles}
+            loggedIn={!!profile}
+            returnTo={`/boards/${slug}/${postId}`}
+          />
+        </main>
+      );
+    }
+    data = await fetchMemberPost(slug, postId);
   }
 
-  // 공개 게시판: 서버에서 anon으로 렌더 (ISR 엣지 캐시)
-  const detail = await getPostDetail(slug, postId);
-  if (!detail || !detail.post) notFound();
-  const { post, comments, attachments, prevPost, nextPost } = detail;
+  return <PostView slug={slug} boardName={board.name} writeRoles={board.write_roles} {...data} />;
+}
 
-  const signer = publicClient();
-  const signed = await Promise.all(
-    attachments.map(async (f) => {
-      const { data } = await signer.storage.from("attachments").createSignedUrl(f.storage_path, 3600);
-      return {
-        id: f.id, file_name: f.file_name, byte_size: f.byte_size, mime_type: f.mime_type, url: data?.signedUrl ?? null,
-      };
-    }),
-  );
+function pick(post: {
+  id: string; title: string; content: string; view_count: number;
+  created_at: string; event_date: string | null; legacy_document_srl: number | null;
+}): PostViewData["post"] {
+  return {
+    id: post.id, title: post.title, content: post.content, view_count: post.view_count,
+    created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
+  };
+}
 
-  return (
-    <PostView
-      slug={slug}
-      boardName={board.name}
-      writeRoles={board.write_roles}
-      post={{
-        id: post.id, title: post.title, content: post.content, view_count: post.view_count,
-        created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
-      }}
-      author={post.author as { id: string; nickname: string } | null}
-      attachments={signed}
-      comments={comments as Parameters<typeof PostView>[0]["comments"]}
-      prevPost={prevPost ?? null}
-      nextPost={nextPost ?? null}
-    />
-  );
+async function fetchMemberPost(slug: string, postId: string) {
+  const supabase = await createClient();
+  const { data: post } = await supabase
+    .from("posts")
+    .select("*, author:profiles(id, nickname), boards!inner(slug)")
+    .eq("id", postId)
+    .eq("boards.slug", slug)
+    .is("deleted_at", null)
+    .single();
+  if (!post) notFound();
+
+  const [{ data: comments }, { data: attachments }, { data: prevPost }, { data: nextPost }] =
+    await Promise.all([
+      supabase
+        .from("comments")
+        .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
+        .eq("post_id", postId)
+        .is("deleted_at", null)
+        .order("created_at"),
+      supabase
+        .from("attachments")
+        .select("id, file_name, byte_size, mime_type")
+        .eq("post_id", postId)
+        .order("created_at"),
+      supabase.from("posts").select("id, title").eq("board_id", post.board_id).is("deleted_at", null)
+        .lt("created_at", post.created_at).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("posts").select("id, title").eq("board_id", post.board_id).is("deleted_at", null)
+        .gt("created_at", post.created_at).order("created_at").limit(1).maybeSingle(),
+    ]);
+
+  return {
+    post: pick(post),
+    author: post.author as PostViewData["author"],
+    attachments: (attachments as Att[]) ?? [],
+    comments: (comments ?? []) as PostViewData["comments"],
+    prevPost: prevPost ?? null,
+    nextPost: nextPost ?? null,
+  };
 }

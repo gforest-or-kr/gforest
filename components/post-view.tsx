@@ -23,7 +23,8 @@ export type PostViewData = {
     legacy_document_srl: number | null;
   };
   author: { id: string; nickname: string } | null;
-  attachments: { id: string; file_name: string; byte_size: number; mime_type: string | null; url: string | null }[];
+  // 서명 URL을 본문에 박지 않는다(정적 캐시 동결 방지). 다운로드는 /dl/{id} 프록시로.
+  attachments: { id: string; file_name: string; byte_size: number; mime_type: string | null }[];
   comments: Parameters<typeof CommentSection>[0]["comments"];
   prevPost: { id: string; title: string } | null;
   nextPost: { id: string; title: string } | null;
@@ -86,17 +87,13 @@ export default function PostView({
                 const isImage = f.mime_type?.startsWith("image/");
                 return (
                   <li key={f.id} className="text-sm">
-                    {f.url ? (
-                      <a href={f.url} className="text-forest-700 hover:underline" download={f.file_name}>
-                        {f.file_name}
-                      </a>
-                    ) : (
-                      <span className="text-slate-400">{f.file_name} (권한 없음)</span>
-                    )}
+                    <a href={`/dl/${f.id}`} className="text-forest-700 hover:underline">
+                      {f.file_name}
+                    </a>
                     <span className="text-xs text-slate-400 ml-2">{(f.byte_size / 1024 / 1024).toFixed(2)}MB</span>
-                    {f.url && isImage && (
+                    {isImage && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={f.url} alt={f.file_name} loading="lazy" className="mt-2 max-w-full h-auto rounded-xl" />
+                      <img src={`/dl/${f.id}?inline=1`} alt={f.file_name} loading="lazy" className="mt-2 max-w-full h-auto rounded-xl" />
                     )}
                   </li>
                 );
