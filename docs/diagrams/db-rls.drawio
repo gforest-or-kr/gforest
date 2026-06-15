@@ -1,0 +1,50 @@
+<mxfile host="app.diagrams.net" modified="2026-06-15T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="db-rls" id="rls-1">
+    <mxGraphModel dx="1000" dy="700" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="caption" value="어떤 경로로 들어오든 권한은 DB 한 곳에서 강제된다" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#1d6845;align=center;" vertex="1" parent="1">
+          <mxGeometry x="120" y="30" width="580" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- 진입 경로 3개 -->
+        <mxCell id="app" value="앱 (서버 컴포넌트·액션)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="90" width="200" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" value="관리 도구" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="90" width="200" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="sql" value="직접 SQL 쿼리" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="560" y="90" width="200" height="56" as="geometry" />
+        </mxCell>
+
+        <!-- DB + RLS -->
+        <mxCell id="dbbox" value="🟩 PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;verticalAlign=top;fontSize=14;fontStyle=1;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="230" y="250" width="360" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="rls" value="🔒 RLS 정책&#10;행(row) 단위로 읽기/쓰기를 허용·차단&#10;can_read_board() · can_write_board()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1d6845;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="255" y="295" width="310" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="data" value="데이터(행)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#2f9e6e;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="335" y="375" width="150" height="32" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.2;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="app" target="dbbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="admin" target="dbbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.8;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sql" target="dbbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="대비: 전통 방식은 인가가 각 앱 코드에 흩어져 있어, 한 군데라도 빠뜨리면 그 경로로 데이터가 샌다.&#10;RLS는 앱 코드가 뚫려도 DB가 막는다 → 앱의 권한 검사는 UI 노출(메뉴·버튼)만 담당." style="text;html=1;fontSize=11;fontColor=#475569;align=center;" vertex="1" parent="1">
+          <mxGeometry x="60" y="450" width="700" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

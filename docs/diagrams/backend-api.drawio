@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" modified="2026-06-15T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="backend-api" id="be-1">
+    <mxGraphModel dx="1000" dy="760" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 전통 -->
+        <mxCell id="tradTitle" value="전통 — API 서버를 거친다" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#475569;align=center;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="380" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="tReact" value="React (브라우저)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="80" width="200" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="tSpring" value="Spring — Controller→Service→Repository" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e6;strokeColor=#cc7a00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="190" width="280" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="tDB" value="DB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="310" width="120" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="te1" value="HTTP REST 호출" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#cc7a00;fontSize=12;" edge="1" parent="1" source="tReact" target="tSpring">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te2" value="JPA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=12;" edge="1" parent="1" source="tSpring" target="tDB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tNote" value="인가: 코드 곳곳(@PreAuthorize 등)" style="text;html=1;fontSize=11;fontColor=#cc7a00;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="262" width="280" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 구분선 -->
+        <mxCell id="divider" value="" style="endArrow=none;html=1;strokeColor=#cbd5e1;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="40" as="sourcePoint" />
+            <mxPoint x="450" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 이 프로젝트 -->
+        <mxCell id="nTitle" value="이 프로젝트 — API 경계가 함수 호출로 흡수" style="text;html=1;fontSize=13;fontStyle=1;fontColor=#1d6845;align=center;" vertex="1" parent="1">
+          <mxGeometry x="480" y="40" width="400" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="nRead" value="서버 컴포넌트 (읽기)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="80" width="180" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="nWrite" value="클라 폼 → 서버 액션 (쓰기)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="180" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="nDB" value="🟩 Postgres + RLS&#10;(인가를 DB가 강제)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#1d6845;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="590" y="280" width="200" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="ne1" value="DB 직접 조회" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="nRead" target="nDB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ne2" value="함수 호출(RPC 같이)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="nWrite" target="nDB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="nNote" value="별도 REST API 프로젝트·엔드포인트·HTTP 호출이 없음&#10;(외부 연동만 라우트 핸들러로)" style="text;html=1;fontSize=11;fontColor=#1d6845;align=center;" vertex="1" parent="1">
+          <mxGeometry x="480" y="400" width="400" height="34" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
