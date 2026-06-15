@@ -14,11 +14,11 @@ import CommentSection from "@/components/comment-section";
 import PostError from "@/components/post-error";
 import { deletePost } from "../actions";
 
-// 공개 게시판 글은 ISR(prefetch 작동), 권한 게시판 글은 쿠키를 읽어 동적 렌더된다.
-export const revalidate = 300; // 첨부 서명 URL(1시간)보다 짧게 → 항상 유효
-export async function generateStaticParams() {
-  return []; // 온디맨드 ISR — 첫 방문 시 생성·캐시
-}
+// 이 라우트는 공개 글과 권한(회원) 글을 모두 서빙한다. 권한 글은 RLS 위해 쿠키를 읽어야
+// 하는데, ISR(revalidate) 라우트에서 쿠키를 읽으면 프로덕션 500(DYNAMIC_SERVER_USAGE)이 난다
+// (docs/design/rendering.md). 그래서 동적 렌더로 둔다 — 공개 글 속도는 getPostDetail의
+// 데이터 캐시(revalidate 300 + 태그 무효화)가 유지하고, 첨부 서명 URL은 매 렌더마다 신선하다.
+export const dynamic = "force-dynamic";
 
 type Detail = NonNullable<Awaited<ReturnType<typeof getPostDetail>>>;
 
