@@ -1,19 +1,19 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getBoardMeta, getPostDetail } from "@/lib/boards";
-import { getSessionProfile } from "@/lib/auth";
-import { canReadBoard } from "@/lib/menu";
-import AccessNotice from "@/components/access-notice";
 import PostView, { type PostViewData } from "@/components/post-view";
+import MemberPostLoader from "@/components/member-post-loader";
 
-// 공개글·회원글을 한 라우트에서 모두 "서버 렌더"한다. 이 라우트는 동적(ƒ)이다.
-//  - generateStaticParams가 있으면 라우트가 정적(●)으로 확정돼, 회원글의 쿠키(세션) 읽기가
-//    프로덕션 런타임 정적 생성 시점에 DYNAMIC_SERVER_USAGE를 던지며 500이 난다(검증됨).
-//    Next 16 안정판에선 한 라우트가 "정적+쿠키동적"을 요청별로 자동 결정하지 못한다(그건 PPR).
-//  - 그래서 라우트 전체를 동적 SSR로 두되, 공개글은 데이터 레이어 캐시(getPostDetail의
-//    unstable_cache, 태그 post:id/board:slug)로 TTFB를 낮춘다 → 회원글은 세션 SSR로 한 번에 렌더.
-// 신선도: 글 편집·댓글 시 revalidateTag('post:id','max')가 공개글 데이터 캐시를 무효화한다.
-// 첨부 서명 URL은 본문에 박지 않고 /dl/{id} 프록시로 빼서, 캐시가 만료 URL을 동결하지 않게 한다.
+// 정적 셸 + 클라 개인화 — 페이지는 쿠키를 안 읽어 정적(●)으로 유지된다(공개·회원 둘 다 빠름).
+//  - 공개 게시판 글: 서버 anon(getPostDetail, 데이터 캐시)로 "풀 렌더" → 엣지 캐시·전체 prefetch
+//    → 목록↔글 soft-nav 즉시 전환(중앙값 ~110ms).
+//  - 권한(회원) 게시판 글: 서버가 쿠키를 읽으면 ● 라우트가 프로덕션 500(docs/design/rendering.md 9).
+//    그래서 본문만 MemberPostLoader(클라)가 브라우저 세션(RLS)으로 "단일 왕복"에 가져온다(XE급).
+// 분기는 board.read_roles(공개 메타, 쿠키 아님)로만 하므로 페이지는 모든 사용자에게 동일=정적.
+// 첨부는 /dl/{id} 프록시 링크만 본문에 둔다(만료되는 서명 URL을 정적 HTML에 동결하지 않음).
+export async function generateStaticParams() {
+  return []; // 온디맨드 — 공개글은 첫 방문 시 생성·캐시, 회원글 셸도 정적
+}
+
 type Att = PostViewData["attachments"][number];
 
 export default async function PostPage({
@@ -25,39 +25,36 @@ export default async function PostPage({
   const board = await getBoardMeta(slug);
   if (!board) notFound();
 
-  let data: Omit<PostViewData, "slug" | "boardName" | "writeRoles">;
-
-  if (board.read_roles === null) {
-    // 공개글 — anon + 캐시(정적)
-    const detail = await getPostDetail(slug, postId);
-    if (!detail || !detail.post) notFound();
-    data = {
-      post: pick(detail.post),
-      author: detail.post.author as PostViewData["author"],
-      attachments: (detail.attachments as Att[]) ?? [],
-      comments: detail.comments as PostViewData["comments"],
-      prevPost: detail.prevPost ?? null,
-      nextPost: detail.nextPost ?? null,
-    };
-  } else {
-    // 회원글 — 세션(RLS)으로 동적 SSR
-    const profile = await getSessionProfile();
-    if (!canReadBoard(board.read_roles, profile?.role ?? null)) {
-      return (
-        <main className="max-w-3xl mx-auto px-4">
-          <AccessNotice
-            boardName={board.name}
-            readRoles={board.read_roles}
-            loggedIn={!!profile}
-            returnTo={`/boards/${slug}/${postId}`}
-          />
-        </main>
-      );
-    }
-    data = await fetchMemberPost(slug, postId);
+  // 권한 게시판: 페이지는 쿠키를 안 읽고 본문만 클라 세션으로 로드 (● 유지)
+  if (board.read_roles !== null) {
+    return (
+      <MemberPostLoader
+        slug={slug}
+        postId={postId}
+        boardId={board.id}
+        boardName={board.name}
+        readRoles={board.read_roles}
+        writeRoles={board.write_roles}
+      />
+    );
   }
 
-  return <PostView slug={slug} boardName={board.name} writeRoles={board.write_roles} {...data} />;
+  // 공개 게시판: 서버 anon 렌더 (정적 엣지 캐시)
+  const detail = await getPostDetail(slug, postId);
+  if (!detail || !detail.post) notFound();
+  return (
+    <PostView
+      slug={slug}
+      boardName={board.name}
+      writeRoles={board.write_roles}
+      post={pick(detail.post)}
+      author={detail.post.author as PostViewData["author"]}
+      attachments={(detail.attachments as Att[]) ?? []}
+      comments={detail.comments as PostViewData["comments"]}
+      prevPost={detail.prevPost ?? null}
+      nextPost={detail.nextPost ?? null}
+    />
+  );
 }
 
 function pick(post: {
@@ -67,45 +64,5 @@ function pick(post: {
   return {
     id: post.id, title: post.title, content: post.content, view_count: post.view_count,
     created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
-  };
-}
-
-async function fetchMemberPost(slug: string, postId: string) {
-  const supabase = await createClient();
-  const { data: post } = await supabase
-    .from("posts")
-    .select("*, author:profiles(id, nickname), boards!inner(slug)")
-    .eq("id", postId)
-    .eq("boards.slug", slug)
-    .is("deleted_at", null)
-    .single();
-  if (!post) notFound();
-
-  const [{ data: comments }, { data: attachments }, { data: prevPost }, { data: nextPost }] =
-    await Promise.all([
-      supabase
-        .from("comments")
-        .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
-        .eq("post_id", postId)
-        .is("deleted_at", null)
-        .order("created_at"),
-      supabase
-        .from("attachments")
-        .select("id, file_name, byte_size, mime_type")
-        .eq("post_id", postId)
-        .order("created_at"),
-      supabase.from("posts").select("id, title").eq("board_id", post.board_id).is("deleted_at", null)
-        .lt("created_at", post.created_at).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("posts").select("id, title").eq("board_id", post.board_id).is("deleted_at", null)
-        .gt("created_at", post.created_at).order("created_at").limit(1).maybeSingle(),
-    ]);
-
-  return {
-    post: pick(post),
-    author: post.author as PostViewData["author"],
-    attachments: (attachments as Att[]) ?? [],
-    comments: (comments ?? []) as PostViewData["comments"],
-    prevPost: prevPost ?? null,
-    nextPost: nextPost ?? null,
   };
 }
