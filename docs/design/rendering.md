@@ -13,10 +13,10 @@
 
 | 페이지 | 렌더 | 이유 |
 |---|---|---|
-| 글 상세 `/boards/[slug]/[postId]` (공개 게시판) | **ISR(●)** `revalidate=300` | 내용이 거의 안 바뀜 → 정적 + 5분 재생성. 목록→글 soft-nav 중앙값 928ms→110ms |
-| 글 상세 (권한 게시판) | 동적(ƒ) | 읽기 권한 검사에 쿠키가 필요 → 의도적으로 동적 (`fetchPostDynamic`) |
+| 글 상세 `/boards/[slug]/[postId]` | **동적(ƒ)** | 한 라우트가 공개글(쿠키X)·회원글(쿠키O)을 모두 서버 렌더. 회원글 권한검사가 쿠키를 읽으므로 라우트 전체가 동적이어야 한다(아래 9). 공개글은 `getPostDetail`의 `unstable_cache`로 TTFB를 낮춤(prod 실측 ~0.42s) |
 | 게시판 목록 `/boards/[slug]` | 동적(ƒ) | `searchParams`(페이지·검색) 의존 |
 | 글쓰기/수정/관리/마이페이지 | 동적(ƒ) | 인증·폼 |
+| 글소개 `/intro/[slug]` | ISR(●) `revalidate=600` | 쿠키 안 읽는 순수 공개 콘텐츠 |
 
 ## 2. ⚠️ 절대 규칙 — layout과 ISR 페이지는 쿠키를 읽지 말 것
 
@@ -104,3 +104,21 @@ unstable_cache·서버액션·`useSearchParams` 전부 무죄였고, 진범은 *
 재발 방지로 5의 CI 게이트를 추가했다. 추가 교훈: **배포 실패 시 짧은 간격으로 재트리거하지
 말 것** — `concurrency: cancel-in-progress`와 맞물려 Vercel 배포 큐가 꼬여 `vercel deploy`가
 hang한다. 복구는 대시보드에서 직전 정상 배포를 Promote.
+
+## 9. 사고 기록 (2026-06-15) — 글 상세 라우트는 `ƒ` 하나로 통일
+
+GFM-47에서 "공개글은 정적(●)·회원글은 동적, **한 라우트가 요청별로 자동 결정**"을 노렸다.
+`generateStaticParams(){return []}` + `revalidate` 제거로 되는 줄 알았으나, **회원 게시판 글이
+프로덕션에서만 500**이 났다(공개글·로컬 next start·빌드는 전부 정상 — `notice`만 스모크해서
+못 잡음). 원인: `generateStaticParams`가 있으면 빌드가 라우트를 **정적(●)으로 확정**하고,
+회원글 권한검사의 쿠키 읽기가 런타임 정적 생성 시점에 `DYNAMIC_SERVER_USAGE`를 던진다.
+**Next 16 안정판은 한 라우트의 "정적+쿠키동적" 요청별 자동결정을 지원하지 않는다 — 그게
+PPR이고 보류 상태다(7).** 해결: `generateStaticParams` 제거 → 라우트 전체 `ƒ`(동적 SSR).
+공개글 속도는 `getPostDetail`의 `unstable_cache`(데이터 캐시)로 흡수(prod 직접 TTFB ~0.42s,
+정적 HIT 0.43s와 거의 동일). 잃은 것은 공개글 **soft-nav 전체 prefetch**(즉시 전환)뿐 —
+이제 `loading.tsx` 스켈레톤 후 ~0.4s. 재발 방지로 스모크에 **멤버 게시판 더미 UUID 경로
+비로그인 200** 검사를 추가(`isr-smoke.sh`).
+
+> 공개글 soft-nav 즉시성을 되살리려면 공개=`●`/회원=동적으로 **라우트를 물리적으로 분리**
+> (미들웨어 rewrite 또는 회원 콘텐츠를 단일 RPC 클라 아일랜드로)해야 하는데, 무인운영·단순함
+> 원칙과의 트레이드오프라 현재는 통일 `ƒ`를 채택. PPR 정식 승격 시 (7)과 함께 재검토.
