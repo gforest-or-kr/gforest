@@ -57,6 +57,21 @@ if ! grep -qE '<h1[^>]*>[^<]+</h1>' "$BODY"; then
   echo "::error::글 상세에 제목(h1)이 없음 — 렌더 실패 의심"; fail=1
 fi
 
+# 회원 게시판 글 경로 — 비로그인으로 요청해도 500이 아니라 200(권한 안내 SSR)이어야 한다.
+# 글 상세 라우트는 권한검사에 쿠키(세션)를 읽는다. 라우트가 정적(●)이면 그 쿠키 읽기가
+# 프로덕션 런타임 생성 시점에 DYNAMIC_SERVER_USAGE를 던져 500이 난다(GFM-47 사고).
+# 공개글만 검사하면 이 회귀를 놓친다. 더미 UUID면 충분하다 — 권한검사(쿠키)가 글 조회보다
+# 먼저 일어나 비로그인은 AccessNotice(200)로 끝나므로, 실제 멤버 글 ID가 없어도 경로가 탄다.
+MBOARD="${SMOKE_MEMBER_BOARD:-free}"
+MPOST="/boards/$MBOARD/00000000-0000-0000-0000-000000000000"
+echo "▶ 멤버 게시판 경로(비로그인, 더미 ID): $MPOST"
+MCODE=$(curl -s -o "$BODY" -w '%{http_code}' "$BASE$MPOST")
+echo "▶ 멤버 글 상세(비로그인) HTTP $MCODE"
+[ "$MCODE" = "200" ] || { echo "::error::멤버 글 비로그인 HTTP $MCODE (200 권한안내 아님 — 라우트가 정적인데 쿠키 읽음 의심)"; fail=1; }
+if grep -q "DYNAMIC_SERVER_USAGE" "$BODY"; then
+  echo "::error::멤버 글에서 DYNAMIC_SERVER_USAGE 검출 — 라우트가 동적(ƒ)이 아님"; fail=1
+fi
+
 if [ "$fail" = 0 ]; then
   echo "✅ ISR 스모크 통과 (글 상세 200 + 제목 렌더 + 동적오류 없음)"
 else

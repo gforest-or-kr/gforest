@@ -6,17 +6,14 @@ import { canReadBoard } from "@/lib/menu";
 import AccessNotice from "@/components/access-notice";
 import PostView, { type PostViewData } from "@/components/post-view";
 
-// 공개글·회원글을 한 라우트에서 모두 "서버 렌더"한다. 핵심: 라우트에 revalidate를 두지 않는다.
-//  - 공개 게시판 글: 쿠키를 안 읽어 정적 생성(●) → 엣지 캐시·prefetch (연속 전환 즉시).
-//  - 권한(회원) 게시판 글: 쿠키(세션)를 읽어 동적 SSR → DB 한 번에 렌더(XE처럼 빠름, 클라 워터폴 없음).
-//    같은 라우트지만 cookies 사용 여부로 Next가 요청별로 정적/동적을 자동 결정한다.
-//    (revalidate를 두면 ISR로 강제돼 회원글의 쿠키 읽기가 프로덕션 500 — docs/design/rendering.md)
-// 신선도: 글 편집·댓글 시 revalidateTag('post:id')가 공개 정적글을 무효화한다(시간 revalidate 불필요).
-// 첨부 서명 URL은 본문에 박지 않고 /dl/{id} 프록시로 빼서, 정적 캐시가 만료 URL을 동결하지 않게 한다.
-export async function generateStaticParams() {
-  return []; // 온디맨드 — 첫 방문 시 공개글은 생성·캐시, 회원글은 동적 SSR
-}
-
+// 공개글·회원글을 한 라우트에서 모두 "서버 렌더"한다. 이 라우트는 동적(ƒ)이다.
+//  - generateStaticParams가 있으면 라우트가 정적(●)으로 확정돼, 회원글의 쿠키(세션) 읽기가
+//    프로덕션 런타임 정적 생성 시점에 DYNAMIC_SERVER_USAGE를 던지며 500이 난다(검증됨).
+//    Next 16 안정판에선 한 라우트가 "정적+쿠키동적"을 요청별로 자동 결정하지 못한다(그건 PPR).
+//  - 그래서 라우트 전체를 동적 SSR로 두되, 공개글은 데이터 레이어 캐시(getPostDetail의
+//    unstable_cache, 태그 post:id/board:slug)로 TTFB를 낮춘다 → 회원글은 세션 SSR로 한 번에 렌더.
+// 신선도: 글 편집·댓글 시 revalidateTag('post:id','max')가 공개글 데이터 캐시를 무효화한다.
+// 첨부 서명 URL은 본문에 박지 않고 /dl/{id} 프록시로 빼서, 캐시가 만료 URL을 동결하지 않게 한다.
 type Att = PostViewData["attachments"][number];
 
 export default async function PostPage({
