@@ -69,8 +69,10 @@ export default function PostView({
         )}
         {post.legacy_document_srl ? (
           <div
-            // 레거시 본문은 고정폭 래퍼·인라인 width 이미지를 품어 [&_*]:max-w-full로 모든 자손을 폭 제한
-            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_*]:max-w-full [&_img]:h-auto [&_p]:my-2 [&_table]:block [&_table]:overflow-x-auto"
+            // 레거시 본문은 고정폭 래퍼·인라인 width 이미지를 품어 [&_*]:max-w-full로 모든 자손을 폭 제한.
+            // ol/ul 들여쓰기 복원([&_ol/ul]:pl-6): Tailwind preflight가 list padding을 0으로 리셋해
+            // outside 마커(1.·•)가 컨테이너 왼쪽 끝에 붙어 "여백 없음"으로 보였다(특히 iOS Safari/WebKit).
+            className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_*]:max-w-full [&_img]:h-auto [&_p]:my-2 [&_table]:block [&_table]:overflow-x-auto [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
         ) : (
