@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { buildMenu, ROLE_LABEL } from "@/lib/menu";
+import { avatarUrl } from "@/lib/avatar";
 import type { getMenuData } from "@/lib/menu-data";
 import type { Database } from "@/lib/supabase/types";
 
@@ -14,7 +15,11 @@ type Props = Awaited<ReturnType<typeof getMenuData>>;
 export default function HeaderNav({ boards, staticPages }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null); // 데스크탑 드롭다운 (클릭 토글 — 호버 의존 금지)
-  const [profile, setProfile] = useState<{ nickname: string; role: AppRole } | null>(null);
+  const [profile, setProfile] = useState<{
+    nickname: string;
+    role: AppRole;
+    avatar_path: string | null;
+  } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -34,10 +39,11 @@ export default function HeaderNav({ boards, staticPages }: Props) {
       setTimeout(async () => {
         const { data: p } = await supabase
           .from("profiles")
-          .select("nickname, role")
+          .select("nickname, role, avatar_path")
           .eq("id", uid)
           .single();
-        if (active) setProfile(p ? { nickname: p.nickname, role: p.role } : null);
+        if (active)
+          setProfile(p ? { nickname: p.nickname, role: p.role, avatar_path: p.avatar_path } : null);
       }, 0);
     });
     return () => {
@@ -121,9 +127,18 @@ export default function HeaderNav({ boards, staticPages }: Props) {
                 href="/me"
                 className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 text-sm font-medium"
               >
-                <span className="w-7 h-7 rounded-full bg-forest-100 text-forest-700 grid place-items-center text-xs font-bold">
-                  {profile.nickname.slice(0, 1)}
-                </span>
+                {avatarUrl(profile.avatar_path) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl(profile.avatar_path)!}
+                    alt=""
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="w-7 h-7 rounded-full bg-forest-100 text-forest-700 grid place-items-center text-xs font-bold">
+                    {profile.nickname.slice(0, 1)}
+                  </span>
+                )}
                 <span className="hidden sm:block">{profile.nickname}</span>
               </Link>
             ) : (
@@ -157,9 +172,18 @@ export default function HeaderNav({ boards, staticPages }: Props) {
         <div className="p-4 space-y-1 text-[15px]">
           {profile ? (
             <div className="flex items-center gap-3 p-3 mb-2 rounded-2xl bg-forest-50">
-              <span className="w-10 h-10 rounded-full bg-forest-600 text-white grid place-items-center font-bold">
-                {profile.nickname.slice(0, 1)}
-              </span>
+              {avatarUrl(profile.avatar_path) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl(profile.avatar_path)!}
+                  alt=""
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <span className="w-10 h-10 rounded-full bg-forest-600 text-white grid place-items-center font-bold">
+                  {profile.nickname.slice(0, 1)}
+                </span>
+              )}
               <div>
                 <p className="font-semibold">{profile.nickname}님</p>
                 <p className="text-xs text-slate-500">{ROLE_LABEL[profile.role]}</p>

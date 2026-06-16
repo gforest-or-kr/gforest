@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/menu";
 import { shortDate } from "@/lib/format";
+import ProfileEditForm from "@/components/profile-edit-form";
 
 export const dynamic = "force-dynamic";
 
@@ -23,20 +24,20 @@ export default async function MePage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 pb-16">
-      <div className="mt-8 flex items-center gap-4 rounded-3xl bg-forest-50 p-6">
-        <span className="w-14 h-14 rounded-full bg-forest-600 text-white grid place-items-center text-xl font-bold">
-          {profile.nickname.slice(0, 1)}
+      <div className="mt-8 mb-3 flex items-center gap-2">
+        <h1 className="font-bold text-lg">내 정보</h1>
+        <span className="text-[11px] font-semibold bg-forest-50 text-forest-700 border border-forest-200 rounded-full px-2 py-0.5">
+          {ROLE_LABEL[profile.role]}
         </span>
-        <div>
-          <p className="font-bold text-lg">
-            {profile.nickname}
-            <span className="ml-2 align-middle text-[11px] font-semibold bg-white text-forest-700 border border-forest-200 rounded-full px-2 py-0.5">
-              {ROLE_LABEL[profile.role]}
-            </span>
-          </p>
-          <p className="text-sm text-slate-500">{profile.name}</p>
-        </div>
       </div>
+      <ProfileEditForm
+        profile={{
+          id: profile.id,
+          nickname: profile.nickname,
+          name: profile.name,
+          avatar_path: profile.avatar_path,
+        }}
+      />
 
       {profile.role === "pending" && (
         <p className="mt-4 rounded-2xl bg-amber-50 text-amber-800 text-sm px-4 py-3 leading-relaxed">
