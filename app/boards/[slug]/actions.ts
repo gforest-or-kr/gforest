@@ -38,6 +38,18 @@ function parseAttachments(raw: unknown, userId: string): AttachmentMeta[] {
     .slice(0, MAX_FILE_COUNT);
 }
 
+// 수정 시 제거할 기존 첨부 id 목록(JSON). 형식만 검증, 권한은 attachments_delete RLS가 강제.
+function parseRemovedIds(raw: unknown): string[] {
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x): x is string => typeof x === "string").slice(0, MAX_FILE_COUNT);
+  } catch {
+    return [];
+  }
+}
+
 // 권한 검사는 RLS가 강제한다 — 여기서는 insert/update 결과만 처리 (CLAUDE.md 원칙 3)
 
 export async function createPost(slug: string, formData: FormData) {
@@ -139,6 +151,32 @@ export async function updatePost(slug: string, postId: string, formData: FormDat
   if (error || !updated || updated.length === 0) {
     redirect(
       `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("수정에 실패했습니다. 권한을 확인해 주세요")}`,
+    );
+  }
+
+  // 첨부 편집: 제거된 기존 첨부(스토리지+행) 삭제 후 새 첨부 추가. 권한은 attachments RLS가 강제.
+  const removedIds = parseRemovedIds(formData.get("removed_attachment_ids"));
+  if (removedIds.length > 0) {
+    const { data: toRemove } = await supabase
+      .from("attachments")
+      .select("storage_path")
+      .eq("post_id", postId)
+      .in("id", removedIds);
+    const paths = (toRemove ?? []).map((a) => a.storage_path).filter(Boolean) as string[];
+    if (paths.length > 0) await supabase.storage.from("attachments").remove(paths);
+    await supabase.from("attachments").delete().eq("post_id", postId).in("id", removedIds);
+  }
+  const newFiles = parseAttachments(formData.get("attachments"), user.id);
+  if (newFiles.length > 0) {
+    await supabase.from("attachments").insert(
+      newFiles.map((f) => ({
+        post_id: postId,
+        uploader_id: user.id,
+        storage_path: f.storage_path,
+        file_name: f.file_name,
+        byte_size: f.byte_size,
+        mime_type: f.mime_type,
+      })),
     );
   }
 

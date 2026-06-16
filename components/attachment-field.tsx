@@ -50,11 +50,32 @@ function extOf(name: string): string {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "bin";
 }
 
-export default function AttachmentField() {
+type ExistingAttachment = {
+  id: string;
+  file_name: string;
+  byte_size: number;
+  mime_type: string | null;
+};
+
+export default function AttachmentField({
+  initial = [],
+}: {
+  initial?: ExistingAttachment[];
+}) {
   const [items, setItems] = useState<AttachmentMeta[]>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 수정 시 기존 첨부 = initial − 제거표시. 새 업로드(items)와 합쳐 최대 개수를 센다.
+  const existing = initial.filter((a) => !removedIds.includes(a.id));
+
+  // 기존 첨부 제거는 스토리지를 건드리지 않고 표시만 — 실제 삭제는 저장(updatePost) 시점.
+  // (수정 취소 시 파일이 보존돼야 하므로 새 업로드와 달리 즉시 삭제하지 않는다)
+  function removeExisting(id: string) {
+    setRemovedIds((prev) => [...prev, id]);
+  }
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -71,7 +92,7 @@ export default function AttachmentField() {
     }
 
     const newErrors: string[] = [];
-    let slots = MAX_FILE_COUNT - items.length; // 이번 배치에서 추가 가능한 개수
+    let slots = MAX_FILE_COUNT - items.length - existing.length; // 기존+신규 합산
 
     for (const file of files) {
       if (slots <= 0) {
@@ -149,6 +170,31 @@ export default function AttachmentField() {
         </ul>
       )}
 
+      {existing.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {existing.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm"
+            >
+              <span className="truncate">
+                {a.file_name}
+                <span className="ml-2 text-xs text-slate-400">
+                  {(a.byte_size / 1024 / 1024).toFixed(2)}MB
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => removeExisting(a.id)}
+                className="shrink-0 text-slate-400 hover:text-red-500 px-2 py-1 min-h-[44px]"
+              >
+                삭제
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {items.length > 0 && (
         <ul className="mt-3 space-y-2">
           {items.map((it) => (
@@ -175,6 +221,7 @@ export default function AttachmentField() {
       )}
 
       <input type="hidden" name="attachments" value={JSON.stringify(items)} />
+      <input type="hidden" name="removed_attachment_ids" value={JSON.stringify(removedIds)} />
     </div>
   );
 }

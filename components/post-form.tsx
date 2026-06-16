@@ -12,6 +12,7 @@ export default function PostForm({
   error,
   defaults,
   showAttachments,
+  initialAttachments,
 }: {
   action: (formData: FormData) => Promise<void>;
   boardType: string;
@@ -21,6 +22,12 @@ export default function PostForm({
   error?: string;
   defaults?: { title?: string | null; content?: string | null; eventDate?: string | null };
   showAttachments: boolean;
+  initialAttachments?: {
+    id: string;
+    file_name: string;
+    byte_size: number;
+    mime_type: string | null;
+  }[];
 }) {
   return (
     <form action={action}>
@@ -69,7 +76,7 @@ export default function PostForm({
         className="mt-4 w-full leading-relaxed outline-none resize-y min-h-[40vh]"
       />
 
-      {showAttachments && <AttachmentField />}
+      {showAttachments && <AttachmentField initial={initialAttachments} />}
     </form>
   );
 }

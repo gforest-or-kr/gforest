@@ -6,7 +6,7 @@ import PostForm from "@/components/post-form";
 
 export const dynamic = "force-dynamic";
 
-// SCR-320 수정 — 글쓰기 폼을 재사용해 제목·본문(달력은 일정)을 채운 상태로 진입. 첨부 편집은 범위 외.
+// SCR-320 수정 — 글쓰기 폼을 재사용해 제목·본문(달력은 일정)·기존 첨부를 채운 상태로 진입.
 export default async function EditPostPage({
   params,
   searchParams,
@@ -18,7 +18,7 @@ export default async function EditPostPage({
   const { error } = await searchParams;
 
   const supabase = await createClient();
-  const [profile, { data: board }, { data: post }] = await Promise.all([
+  const [profile, { data: board }, { data: post }, { data: attachments }] = await Promise.all([
     getSessionProfile(),
     supabase.from("boards").select("*").eq("slug", slug).single(),
     supabase
@@ -28,6 +28,11 @@ export default async function EditPostPage({
       .eq("boards.slug", slug)
       .is("deleted_at", null)
       .single(),
+    supabase
+      .from("attachments")
+      .select("id, file_name, byte_size, mime_type")
+      .eq("post_id", postId)
+      .order("created_at"),
   ]);
   if (!board || !post) notFound();
   if (!profile)
@@ -50,7 +55,8 @@ export default async function EditPostPage({
         submitLabel="저장"
         error={error}
         defaults={{ title: post.title, content: post.content, eventDate: post.event_date }}
-        showAttachments={false}
+        showAttachments
+        initialAttachments={attachments ?? []}
       />
     </main>
   );
