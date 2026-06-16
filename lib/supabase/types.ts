@@ -111,6 +111,7 @@ export type Database = {
           content: string
           created_at: string
           deleted_at: string | null
+          edited_at: string | null
           id: string
           legacy_comment_srl: number | null
           parent_id: string | null
@@ -122,6 +123,7 @@ export type Database = {
           content: string
           created_at?: string
           deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           legacy_comment_srl?: number | null
           parent_id?: string | null
@@ -133,6 +135,7 @@ export type Database = {
           content?: string
           created_at?: string
           deleted_at?: string | null
+          edited_at?: string | null
           id?: string
           legacy_comment_srl?: number | null
           parent_id?: string | null

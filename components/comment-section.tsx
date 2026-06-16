@@ -2,21 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { shortDate } from "@/lib/format";
-import { createComment, deleteComment } from "@/app/boards/[slug]/actions";
+import { shortDate, fullDate } from "@/lib/format";
+import { createComment, updateComment, deleteComment } from "@/app/boards/[slug]/actions";
 
 type CommentRow = {
   id: string;
   content: string;
   created_at: string;
+  edited_at: string | null;
   parent_id: string | null;
   author: { id: string; nickname: string } | null;
 };
 
 // 댓글 — 목록은 서버(공개글 ISR)·클라(회원글 아일랜드)에서 prop으로 받아 시작하고,
-// 작성/삭제 후엔 브라우저 세션으로 다시 읽어 즉시 갱신한다(회원글은 클라 렌더라 서버
-// 액션만으론 화면이 안 바뀐다). 권한 강제는 서버 액션 + RLS, 공개글 ISR 캐시는
-// 서버 액션의 revalidateTag가 무효화한다. 답글(대댓글)은 루트 댓글에만 1단계로 단다.
+// 작성/수정/삭제 후엔 브라우저 세션으로 다시 읽어 즉시 갱신한다(회원글은 클라 렌더라 서버
+// 액션만으론 화면이 안 바뀐다). 권한 강제는 서버 액션 + RLS, 공개글 ISR 캐시는 서버 액션의
+// revalidateTag가 무효화한다. 답글(대댓글)은 루트 댓글에만 1단계. 등록·삭제는 confirm 확인.
 export default function CommentSection({
   slug,
   postId,
@@ -31,9 +32,9 @@ export default function CommentSection({
   const [me, setMe] = useState<{ uid: string; role: string } | null>(null);
   const [comments, setComments] = useState<CommentRow[]>(initialComments);
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // 서버에서 새 prop이 오면(다른 글 등) 동기화
   useEffect(() => {
     setComments(initialComments);
   }, [initialComments]);
@@ -63,33 +64,59 @@ export default function CommentSection({
     const supabase = createClient();
     const { data } = await supabase
       .from("comments")
-      .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
+      .select("id, content, created_at, edited_at, parent_id, author:profiles(id, nickname)")
       .eq("post_id", postId)
       .is("deleted_at", null)
       .order("created_at");
     if (data) setComments(data as unknown as CommentRow[]);
   }
 
-  // 폼 제출 — 서버 액션(권한·RLS·ISR 무효화)으로 쓰고, 브라우저 세션으로 다시 읽어 즉시 반영
-  async function submitComment(formData: FormData) {
-    if (busy) return;
+  // 작성/답글 등록 — confirm 후 서버 액션, 그 다음 재조회로 즉시 반영
+  async function onCreate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    if (!String(fd.get("content") ?? "").trim() || busy) return;
+    if (!confirm("댓글을 등록할까요?")) return;
     setBusy(true);
     try {
-      await createComment(slug, postId, formData);
+      await createComment(slug, postId, fd);
       await refetch();
+      form.reset();
       setReplyTo(null);
     } finally {
       setBusy(false);
     }
   }
 
-  async function removeComment(id: string) {
-    await deleteComment(slug, postId, id);
-    await refetch();
+  // 수정 저장 — 별도 확인 없이 저장(updateComment가 edited_at 기록 → '수정됨' 표시)
+  async function onEdit(e: React.FormEvent<HTMLFormElement>, commentId: string) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    if (!String(fd.get("content") ?? "").trim() || busy) return;
+    setBusy(true);
+    try {
+      await updateComment(slug, postId, commentId, fd);
+      await refetch();
+      setEditing(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete(id: string) {
+    if (busy || !confirm("댓글을 삭제할까요? 되돌릴 수 없습니다.")) return;
+    setBusy(true);
+    try {
+      await deleteComment(slug, postId, id);
+      await refetch();
+    } finally {
+      setBusy(false);
+    }
   }
 
   const canComment = !!me && (me.role === "admin" || writeRoles.includes(me.role));
-  const canDelete = (authorId: string | null | undefined) =>
+  const canModify = (authorId: string | null | undefined) =>
     !!me && (me.role === "admin" || me.uid === authorId);
 
   const roots = comments.filter((c) => !c.parent_id);
@@ -97,29 +124,68 @@ export default function CommentSection({
 
   const Item = ({ c, isRoot }: { c: CommentRow; isRoot: boolean }) => (
     <div className="rounded-2xl bg-slate-50/70 p-3.5">
-      <div className="flex items-center gap-2 text-xs mb-1.5">
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs mb-1.5">
         <span className="font-semibold text-slate-700">{c.author?.nickname ?? "알 수 없음"}</span>
         <span className="text-slate-400">{shortDate(c.created_at)}</span>
-        {canDelete(c.author?.id) && (
-          <button onClick={() => removeComment(c.id)} className="ml-auto text-slate-300 hover:text-red-400">
-            삭제
-          </button>
+        {c.edited_at && (
+          <span className="text-slate-400">· 수정됨 {fullDate(c.edited_at)}</span>
+        )}
+        {canModify(c.author?.id) && editing !== c.id && (
+          <span className="ml-auto flex gap-2">
+            <button onClick={() => setEditing(c.id)} className="text-slate-300 hover:text-forest-700">
+              수정
+            </button>
+            <button onClick={() => onDelete(c.id)} className="text-slate-300 hover:text-red-400">
+              삭제
+            </button>
+          </span>
         )}
       </div>
-      <p className="text-sm whitespace-pre-wrap break-words">{c.content}</p>
-      {isRoot && canComment && (
-        <button
-          onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
-          className="mt-2 text-xs font-medium text-slate-400 hover:text-forest-700"
-        >
-          {replyTo === c.id ? "취소" : "답글"}
-        </button>
+
+      {editing === c.id ? (
+        <form onSubmit={(e) => onEdit(e, c.id)} className="flex flex-col gap-2">
+          <textarea
+            name="content"
+            required
+            rows={2}
+            autoFocus
+            defaultValue={c.content}
+            className="w-full border border-slate-200 rounded-xl text-sm p-3 resize-none"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="text-sm text-slate-400 px-3 py-1.5"
+            >
+              취소
+            </button>
+            <button
+              disabled={busy}
+              className="bg-forest-600 hover:bg-forest-700 disabled:opacity-60 text-white text-sm font-medium px-4 py-1.5 rounded-xl"
+            >
+              저장
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p className="text-sm whitespace-pre-wrap break-words">{c.content}</p>
+          {isRoot && canComment && (
+            <button
+              onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
+              className="mt-2 text-xs font-medium text-slate-400 hover:text-forest-700"
+            >
+              {replyTo === c.id ? "취소" : "답글"}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
 
-  const ReplyForm = ({ parentId, autoFocus }: { parentId?: string; autoFocus?: boolean }) => (
-    <form action={submitComment} className="flex gap-2">
+  const CommentForm = ({ parentId, autoFocus }: { parentId?: string; autoFocus?: boolean }) => (
+    <form onSubmit={onCreate} className="flex gap-2">
       {parentId && <input type="hidden" name="parent_id" value={parentId} />}
       <textarea
         name="content"
@@ -152,7 +218,7 @@ export default function CommentSection({
             ))}
             {replyTo === c.id && canComment && (
               <div className="ml-8 mt-3">
-                <ReplyForm parentId={c.id} autoFocus />
+                <CommentForm parentId={c.id} autoFocus />
               </div>
             )}
           </li>
@@ -161,7 +227,7 @@ export default function CommentSection({
 
       {canComment ? (
         <div className="mt-6">
-          <ReplyForm />
+          <CommentForm />
         </div>
       ) : (
         <p className="mt-6 text-sm text-slate-400">

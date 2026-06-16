@@ -64,7 +64,7 @@ export default function MemberPostLoader({
             .maybeSingle(),
           supabase
             .from("comments")
-            .select("id, content, created_at, parent_id, author:profiles(id, nickname)")
+            .select("id, content, created_at, edited_at, parent_id, author:profiles(id, nickname)")
             .eq("post_id", postId)
             .is("deleted_at", null)
             .order("created_at"),

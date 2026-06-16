@@ -170,6 +170,30 @@ export async function createComment(slug: string, postId: string, formData: Form
   revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (댓글 즉시 반영)
 }
 
+export async function updateComment(
+  slug: string,
+  postId: string,
+  commentId: string,
+  formData: FormData,
+) {
+  const content = String(formData.get("content") ?? "").trim();
+  if (!content) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
+
+  // 본문 수정 — RLS(comments_update)가 본인/admin만 허용. edited_at으로 '수정됨' 표시(소프트삭제와 구분)
+  await supabase
+    .from("comments")
+    .update({ content, edited_at: new Date().toISOString() })
+    .eq("id", commentId);
+  revalidatePath(`/boards/${slug}/${postId}`);
+  revalidateTag(`post:${postId}`, "max");
+}
+
 export async function deletePost(slug: string, postId: string) {
   const supabase = await createClient();
   const {
