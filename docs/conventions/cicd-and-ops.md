@@ -44,6 +44,16 @@ GitHub → Settings → Secrets and variables → Actions:
 - **Discord 채널 알림**: ✅🚨 배포 결과 / 🚨 백업·keep-alive 실패 / 🔴 사이트 다운.
   (커밋·PR Discord 알림은 중복이라 **비활성**됨 — GitHub repo 웹훅 삭제.)
 
+## DB 마이그레이션 (자동 적용, GFM-60)
+
+스키마 변경의 단일 진실은 `supabase/migrations/*.sql`. **이제 prod DB 적용은 배포 CI가 자동으로 한다**(과거엔 수동 psql이라 mig3·4가 누락돼 첨부·슬라이드 업로드가 깨졌던 드리프트 사고가 있었다).
+
+- `deploy.yml`이 코드 빌드 **전에** `supabase db push --db-url "$SUPABASE_DB_URL" --yes`를 실행(push=production에서만; PR preview는 공유 prod DB를 안 건드리도록 제외).
+- 적용 이력은 `supabase_migrations.schema_migrations` 테이블이 추적 — 아직 안 올라간 마이그레이션만 골라 적용한다. 실패하면 잡이 죽어 배포가 막힌다(스키마 불일치 차단).
+- **베이스라인(1회성, 완료)**: 기존 mig1~8은 순수 psql로 적용돼 추적 테이블이 없었다. 그대로 push하면 전부 재적용하다 충돌하므로 `schema_migrations`에 mig1~8 버전을 "기적용"으로 선등록했다. 이후부터는 새 마이그레이션만 자동 적용된다.
+- **새 마이그레이션 작성법**: `supabase/migrations/`에 `<14자리>_name.sql` 추가(기존 `0000…NN` 접두사 이어가기) → main에 push하면 CI가 적용. 로컬 선검증: `npx supabase db push --db-url <세션풀러 URL> --dry-run`.
+- **필요 시크릿**: `SUPABASE_DB_URL` = 세션 풀러 연결문자열(비밀번호 percent-encoded), 포트 5432. 직접 호스트(db.\<ref\>.supabase.co)는 IPv6 전용이라 GitHub 러너에서 실패 — 반드시 풀러.
+
 ## ⚠️ 실제로 겪은 함정 — 어기면 깨진다
 
 | 함정 | 내용 | 위반 시 |
