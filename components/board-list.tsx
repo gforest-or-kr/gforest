@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { publicClient } from "@/lib/supabase/public";
 import { getSessionProfile } from "@/lib/auth";
 import { canReadBoard } from "@/lib/menu";
 import { getBoardMeta, getPublicBoardList } from "@/lib/boards";
@@ -98,6 +99,44 @@ export default async function BoardList({
     fileCount: (p.attachments as unknown as { count: number }[])[0]?.count ?? 0,
   }));
 
+  // 갤러리 게시판: 글마다 첫 이미지 첨부를 썸네일로 보여준다. 목록 데이터 경로(공개=캐시/
+  // 회원=RLS)와 별개로, 보이는 글들의 이미지 첨부 id만 한 번에 모아 /dl 프록시로 렌더한다.
+  // (BoardList는 이미 Suspense 안에서 동적 스트리밍 — 셸 정적/prefetch는 그대로 유지된다.)
+  const isGallery = board.board_type === "gallery";
+  const thumb: Record<string, string> = {};
+  if (isGallery && rows.length > 0) {
+    const sb = board.read_roles === null ? publicClient() : await createClient();
+    const { data: atts } = await sb
+      .from("attachments")
+      .select("id, post_id, mime_type, created_at")
+      .in("post_id", rows.map((r) => r.id))
+      .like("mime_type", "image/%")
+      .order("created_at", { ascending: true });
+    for (const a of (atts ?? []) as { id: string; post_id: string }[]) {
+      if (!thumb[a.post_id]) thumb[a.post_id] = a.id; // 글당 첫 이미지
+    }
+  }
+
+  const Pager = () => (
+    <div className="flex justify-center items-center gap-1 mt-6 text-sm">
+      {Array.from({ length: totalPages }, (_, i) => i + 1)
+        .filter((n) => Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
+        .map((n, i, arr) => (
+          <span key={n} className="flex items-center gap-1">
+            {i > 0 && arr[i - 1] !== n - 1 && <span className="px-1 text-slate-300">…</span>}
+            <Link
+              href={`/boards/${slug}?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              className={`px-3 py-1.5 rounded-lg ${
+                n === page ? "bg-forest-600 text-white font-medium" : "hover:bg-slate-50"
+              }`}
+            >
+              {n}
+            </Link>
+          </span>
+        ))}
+    </div>
+  );
+
   return (
     <>
       {q && (
@@ -134,6 +173,42 @@ export default async function BoardList({
         <div className="py-20 text-center text-slate-400 text-sm">
           {q ? "검색 결과가 없습니다" : "아직 게시글이 없습니다"}
         </div>
+      ) : isGallery ? (
+        <>
+          {/* 갤러리: 썸네일 그리드 (모바일 2열 / 데스크탑 3~4열) */}
+          <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {rows.map((p) => (
+              <li key={p.id}>
+                <Link href={`/boards/${slug}/${p.id}`} prefetch className="block group">
+                  <div className="aspect-square rounded-2xl overflow-hidden bg-slate-100">
+                    {thumb[p.id] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`/dl/${thumb[p.id]}?inline=1`}
+                        alt={p.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-active:opacity-90"
+                      />
+                    ) : (
+                      <div className="w-full h-full grid place-items-center text-slate-300 text-3xl">
+                        🖼️
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium leading-snug line-clamp-2">{p.title}</p>
+                  <p className="text-xs text-slate-400">
+                    {p.nickname} · {shortDate(p.created_at)}
+                    {p.commentCount > 0 && (
+                      <span className="text-forest-600 font-semibold"> · 댓글 {p.commentCount}</span>
+                    )}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {totalPages > 1 && <Pager />}
+        </>
       ) : (
         <>
           {/* 데스크탑: 테이블 */}
@@ -188,25 +263,7 @@ export default async function BoardList({
             ))}
           </ul>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-1 mt-6 text-sm">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((n) => Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
-                .map((n, i, arr) => (
-                  <span key={n} className="flex items-center gap-1">
-                    {i > 0 && arr[i - 1] !== n - 1 && <span className="px-1 text-slate-300">…</span>}
-                    <Link
-                      href={`/boards/${slug}?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-                      className={`px-3 py-1.5 rounded-lg ${
-                        n === page ? "bg-forest-600 text-white font-medium" : "hover:bg-slate-50"
-                      }`}
-                    >
-                      {n}
-                    </Link>
-                  </span>
-                ))}
-            </div>
-          )}
+          {totalPages > 1 && <Pager />}
         </>
       )}
     </>
