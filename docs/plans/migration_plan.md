@@ -30,7 +30,7 @@
 | 호스팅 | Vercel (Hobby) | 약관 이슈 시 Cloudflare Pages로 전환 가능하게 설계 |
 | DB | Supabase Postgres, **Seoul(ap-northeast-2) 리전** | |
 | 인증 | Supabase Auth (이메일/비밀번호) | 카카오 OAuth는 추후 옵션 |
-| 파일 | Supabase Storage | 1GB 초과 시 R2 병행 검토 |
+| 파일 | Supabase Storage | 1GB 초과 시 R2 병행 검토 — [media_storage_strategy.md](../research/media_storage_strategy.md) 참조 |
 | 권한 | Postgres RLS 정책 | "본인 글만 수정" 등은 DB에서 강제 |
 | 스타일 | Tailwind CSS | |
 
