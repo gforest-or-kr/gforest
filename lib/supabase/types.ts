@@ -213,6 +213,7 @@ export type Database = {
           author_id: string
           board_id: string
           content: string
+          content_html: boolean
           created_at: string
           deleted_at: string | null
           event_date: string | null
@@ -230,6 +231,7 @@ export type Database = {
           author_id: string
           board_id: string
           content?: string
+          content_html?: boolean
           created_at?: string
           deleted_at?: string | null
           event_date?: string | null
@@ -247,6 +249,7 @@ export type Database = {
           author_id?: string
           board_id?: string
           content?: string
+          content_html?: boolean
           created_at?: string
           deleted_at?: string | null
           event_date?: string | null

@@ -5,6 +5,7 @@ import ViewCounter from "@/components/view-counter";
 import PostActions from "@/components/post-actions";
 import CommentSection from "@/components/comment-section";
 import PostError from "@/components/post-error";
+import { RICH_CLASS } from "@/lib/rich";
 import { deletePost } from "@/app/boards/[slug]/actions";
 
 // 글 상세 본문 — 서버(공개글 ISR)·클라(회원글) 양쪽에서 재사용하는 프레젠테이션 컴포넌트.
@@ -21,6 +22,7 @@ export type PostViewData = {
     created_at: string;
     event_date: string | null;
     legacy_document_srl: number | null;
+    content_html: boolean;
   };
   author: { id: string; nickname: string } | null;
   // 서명 URL을 본문에 박지 않는다(정적 캐시 동결 방지). 다운로드는 /dl/{id} 프록시로.
@@ -73,6 +75,12 @@ export default function PostView({
             // ol/ul 들여쓰기 복원([&_ol/ul]:pl-6): Tailwind preflight가 list padding을 0으로 리셋해
             // outside 마커(1.·•)가 컨테이너 왼쪽 끝에 붙어 "여백 없음"으로 보였다(특히 iOS Safari/WebKit).
             className="mt-6 pt-6 border-t border-slate-100 leading-relaxed break-words [&_*]:max-w-full [&_img]:h-auto [&_p]:my-2 [&_table]:block [&_table]:overflow-x-auto [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        ) : post.content_html ? (
+          // WYSIWYG 본문 — 저장 시 서버 sanitize된 HTML만 들어온다(저장형 XSS 차단)
+          <div
+            className={`mt-6 pt-6 border-t border-slate-100 ${RICH_CLASS}`}
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
         ) : (

@@ -23,7 +23,7 @@ export default async function EditPostPage({
     supabase.from("boards").select("*").eq("slug", slug).single(),
     supabase
       .from("posts")
-      .select("title, content, event_date, is_notice, author:profiles(id), boards!inner(slug)")
+      .select("title, content, event_date, is_notice, legacy_document_srl, author:profiles(id), boards!inner(slug)")
       .eq("id", postId)
       .eq("boards.slug", slug)
       .is("deleted_at", null)
@@ -63,6 +63,7 @@ export default async function EditPostPage({
         showAttachments
         initialAttachments={attachments ?? []}
         canPinNotice={profile.role === "admin" || profile.role === "operator"}
+        richText={!post.legacy_document_srl}
       />
     </main>
   );

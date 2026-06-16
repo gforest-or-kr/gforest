@@ -9,6 +9,15 @@ import {
   validateFile,
   type AttachmentMeta,
 } from "@/lib/attachments";
+import { sanitizeRichHtml, htmlIsEmpty } from "@/lib/sanitize";
+
+// 폼 본문 파싱 — WYSIWYG(is_html=1)는 서버에서 정화한 HTML로, 아니면 plain text(레거시 수정)로.
+function parseContent(formData: FormData): { content: string; isHtml: boolean; empty: boolean } {
+  const isHtml = formData.get("is_html") === "1";
+  const raw = String(formData.get("content") ?? "");
+  const content = isHtml ? sanitizeRichHtml(raw) : raw.trim();
+  return { content, isHtml, empty: isHtml ? htmlIsEmpty(content) : content.length === 0 };
+}
 
 // 폼 hidden input(JSON)의 첨부 메타를 파싱·재검증한다. 권한은 attachments_insert RLS가 최종 강제.
 function parseAttachments(raw: unknown, userId: string): AttachmentMeta[] {
@@ -54,9 +63,9 @@ function parseRemovedIds(raw: unknown): string[] {
 
 export async function createPost(slug: string, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
-  const content = String(formData.get("content") ?? "").trim();
+  const { content, isHtml, empty } = parseContent(formData);
   const eventDate = String(formData.get("event_date") ?? "") || null;
-  if (!title || !content) {
+  if (!title || empty) {
     redirect(`/boards/${slug}/write?error=${encodeURIComponent("제목과 내용을 입력해 주세요")}`);
   }
 
@@ -80,6 +89,7 @@ export async function createPost(slug: string, formData: FormData) {
       author_id: user.id,
       title,
       content,
+      content_html: isHtml,
       event_date: board.board_type === "calendar" ? eventDate : null,
       is_notice: formData.get("is_notice") === "on", // 권한은 guard_is_notice 트리거가 강제
     })
@@ -114,9 +124,9 @@ export async function createPost(slug: string, formData: FormData) {
 
 export async function updatePost(slug: string, postId: string, formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
-  const content = String(formData.get("content") ?? "").trim();
+  const { content, isHtml, empty } = parseContent(formData);
   const eventDate = String(formData.get("event_date") ?? "") || null;
-  if (!title || !content) {
+  if (!title || empty) {
     redirect(
       `/boards/${slug}/${postId}/edit?error=${encodeURIComponent("제목과 내용을 입력해 주세요")}`,
     );
@@ -142,6 +152,7 @@ export async function updatePost(slug: string, postId: string, formData: FormDat
     .update({
       title,
       content,
+      content_html: isHtml,
       event_date: board.board_type === "calendar" ? eventDate : null,
       is_notice: formData.get("is_notice") === "on", // 권한은 guard_is_notice 트리거가 강제
     })

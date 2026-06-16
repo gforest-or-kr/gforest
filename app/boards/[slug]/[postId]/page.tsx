@@ -89,9 +89,11 @@ export default async function PostPage({
 function pick(post: {
   id: string; title: string; content: string; view_count: number;
   created_at: string; event_date: string | null; legacy_document_srl: number | null;
+  content_html: boolean;
 }): PostViewData["post"] {
   return {
     id: post.id, title: post.title, content: post.content, view_count: post.view_count,
     created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
+    content_html: post.content_html,
   };
 }

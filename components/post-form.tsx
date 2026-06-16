@@ -1,8 +1,10 @@
 import Link from "next/link";
 import AttachmentField from "@/components/attachment-field";
+import RichEditor from "@/components/rich-editor";
 
 // 글쓰기/수정 공용 폼 — 동일한 마크업·탭타겟·sticky 헤더를 재사용한다 (CLAUDE.md: 유지보수 우선).
-// 클라이언트 상태가 없어 서버 컴포넌트로 두고, 내부 AttachmentField만 클라이언트로 동작한다.
+// 서버 컴포넌트로 두고, 내부 AttachmentField·RichEditor만 클라이언트로 동작한다.
+// richText면 WYSIWYG(에디터), 아니면 plain textarea(레거시 글 수정 등 HTML 보존이 필요한 경우).
 export default function PostForm({
   action,
   boardType,
@@ -14,6 +16,7 @@ export default function PostForm({
   showAttachments,
   initialAttachments,
   canPinNotice = false,
+  richText = true,
 }: {
   action: (formData: FormData) => Promise<void>;
   boardType: string;
@@ -29,6 +32,7 @@ export default function PostForm({
   };
   showAttachments: boolean;
   canPinNotice?: boolean;
+  richText?: boolean;
   initialAttachments?: {
     id: string;
     file_name: string;
@@ -87,14 +91,19 @@ export default function PostForm({
         </label>
       )}
 
-      <textarea
-        name="content"
-        required
-        rows={16}
-        placeholder="내용을 입력하세요"
-        defaultValue={defaults?.content ?? ""}
-        className="mt-4 w-full leading-relaxed outline-none resize-y min-h-[40vh]"
-      />
+      <input type="hidden" name="is_html" value={richText ? "1" : ""} />
+      {richText ? (
+        <RichEditor name="content" defaultValue={defaults?.content ?? ""} />
+      ) : (
+        <textarea
+          name="content"
+          required
+          rows={16}
+          placeholder="내용을 입력하세요"
+          defaultValue={defaults?.content ?? ""}
+          className="mt-4 w-full leading-relaxed outline-none resize-y min-h-[40vh]"
+        />
+      )}
 
       {showAttachments && <AttachmentField initial={initialAttachments} />}
     </form>
