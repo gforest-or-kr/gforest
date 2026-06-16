@@ -13,6 +13,7 @@ export default function PostForm({
   defaults,
   showAttachments,
   initialAttachments,
+  canPinNotice = false,
 }: {
   action: (formData: FormData) => Promise<void>;
   boardType: string;
@@ -20,8 +21,14 @@ export default function PostForm({
   cancelHref: string;
   submitLabel: string;
   error?: string;
-  defaults?: { title?: string | null; content?: string | null; eventDate?: string | null };
+  defaults?: {
+    title?: string | null;
+    content?: string | null;
+    eventDate?: string | null;
+    isNotice?: boolean | null;
+  };
   showAttachments: boolean;
+  canPinNotice?: boolean;
   initialAttachments?: {
     id: string;
     file_name: string;
@@ -53,6 +60,19 @@ export default function PostForm({
         defaultValue={defaults?.title ?? ""}
         className="mt-4 w-full text-lg font-semibold border-b border-slate-100 focus:border-forest-300 outline-none py-3"
       />
+
+      {/* 공지 고정은 운영자·관리자만 노출 — 최종 강제는 guard_is_notice 트리거(컬럼 권한) */}
+      {canPinNotice && (
+        <label className="mt-4 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="is_notice"
+            defaultChecked={defaults?.isNotice ?? false}
+            className="w-4 h-4 accent-forest-600"
+          />
+          <span className="font-medium">📌 공지로 등록 (목록 상단 고정)</span>
+        </label>
+      )}
 
       {boardType === "calendar" && (
         <label className="mt-4 flex items-center gap-3 text-sm">

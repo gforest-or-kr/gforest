@@ -41,6 +41,7 @@ export default async function WritePage({
         submitLabel="등록"
         error={error}
         showAttachments
+        canPinNotice={profile.role === "admin" || profile.role === "operator"}
       />
     </main>
   );

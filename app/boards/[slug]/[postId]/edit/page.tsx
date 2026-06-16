@@ -23,7 +23,7 @@ export default async function EditPostPage({
     supabase.from("boards").select("*").eq("slug", slug).single(),
     supabase
       .from("posts")
-      .select("title, content, event_date, author:profiles(id), boards!inner(slug)")
+      .select("title, content, event_date, is_notice, author:profiles(id), boards!inner(slug)")
       .eq("id", postId)
       .eq("boards.slug", slug)
       .is("deleted_at", null)
@@ -54,9 +54,15 @@ export default async function EditPostPage({
         cancelHref={`/boards/${slug}/${postId}`}
         submitLabel="저장"
         error={error}
-        defaults={{ title: post.title, content: post.content, eventDate: post.event_date }}
+        defaults={{
+          title: post.title,
+          content: post.content,
+          eventDate: post.event_date,
+          isNotice: post.is_notice,
+        }}
         showAttachments
         initialAttachments={attachments ?? []}
+        canPinNotice={profile.role === "admin" || profile.role === "operator"}
       />
     </main>
   );

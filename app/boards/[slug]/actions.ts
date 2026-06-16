@@ -81,6 +81,7 @@ export async function createPost(slug: string, formData: FormData) {
       title,
       content,
       event_date: board.board_type === "calendar" ? eventDate : null,
+      is_notice: formData.get("is_notice") === "on", // 권한은 guard_is_notice 트리거가 강제
     })
     .select("id")
     .single();
@@ -142,6 +143,7 @@ export async function updatePost(slug: string, postId: string, formData: FormDat
       title,
       content,
       event_date: board.board_type === "calendar" ? eventDate : null,
+      is_notice: formData.get("is_notice") === "on", // 권한은 guard_is_notice 트리거가 강제
     })
     .eq("id", postId)
     .is("deleted_at", null)
