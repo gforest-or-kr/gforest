@@ -65,7 +65,12 @@ export default async function BoardList({
       .eq("is_notice", false)
       .order("created_at", { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-    if (q) listQuery = listQuery.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+    if (q) {
+      // PostgREST .or() 필터에 검색어를 그대로 넣으면 쉼표·괄호가 구분자로 파싱돼 깨진다.
+      // 패턴 값을 큰따옴표로 감싸 리터럴로 처리하고, 값 안의 "·\ 만 이스케이프한다.
+      const safe = q.replace(/[\\"]/g, (m) => "\\" + m);
+      listQuery = listQuery.or(`title.ilike."%${safe}%",content.ilike."%${safe}%"`);
+    }
 
     const [{ data: noticeRows }, { data: postRows, count: postCount }] = await Promise.all([
       q
