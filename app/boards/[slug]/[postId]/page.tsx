@@ -1,7 +1,36 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBoardMeta, getPostDetail } from "@/lib/boards";
 import PostView, { type PostViewData } from "@/components/post-view";
 import MemberPostLoader from "@/components/member-post-loader";
+
+// SEO/누설 방지(GFM-58): 공개글은 제목·요약을 메타로, 회원 게시판 글은 내용 누설 없이 noindex.
+// getBoardMeta/getPostDetail은 쿠키를 안 읽어(캐시) ● 정적 생성이 유지된다.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; postId: string }>;
+}): Promise<Metadata> {
+  const { slug, postId } = await params;
+  const board = await getBoardMeta(slug);
+  if (!board) return {};
+  if (board.read_roles !== null) {
+    return { title: board.name, robots: { index: false, follow: false } };
+  }
+  const detail = await getPostDetail(slug, postId);
+  if (!detail?.post) return { title: board.name };
+  const desc =
+    (detail.post.content || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120) || undefined;
+  return {
+    title: detail.post.title,
+    description: desc,
+    openGraph: { title: detail.post.title, description: desc, type: "article" },
+  };
+}
 
 // 정적 셸 + 클라 개인화 — 페이지는 쿠키를 안 읽어 정적(●)으로 유지된다(공개·회원 둘 다 빠름).
 //  - 공개 게시판 글: 서버 anon(getPostDetail, 데이터 캐시)로 "풀 렌더" → 엣지 캐시·전체 prefetch

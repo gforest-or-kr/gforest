@@ -6,8 +6,10 @@ import "./globals.css";
 import Header from "@/components/header";
 import HeaderShell from "@/components/header-shell";
 import Footer from "@/components/footer";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "푸른숲발도르프학교",
     template: "%s | 푸른숲발도르프학교",

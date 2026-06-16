@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getBoardMeta, getPublicBoardSlugs, getCalendarEvents } from "@/lib/boards";
@@ -15,6 +16,20 @@ import AccessNotice from "@/components/access-notice";
 export async function generateStaticParams() {
   const slugs = await getPublicBoardSlugs();
   return slugs.map((slug) => ({ slug }));
+}
+
+// 회원 게시판 목록은 noindex(누설 방지, GFM-58). getBoardMeta는 쿠키를 안 읽어 정적 유지.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const board = await getBoardMeta(slug);
+  if (!board) return {};
+  return board.read_roles !== null
+    ? { title: board.name, robots: { index: false, follow: false } }
+    : { title: board.name };
 }
 
 type Params = { slug: string };
