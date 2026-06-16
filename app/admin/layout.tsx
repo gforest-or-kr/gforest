@@ -34,6 +34,12 @@ export default async function AdminLayout({
           >
             메인 팝업
           </Link>
+          <Link
+            href="/admin/boards"
+            className="px-3 py-1.5 rounded-lg hover:bg-forest-50 font-medium"
+          >
+            게시판
+          </Link>
         </nav>
       </div>
       {children}
