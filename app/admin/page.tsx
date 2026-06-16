@@ -8,7 +8,12 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 const ROLES: AppRole[] = ["pending", "member", "operator", "teacher", "student", "admin"];
 
 // SCR-600 회원·역할 승인 — 기존 등업게시판 워크플로 대체
-export default async function AdminMembersPage() {
+export default async function AdminMembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error: errMsg } = await searchParams;
   const supabase = await createClient();
   const [{ data: profiles }, { data: audit }] = await Promise.all([
     supabase
@@ -61,6 +66,9 @@ export default async function AdminMembersPage() {
 
   return (
     <main className="pb-16">
+      {errMsg && (
+        <p className="mt-4 rounded-2xl bg-red-50 text-red-600 text-sm px-4 py-3">{errMsg}</p>
+      )}
       <section className="mt-6">
         <h2 className="font-bold mb-1">
           승인 대기{" "}

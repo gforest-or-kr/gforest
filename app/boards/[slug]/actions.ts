@@ -160,12 +160,13 @@ export async function createComment(slug: string, postId: string, formData: Form
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
 
-  await supabase.from("comments").insert({
+  const { error } = await supabase.from("comments").insert({
     post_id: postId,
     author_id: user.id,
     content,
     parent_id: parentId,
   });
+  if (error) return { error: "댓글 등록에 실패했습니다. 권한을 확인해 주세요." };
   revalidatePath(`/boards/${slug}/${postId}`);
   revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (댓글 즉시 반영)
 }
@@ -186,10 +187,13 @@ export async function updateComment(
   if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}`)}`);
 
   // 본문 수정 — RLS(comments_update)가 본인/admin만 허용. edited_at으로 '수정됨' 표시(소프트삭제와 구분)
-  await supabase
+  // 수정 행은 select에 남으므로 .select()로 영향행을 직접 확인(RLS가 0행 거르면 빈 배열)
+  const { data, error } = await supabase
     .from("comments")
     .update({ content, edited_at: new Date().toISOString() })
-    .eq("id", commentId);
+    .eq("id", commentId)
+    .select("id");
+  if (error || !data?.length) return { error: "댓글 수정에 실패했습니다. 권한을 확인해 주세요." };
   revalidatePath(`/boards/${slug}/${postId}`);
   revalidateTag(`post:${postId}`, "max");
 }
@@ -233,10 +237,22 @@ export async function deletePost(slug: string, postId: string) {
 
 export async function deleteComment(slug: string, postId: string, commentId: string) {
   const supabase = await createClient();
-  await supabase
+  const { error } = await supabase
     .from("comments")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", commentId);
+    .eq("id", commentId)
+    .is("deleted_at", null);
+
+  // soft-delete된 행은 comments_select(deleted_at is null)에서 사라져 .select()로 성공행을
+  // 못 받으므로(deletePost와 동일 이유), "여전히 보이는 댓글이 남았는가"를 재조회로 확인한다.
+  const { data: still } = await supabase
+    .from("comments")
+    .select("id")
+    .eq("id", commentId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error || still) return { error: "댓글을 삭제할 수 없습니다. 권한을 확인해 주세요." };
+
   revalidatePath(`/boards/${slug}/${postId}`);
   revalidateTag(`post:${postId}`, "max"); // 글 상세 ISR 캐시 무효화 (댓글 삭제 즉시 반영)
 }

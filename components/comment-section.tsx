@@ -80,7 +80,11 @@ export default function CommentSection({
     if (!confirm("댓글을 등록할까요?")) return;
     setBusy(true);
     try {
-      await createComment(slug, postId, fd);
+      const res = await createComment(slug, postId, fd);
+      if (res?.error) {
+        alert(res.error);
+        return;
+      }
       await refetch();
       form.reset();
       setReplyTo(null);
@@ -96,7 +100,11 @@ export default function CommentSection({
     if (!String(fd.get("content") ?? "").trim() || busy) return;
     setBusy(true);
     try {
-      await updateComment(slug, postId, commentId, fd);
+      const res = await updateComment(slug, postId, commentId, fd);
+      if (res?.error) {
+        alert(res.error);
+        return;
+      }
       await refetch();
       setEditing(null);
     } finally {
@@ -108,7 +116,11 @@ export default function CommentSection({
     if (busy || !confirm("댓글을 삭제할까요? 되돌릴 수 없습니다.")) return;
     setBusy(true);
     try {
-      await deleteComment(slug, postId, id);
+      const res = await deleteComment(slug, postId, id);
+      if (res?.error) {
+        alert(res.error);
+        return;
+      }
       await refetch();
     } finally {
       setBusy(false);
