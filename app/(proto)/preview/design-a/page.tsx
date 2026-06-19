@@ -8,30 +8,49 @@ export const metadata: Metadata = {
 
 // ── 시안 A(Modern Minimal) 프로토타입 ──────────────────────────────────────
 // 정적 페이지. 쿠키·세션·DB를 호출하지 않는다(렌더링 함정 #9 회피). 콘텐츠는 목업과 동일한
-// 더미 샘플이며, 사진은 forest→teal 그라데이션 플레이스홀더로 대체했다(외부 의존 0).
+// 더미 샘플. 사진은 원본 시안 A의 실제 에셋(public/assets/design-a/img/*)을 사용 —
+// "사진 위에 텍스트"가 시안 A의 핵심 정체성이라 그라데이션 대신 실제 이미지를 깐다.
+
+const IMG = {
+  hero: "/assets/design-a/img/hero-school.jpg",
+  steiner: "/assets/design-a/img/steiner.jpg",
+  community: "/assets/design-a/img/community.jpg",
+  grass: "/assets/design-a/img/nature-grass.jpg",
+  valley: "/assets/design-a/img/nature-valley.jpg",
+  sunset: "/assets/design-a/img/nature-sunset.jpg",
+};
 
 const PALETTE = {
   forest: "#1F5C46",
   forestDeep: "#163D2F",
   ink: "#1A2421",
   muted: "#5B6B63",
-  line: "#E4EAE6",
   bgSoft: "#F4F7F4",
 };
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function Eyebrow({
+  children,
+  light = false,
+}: {
+  children: React.ReactNode;
+  light?: boolean;
+}) {
   return (
-    <p className="text-teal-600 font-semibold text-sm tracking-wide mb-3">
+    <p
+      className={`font-semibold text-sm tracking-wide mb-3 ${
+        light ? "text-teal-200" : "text-teal-600"
+      }`}
+    >
       {children}
     </p>
   );
 }
 
 const COURSES = [
-  { t: "담임과정", d: "1–8학년. 한 담임이 8년간 함께하며 에포크 수업으로 깊이 배운다." },
-  { t: "상급과정", d: "9–12학년. 사고의 독립과 전문성, 농사실습·인턴십·프로젝트." },
-  { t: "절기와 공동체 행사", d: "미카엘·성마틴·빛의 축제 등 사계절 절기를 온 학교가 함께 준비한다." },
-  { t: "예술·노작·음악", d: "오이리트미·목공·뜨개·오케스트라 — 손과 의지를 깨우는 노작." },
+  { t: "담임과정", d: "1–8학년. 한 담임이 8년간 함께하며 에포크 수업으로 깊이 배운다.", img: IMG.valley },
+  { t: "상급과정", d: "9–12학년. 사고의 독립과 전문성, 농사실습·인턴십·프로젝트.", img: IMG.hero },
+  { t: "절기와 공동체 행사", d: "미카엘·성마틴·빛의 축제 등 사계절 절기를 온 학교가 함께 준비한다.", img: IMG.community },
+  { t: "예술·노작·음악", d: "오이리트미·목공·뜨개·오케스트라 — 손과 의지를 깨우는 노작.", img: IMG.grass },
 ];
 
 const NOTICES = [
@@ -54,79 +73,98 @@ const DEVELOP = [
   { age: "14–21세", title: "머리", body: "독립적 사고와 판단의 시기. 탐구·실습·프로젝트로 세상과 만난다." },
 ];
 
+const MEDIA = [
+  { t: "봄 축제 후기 — 온 학교가 함께한 하루", img: IMG.community },
+  { t: "상급과정 농사실습 다큐", img: IMG.valley },
+  { t: "겨울 빛의 축제 스케치", img: IMG.sunset },
+  { t: "상급 오케스트라 정기연주회", img: IMG.hero },
+];
+
+/* eslint-disable @next/next/no-img-element */
 export default function DesignAPreview() {
   return (
-    <main id="top" className="bg-white text-[#1A2421]" style={{ color: PALETTE.ink }}>
+    <main id="top" className="bg-white" style={{ color: PALETTE.ink }}>
       <SiteHeader />
 
-      {/* HERO */}
-      <section className="relative">
-        <div className="relative overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(120% 120% at 80% 0%, ${PALETTE.forest} 0%, ${PALETTE.forestDeep} 55%, #0e2c21 100%)`,
-            }}
-          />
-          <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_80%,rgba(79,179,160,.55),transparent_45%)]" />
-          <div className="relative mx-auto max-w-[1180px] px-5 py-24 sm:py-32 text-white">
-            <Reveal>
-              <p className="text-teal-200 font-semibold mb-4">
-                푸른숲발도르프학교 · 개교 22년
-              </p>
-              <h1 className="text-3xl sm:text-5xl font-bold leading-[1.18] tracking-tight max-w-3xl">
-                자연 속에서, 함께 배우고,
-                <br />
-                스스로 자라는 행복한 학교
-              </h1>
-              <p className="mt-6 text-white/80 text-lg max-w-xl leading-relaxed">
-                루돌프 슈타이너의 발달관 위에서, 머리와 가슴과 손이 고르게 자라는
-                12년의 여정을 학부모와 교사가 함께 만들어 갑니다.
-              </p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <a
-                  href="#admit"
-                  className="inline-flex items-center rounded-full bg-teal-400 px-6 py-3 font-semibold text-[#0e2c21] hover:bg-teal-300 transition-colors"
-                >
-                  입학설명회 신청 →
-                </a>
-                <a
-                  href="#about"
-                  className="inline-flex items-center rounded-full bg-white/12 backdrop-blur px-6 py-3 font-semibold text-white ring-1 ring-white/25 hover:bg-white/20 transition-colors"
-                >
-                  학교 소개 보기
-                </a>
-              </div>
-              <div className="mt-10 flex flex-wrap gap-2.5">
-                {["개교 22년", "담임·상급 완전 12년 과정", "병설 어린이집·유아과정"].map(
-                  (c) => (
-                    <span
-                      key={c}
-                      className="rounded-full bg-white/10 ring-1 ring-white/20 px-4 py-1.5 text-sm text-white/90"
-                    >
-                      {c}
-                    </span>
-                  ),
-                )}
-              </div>
-            </Reveal>
-          </div>
+      {/* HERO — 풀스크린 사진 + 어두운 그라데이션 오버레이 (시안 A 핵심) */}
+      <section className="relative min-h-[100svh] flex items-end text-white overflow-hidden isolate">
+        <img
+          src={IMG.hero}
+          alt="봄날 벚꽃이 핀 푸른숲발도르프학교 교정"
+          className="absolute inset-0 -z-10 w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(180deg,rgba(22,61,47,.45) 0%,rgba(22,61,47,.15) 35%,rgba(22,61,47,.82) 100%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-[1180px] w-full px-5 pt-32 pb-16 sm:pb-24">
+          <Reveal>
+            <Eyebrow light>푸른숲발도르프학교 · 개교 22년</Eyebrow>
+            <h1
+              className="font-bold leading-[1.16] tracking-tight text-[clamp(2.1rem,5.2vw,4rem)] max-w-[16ch]"
+              style={{ textShadow: "0 2px 24px rgba(0,0,0,.28)" }}
+            >
+              자연 속에서, 함께 배우고, 스스로 자라는 행복한 학교
+            </h1>
+            <p className="mt-5 text-white/90 text-lg max-w-[46ch] leading-relaxed">
+              루돌프 슈타이너의 발달관 위에서, 머리와 가슴과 손이 고르게 자라는
+              12년의 여정을 학부모와 교사가 함께 만들어 갑니다.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="#admit"
+                className="inline-flex items-center rounded-full bg-teal-400 px-6 py-3 font-semibold text-[#0e2c21] hover:bg-teal-300 transition-colors"
+              >
+                입학설명회 신청 →
+              </a>
+              <a
+                href="#about"
+                className="inline-flex items-center rounded-full bg-white/15 backdrop-blur px-6 py-3 font-semibold text-white ring-1 ring-white/30 hover:bg-white/25 transition-colors"
+              >
+                학교 소개 보기
+              </a>
+            </div>
+            <div className="mt-9 flex flex-wrap gap-2.5">
+              {["개교 22년", "담임·상급 완전 12년 과정", "병설 어린이집·유아과정"].map(
+                (c) => (
+                  <span
+                    key={c}
+                    className="rounded-full bg-white/12 ring-1 ring-white/25 px-4 py-1.5 text-sm text-white/90"
+                  >
+                    {c}
+                  </span>
+                ),
+              )}
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ABOUT — 7년 주기 발달 */}
+      {/* ABOUT — 슈타이너 사진 + 7년 주기 발달 */}
       <section id="about" className="mx-auto max-w-[1180px] px-5 py-20 sm:py-28">
-        <Reveal>
-          <Eyebrow>발도르프 교육철학</Eyebrow>
-          <h2 className="text-2xl sm:text-4xl font-bold tracking-tight max-w-2xl leading-snug">
-            머리와 가슴과 손이 자라는 시간, 유아기부터
-          </h2>
-          <p className="mt-5 text-[#5B6B63] text-lg max-w-2xl leading-relaxed">
-            루돌프 슈타이너의 발달관은 인간을 7년 단위로 바라봅니다. 푸른숲은 각
-            시기에 맞는 배움으로, 아이가 스스로 자랄 힘을 기릅니다.
-          </p>
-        </Reveal>
-        <div className="mt-12 grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <Reveal>
+            <Eyebrow>발도르프 교육철학</Eyebrow>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight leading-snug">
+              머리와 가슴과 손이 자라는 시간, 유아기부터
+            </h2>
+            <p className="mt-5 text-[#5B6B63] text-lg leading-relaxed">
+              루돌프 슈타이너의 발달관은 인간을 7년 단위로 바라봅니다. 푸른숲은 각
+              시기에 맞는 배움으로, 아이가 스스로 자랄 힘을 기릅니다.
+            </p>
+          </Reveal>
+          <Reveal delay={120}>
+            <img
+              src={IMG.steiner}
+              alt="발도르프 교육 창시자 루돌프 슈타이너"
+              className="w-full aspect-[4/3] object-cover rounded-[18px]"
+            />
+          </Reveal>
+        </div>
+        <div className="mt-14 grid gap-5 sm:grid-cols-3">
           {DEVELOP.map((d, i) => (
             <Reveal key={d.title} delay={i * 120}>
               <div className="h-full rounded-[18px] border border-[#E4EAE6] bg-[#F4F7F4] p-7">
@@ -138,14 +176,14 @@ export default function DesignAPreview() {
                     {d.age}
                   </span>
                 </div>
-                <p className="mt-4 text-[#1A2421] leading-relaxed">{d.body}</p>
+                <p className="mt-4 leading-relaxed">{d.body}</p>
               </div>
             </Reveal>
           ))}
         </div>
       </section>
 
-      {/* COURSES */}
+      {/* COURSES — 사진 카드 */}
       <section id="courses" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-28">
           <Reveal>
@@ -157,15 +195,18 @@ export default function DesignAPreview() {
           <div className="mt-12 grid gap-5 sm:grid-cols-2">
             {COURSES.map((c, i) => (
               <Reveal key={c.t} delay={i * 100}>
-                <div className="group h-full rounded-[18px] bg-white border border-[#E4EAE6] p-7 hover:shadow-[0_18px_50px_-24px_rgba(22,61,47,.45)] transition-shadow">
-                  <div
-                    className="h-32 rounded-xl mb-5"
-                    style={{
-                      background: `linear-gradient(135deg, ${PALETTE.forest}, #2C8C7C)`,
-                    }}
-                  />
-                  <h3 className="text-xl font-bold">{c.t}</h3>
-                  <p className="mt-2 text-[#5B6B63] leading-relaxed">{c.d}</p>
+                <div className="group h-full rounded-[18px] bg-white border border-[#E4EAE6] overflow-hidden hover:shadow-[0_18px_50px_-24px_rgba(22,61,47,.45)] transition-shadow">
+                  <div className="aspect-[16/9] overflow-hidden">
+                    <img
+                      src={c.img}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                    />
+                  </div>
+                  <div className="p-7">
+                    <h3 className="text-xl font-bold">{c.t}</h3>
+                    <p className="mt-2 text-[#5B6B63] leading-relaxed">{c.d}</p>
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -173,20 +214,27 @@ export default function DesignAPreview() {
         </div>
       </section>
 
-      {/* BAND — 학부모 공동체 */}
-      <section
-        className="text-white"
-        style={{
-          background: `linear-gradient(135deg, ${PALETTE.forestDeep}, ${PALETTE.forest})`,
-        }}
-      >
-        <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-24">
+      {/* BAND — 학부모 공동체 (사진 배경 + 90° 그라데이션 오버레이) */}
+      <section className="relative text-white overflow-hidden isolate">
+        <img
+          src={IMG.community}
+          alt="무대 위에서 손을 맞잡고 둥글게 선 아이들"
+          className="absolute inset-0 -z-10 w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(90deg,rgba(22,61,47,.9),rgba(22,61,47,.5))",
+          }}
+        />
+        <div className="mx-auto max-w-[1180px] px-5 py-24 sm:py-32">
           <Reveal>
-            <p className="text-teal-200 font-semibold mb-3">학부모 공동체</p>
+            <Eyebrow light>학부모 공동체</Eyebrow>
             <h2 className="text-2xl sm:text-4xl font-bold tracking-tight max-w-3xl leading-snug">
               학교가 곧 마을이고, 마을이 학교입니다
             </h2>
-            <p className="mt-5 text-white/80 text-lg max-w-2xl leading-relaxed">
+            <p className="mt-5 text-white/85 text-lg max-w-2xl leading-relaxed">
               학부모는 학교 예산·운영 방향을 교사·행정실과 함께 논의하고, 매년
               살림살이(재정)를 전체 공개합니다. 절기 축제도 함께 준비합니다.
             </p>
@@ -242,15 +290,14 @@ export default function DesignAPreview() {
         </div>
       </section>
 
-      {/* KINDERGARTEN */}
+      {/* KINDERGARTEN — 사진 */}
       <section id="kindergarten" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-24 grid gap-10 lg:grid-cols-2 items-center">
           <Reveal>
-            <div
-              className="aspect-[4/3] rounded-[18px]"
-              style={{
-                background: `linear-gradient(135deg, #4FB3A0, ${PALETTE.forest})`,
-              }}
+            <img
+              src={IMG.grass}
+              alt="자연 속에서 뛰노는 유아들의 모습"
+              className="w-full aspect-[4/3] object-cover rounded-[18px]"
             />
           </Reveal>
           <Reveal delay={120}>
@@ -302,7 +349,7 @@ export default function DesignAPreview() {
         </Reveal>
       </section>
 
-      {/* MEDIA STRIP */}
+      {/* MEDIA STRIP — 사진 썸네일 */}
       <section id="gallery" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-24">
           <Reveal>
@@ -312,27 +359,23 @@ export default function DesignAPreview() {
             </h2>
           </Reveal>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              "봄 축제 후기 — 온 학교가 함께한 하루",
-              "상급과정 농사실습 다큐",
-              "겨울 빛의 축제 스케치",
-              "계절 동화와 손 인형극",
-            ].map((t, i) => (
-              <Reveal key={t} delay={i * 90}>
+            {MEDIA.map((m, i) => (
+              <Reveal key={m.t} delay={i * 90}>
                 <div className="group">
-                  <div
-                    className="relative aspect-video rounded-xl overflow-hidden grid place-items-center"
-                    style={{
-                      background: `linear-gradient(135deg, ${PALETTE.forest}, #2C8C7C)`,
-                    }}
-                  >
-                    <span className="grid place-items-center w-14 h-14 rounded-full bg-white/90 text-teal-700 text-xl pl-1 group-hover:scale-105 transition-transform">
-                      ▶
+                  <div className="relative aspect-video rounded-xl overflow-hidden">
+                    <img
+                      src={m.img}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-[#163D2F]/30 group-hover:bg-[#163D2F]/15 transition-colors" />
+                    <span className="absolute inset-0 grid place-items-center">
+                      <span className="grid place-items-center w-14 h-14 rounded-full bg-white/90 text-teal-700 text-xl pl-1">
+                        ▶
+                      </span>
                     </span>
                   </div>
-                  <p className="mt-3 font-medium text-[#1A2421] leading-snug">
-                    {t}
-                  </p>
+                  <p className="mt-3 font-medium leading-snug">{m.t}</p>
                 </div>
               </Reveal>
             ))}
@@ -341,17 +384,16 @@ export default function DesignAPreview() {
       </section>
 
       {/* FOOTER */}
-      <footer
-        className="text-white/80"
-        style={{ background: PALETTE.forestDeep }}
-      >
+      <footer className="text-white/80" style={{ background: PALETTE.forestDeep }}>
         <div className="mx-auto max-w-[1180px] px-5 py-14">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-8">
             <div>
               <div className="flex items-center gap-2 text-white">
-                <span className="grid place-items-center w-9 h-9 rounded-xl bg-teal-500 font-bold">
-                  숲
-                </span>
+                <img
+                  src="/assets/design-a/img/logo-icon.png"
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
                 <span className="font-bold">푸른숲발도르프학교</span>
               </div>
               <p className="mt-4 text-sm leading-relaxed">
