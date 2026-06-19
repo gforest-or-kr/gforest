@@ -13,6 +13,18 @@
   --color-forest-800: #175437;
   --color-forest-900: #11402b;
 
+  /* teal 액센트 — 시안 A(Modern Minimal) 프로토타입용 (#2C8C7C/#4FB3A0 기준, GFM-63).
+     추가 토큰일 뿐 기존 forest 팔레트·운영 화면에는 영향 없음. */
+  --color-teal-50: #e9f7f3;
+  --color-teal-100: #c9ece4;
+  --color-teal-200: #9bdacd;
+  --color-teal-300: #4fb3a0;
+  --color-teal-400: #38a18d;
+  --color-teal-500: #2c8c7c;
+  --color-teal-600: #237062;
+  --color-teal-700: #1c594e;
+  --color-teal-800: #16453d;
+
   /* 시스템 폰트 스택 — 웹폰트 전송 0. 각 OS 기본 한글 폰트로 렌더 (#25) */
   --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic",
     system-ui, "Noto Sans KR", "Segoe UI", sans-serif;

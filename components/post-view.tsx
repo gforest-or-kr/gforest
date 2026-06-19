@@ -6,7 +6,7 @@ import PostActions from "@/components/post-actions";
 import CommentSection from "@/components/comment-section";
 import PostError from "@/components/post-error";
 import { RICH_CLASS } from "@/lib/rich";
-import { deletePost } from "@/app/boards/[slug]/actions";
+import { deletePost } from "@/app/(site)/boards/[slug]/actions";
 
 // 글 상세 본문 — 서버(공개글 ISR)·클라(회원글) 양쪽에서 재사용하는 프레젠테이션 컴포넌트.
 // 데이터를 props로만 받고 쿠키/비동기를 쓰지 않아 어느 트리에서든 렌더된다.

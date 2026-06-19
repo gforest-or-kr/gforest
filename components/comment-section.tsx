@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { shortDate, fullDate } from "@/lib/format";
-import { createComment, updateComment, deleteComment } from "@/app/boards/[slug]/actions";
+import { createComment, updateComment, deleteComment } from "@/app/(site)/boards/[slug]/actions";
 
 type CommentRow = {
   id: string;
