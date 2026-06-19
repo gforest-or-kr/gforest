@@ -19,9 +19,12 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-[#E4EAE6]">
       <div className="mx-auto max-w-[1180px] px-5 h-16 flex items-center justify-between gap-4">
         <a href="#top" className="flex items-center gap-2 shrink-0">
-          <span className="grid place-items-center w-9 h-9 rounded-xl bg-teal-500 text-white font-bold">
-            숲
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/design-a/img/logo-icon.png"
+            alt=""
+            className="w-8 h-8 object-contain"
+          />
           <span className="font-bold text-[#1A2421] tracking-tight">
             푸른숲발도르프학교
           </span>
