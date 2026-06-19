@@ -14,6 +14,15 @@ Vercel 대시보드의 Git 자동 배포는 **해제**돼 있다. 대신 `.githu
 - **트리거**: `main` push = **production**, PR = **preview**(PR에 URL 코멘트), `workflow_dispatch` 수동.
 - **흐름**: `vercel pull` → `vercel build` → **ISR 스모크 게이트** → `vercel deploy --prebuilt` → Discord 알림.
 
+## 브랜치·병합 전략 (squash 전용, 2026-06-19)
+
+`main`이 production 단일 트렁크. 모든 작업은 **기능 브랜치 → PR → squash 병합**으로 들어간다.
+
+- **브랜치명**: `feat/` · `perf/` · `fix/` · `docs/` · `chore/` + 짧은 설명 (예: `feat/design-a-prototype`).
+- **병합은 squash만** — 리포 설정에서 **merge commit·rebase 비활성**. `gh pr merge --squash` 또는 GitHub UI의 Squash 버튼만 쓸 수 있다. 병합 후 브랜치는 **자동 삭제**, main 히스토리는 기능당 1커밋(선형).
+- **PR 제목 = 커밋 컨벤션으로 작성** (`feat:`/`perf:`/`docs:` … + 관련 `GFM-키`). squash 설정이 **커밋 제목을 PR 제목으로 고정**하므로, PR 제목이 그대로 main 커밋 제목이자 **Discord 배포 알림 문구**가 된다.
+- **왜 merge commit이 아닌가**: `--merge`는 `Merge pull request #N from …`가 main 최신 커밋이 돼, `deploy.yml`이 `head_commit.message` 첫 줄을 띄우는 Discord 알림이 **비설명적**이 된다. squash면 PR 제목이 알림에 떠 설명적으로 유지된다(근본 원인=병합 전략을 바꾼 업계 통상 방식, 워크플로 수정 불필요).
+
 ## 워크플로 3종
 
 | 파일 | 트리거 | 역할 |
