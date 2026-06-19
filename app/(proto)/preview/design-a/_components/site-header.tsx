@@ -16,7 +16,7 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-[#E4EAE6]">
+    <header className="sticky top-0 z-40 bg-white border-b border-[#E4EAE6]">
       <div className="mx-auto max-w-[1180px] px-5 h-16 flex items-center justify-between gap-4">
         <a href="#top" className="flex items-center gap-2 shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}

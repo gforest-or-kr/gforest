@@ -8,16 +8,21 @@ export const metadata: Metadata = {
 
 // ── 시안 A(Modern Minimal) 프로토타입 ──────────────────────────────────────
 // 정적 페이지. 쿠키·세션·DB를 호출하지 않는다(렌더링 함정 #9 회피). 콘텐츠는 목업과 동일한
-// 더미 샘플. 사진은 원본 시안 A의 실제 에셋(public/assets/design-a/img/*)을 사용 —
-// "사진 위에 텍스트"가 시안 A의 핵심 정체성이라 그라데이션 대신 실제 이미지를 깐다.
+// 더미 샘플. 사진은 원본 시안 A의 실제 에셋(public/assets/design-a/img/*)을 사용.
+// 스크롤 성능: 풀해상도는 히어로·밴드 배경에만, 카드·썸네일은 900px THUMB을 쓰고
+// 폴드 아래 이미지는 lazy/async 디코딩 — 큰 원본 반복 디코딩으로 인한 잰크를 방지(GFM-63).
 
-const IMG = {
-  hero: "/assets/design-a/img/hero-school.jpg",
-  steiner: "/assets/design-a/img/steiner.jpg",
-  community: "/assets/design-a/img/community.jpg",
-  grass: "/assets/design-a/img/nature-grass.jpg",
-  valley: "/assets/design-a/img/nature-valley.jpg",
-  sunset: "/assets/design-a/img/nature-sunset.jpg",
+const FULL = {
+  hero: "/assets/design-a/img/hero-school.jpg", // 풀블리드 히어로 (LCP)
+  community: "/assets/design-a/img/community.jpg", // 풀블리드 밴드 배경
+};
+const THUMB = {
+  hero: "/assets/design-a/img/thumb/hero-school.jpg",
+  steiner: "/assets/design-a/img/thumb/steiner.jpg",
+  community: "/assets/design-a/img/thumb/community.jpg",
+  grass: "/assets/design-a/img/thumb/nature-grass.jpg",
+  valley: "/assets/design-a/img/thumb/nature-valley.jpg",
+  sunset: "/assets/design-a/img/thumb/nature-sunset.jpg",
 };
 
 const PALETTE = {
@@ -47,10 +52,10 @@ function Eyebrow({
 }
 
 const COURSES = [
-  { t: "담임과정", d: "1–8학년. 한 담임이 8년간 함께하며 에포크 수업으로 깊이 배운다.", img: IMG.valley },
-  { t: "상급과정", d: "9–12학년. 사고의 독립과 전문성, 농사실습·인턴십·프로젝트.", img: IMG.hero },
-  { t: "절기와 공동체 행사", d: "미카엘·성마틴·빛의 축제 등 사계절 절기를 온 학교가 함께 준비한다.", img: IMG.community },
-  { t: "예술·노작·음악", d: "오이리트미·목공·뜨개·오케스트라 — 손과 의지를 깨우는 노작.", img: IMG.grass },
+  { t: "담임과정", d: "1–8학년. 한 담임이 8년간 함께하며 에포크 수업으로 깊이 배운다.", img: THUMB.valley },
+  { t: "상급과정", d: "9–12학년. 사고의 독립과 전문성, 농사실습·인턴십·프로젝트.", img: THUMB.hero },
+  { t: "절기와 공동체 행사", d: "미카엘·성마틴·빛의 축제 등 사계절 절기를 온 학교가 함께 준비한다.", img: THUMB.community },
+  { t: "예술·노작·음악", d: "오이리트미·목공·뜨개·오케스트라 — 손과 의지를 깨우는 노작.", img: THUMB.grass },
 ];
 
 const NOTICES = [
@@ -74,10 +79,10 @@ const DEVELOP = [
 ];
 
 const MEDIA = [
-  { t: "봄 축제 후기 — 온 학교가 함께한 하루", img: IMG.community },
-  { t: "상급과정 농사실습 다큐", img: IMG.valley },
-  { t: "겨울 빛의 축제 스케치", img: IMG.sunset },
-  { t: "상급 오케스트라 정기연주회", img: IMG.hero },
+  { t: "봄 축제 후기 — 온 학교가 함께한 하루", img: THUMB.community },
+  { t: "상급과정 농사실습 다큐", img: THUMB.valley },
+  { t: "겨울 빛의 축제 스케치", img: THUMB.sunset },
+  { t: "상급 오케스트라 정기연주회", img: THUMB.hero },
 ];
 
 /* eslint-disable @next/next/no-img-element */
@@ -86,11 +91,13 @@ export default function DesignAPreview() {
     <main id="top" className="bg-white" style={{ color: PALETTE.ink }}>
       <SiteHeader />
 
-      {/* HERO — 풀스크린 사진 + 어두운 그라데이션 오버레이 (시안 A 핵심) */}
+      {/* HERO — 풀스크린 사진(LCP, eager) + 어두운 그라데이션 오버레이 */}
       <section className="relative min-h-[100svh] flex items-end text-white overflow-hidden isolate">
         <img
-          src={IMG.hero}
+          src={FULL.hero}
           alt="봄날 벚꽃이 핀 푸른숲발도르프학교 교정"
+          fetchPriority="high"
+          decoding="async"
           className="absolute inset-0 -z-10 w-full h-full object-cover"
         />
         <div
@@ -158,8 +165,10 @@ export default function DesignAPreview() {
           </Reveal>
           <Reveal delay={120}>
             <img
-              src={IMG.steiner}
+              src={THUMB.steiner}
               alt="발도르프 교육 창시자 루돌프 슈타이너"
+              loading="lazy"
+              decoding="async"
               className="w-full aspect-[4/3] object-cover rounded-[18px]"
             />
           </Reveal>
@@ -183,7 +192,7 @@ export default function DesignAPreview() {
         </div>
       </section>
 
-      {/* COURSES — 사진 카드 */}
+      {/* COURSES — 사진 카드 (THUMB, lazy) */}
       <section id="courses" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-28">
           <Reveal>
@@ -200,6 +209,8 @@ export default function DesignAPreview() {
                     <img
                       src={c.img}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                     />
                   </div>
@@ -217,8 +228,10 @@ export default function DesignAPreview() {
       {/* BAND — 학부모 공동체 (사진 배경 + 90° 그라데이션 오버레이) */}
       <section className="relative text-white overflow-hidden isolate">
         <img
-          src={IMG.community}
+          src={FULL.community}
           alt="무대 위에서 손을 맞잡고 둥글게 선 아이들"
+          loading="lazy"
+          decoding="async"
           className="absolute inset-0 -z-10 w-full h-full object-cover"
         />
         <div
@@ -290,13 +303,15 @@ export default function DesignAPreview() {
         </div>
       </section>
 
-      {/* KINDERGARTEN — 사진 */}
+      {/* KINDERGARTEN — 사진 (THUMB, lazy) */}
       <section id="kindergarten" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-24 grid gap-10 lg:grid-cols-2 items-center">
           <Reveal>
             <img
-              src={IMG.grass}
+              src={THUMB.grass}
               alt="자연 속에서 뛰노는 유아들의 모습"
+              loading="lazy"
+              decoding="async"
               className="w-full aspect-[4/3] object-cover rounded-[18px]"
             />
           </Reveal>
@@ -349,7 +364,7 @@ export default function DesignAPreview() {
         </Reveal>
       </section>
 
-      {/* MEDIA STRIP — 사진 썸네일 */}
+      {/* MEDIA STRIP — 사진 썸네일 (THUMB, lazy) */}
       <section id="gallery" style={{ background: PALETTE.bgSoft }}>
         <div className="mx-auto max-w-[1180px] px-5 py-20 sm:py-24">
           <Reveal>
@@ -366,6 +381,8 @@ export default function DesignAPreview() {
                     <img
                       src={m.img}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-[#163D2F]/30 group-hover:bg-[#163D2F]/15 transition-colors" />
@@ -392,6 +409,8 @@ export default function DesignAPreview() {
                 <img
                   src="/assets/design-a/img/logo-icon.png"
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="w-8 h-8 object-contain"
                 />
                 <span className="font-bold">푸른숲발도르프학교</span>
