@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
         "/dl/", // 첨부 다운로드 프록시
         "/boards/*/write",
         "/boards/*/*/edit",
+        "/preview", // 디자인 시안 프로토타입 (비공개 미리보기, GFM-63)
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
