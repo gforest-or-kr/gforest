@@ -54,6 +54,20 @@
 
 ¹ 실보존 용량은 §2 감사 전까지 미정. 위 28GB는 "무료 1GB를 크게 넘되 감사·리사이즈 후 남는 양"을 보수적으로 가정한 예시일 뿐이다. R2 무료 10GB 차감 → 18GB 과금 기준 ~$0.27. **실보존이 10GB 이하면 B·C는 $0.**
 
+### 3.1 업로드(ingress) 비용 — 서비스별 현황 (조사: 2026-06)
+
+egress(다운로드)와 달리 **업로드(ingress) 데이터 전송은 위 서비스 모두에서 사실상 무료**다. 업로드가 실제로 소모하는 건 전송량이 아니라 **저장 용량**이며, 일부 서비스는 업로드를 **쓰기 연산(operation) 횟수**로 별도 계량하나 우리 규모(월 수천 건)에선 무료 한도 안이다.
+
+| 옵션 | 업로드 데이터 전송(ingress) | 업로드 연산(쓰기 ops) | 우리 규모 영향 |
+|---|---|---|---|
+| A. Supabase Free | **무료**(대역폭 비과금) | 비과금 | 업로드는 **1GB 저장 용량만** 소모 — 전송 자체는 0 |
+| **B. Cloudflare R2** | **무료** | Class A(PutObject) $4.50/백만, **월 100만 건 무료** | 사실상 **$0** (월 업로드 수천 « 100만) |
+| C. Backblaze B2 | **무료** | Class A 트랜잭션 **전부 무료** | **$0** |
+| D. Supabase Pro | **무료**(대역폭 비과금) | 비과금 | 업로드 자체 추가비 없음 — 저장·egress만 과금 |
+| E. Vercel Blob | 클라 업로드는 전송 **무료**(서버 업로드는 Fast Data Transfer 과금) | Advanced ops(업로드 포함) $5.00/백만 | 업로드 연산이 유일 변수 — 소규모는 미미 |
+
+**결론**: 업로드는 어느 서비스에서도 비용 천장이 아니다 — 천장은 여전히 **① 저장 용량 + ② egress(다운로드)**. 따라서 §3 순위(R2 ★)는 업로드를 포함해도 바뀌지 않으며, R2·B2는 **ingress·egress 양쪽 무료**라 쓰기·읽기 트래픽 모두 안전하다. 출처: [Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing/), [Backblaze B2 transaction pricing](https://www.backblaze.com/cloud-storage/transaction-pricing), [Vercel Blob pricing](https://vercel.com/docs/vercel-blob/usage-and-pricing), [Supabase pricing](https://supabase.com/pricing).
+
 **핵심 비교 B vs D:**
 - **R2(B)**: egress 무료가 사진 사이트의 본질 위험(§1-B)을 원천 제거. 저장도 10GB 무료. **월 0원 목표를 거의 유지**(초과해도 푼돈). 단 Supabase와 별도 서비스 = 계정/키 1개 추가, ETL에서 R2로 업로드하는 코드 필요.
 - **Supabase Pro(D)**: Storage·egress·DB가 한 콘솔. 운영 단순. 그러나 **$25/월 고정 = 연 33만원**, 그리고 egress 250GB 초과 시 추가 과금이 사진 사이트에선 현실적 위험. "전담 인력 없는 무료 운영" 전제와 충돌.
