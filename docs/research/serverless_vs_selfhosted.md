@@ -1,5 +1,7 @@
 # 서버리스 vs AWS 자체 구축 비교 (2026-06-11)
 
+> ⚠️ **2026-07 정정**: 아래 §0의 *"회원 300명·트래픽 한도의 10% 미만"* 가정은 곽대종 학부모의 2026-06-26 실측(일 62,714 hits·~90GB/월 egress·회원 3,025)으로 **반증**됐다. 실운영 트래픽 기반 예산·한도 재산출은 [budget_prod_traffic.md](budget_prod_traffic.md) 참조. 서버리스↔자체구축 *구조 비교*는 유효하나, 무료 티어 전제는 Vercel Pro + Supabase Pro로 현실화됐다.
+
 > 회원 ~300명, 동시접속 수십 명 이하의 학교 커뮤니티 기준.
 > 서버리스(Vercel Hobby + Supabase Free, Seoul)와 AWS 저사양 자체 구축을 비용·방식·성능·장단점·유지보수성 관점에서 비교.
 > 가격은 2026-06 기준 USD, AWS는 서울(ap-northeast-2) 리전 공식 Price List 실측.

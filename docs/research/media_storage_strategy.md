@@ -4,7 +4,7 @@
 > **레거시 미디어 ~38GB vs Supabase Free Storage 1GB** — 를 의사결정 가능한 선택지로 정리한다.
 > 이 문서는 "월 0원" 운영 목표를 지키면서 38GB를 어떻게 다룰지에 대한 **기술 스코핑**이며,
 > 최종 결정(예산 투입 여부·이관 범위)은 이해관계자 몫이다.
-> 관련: [serverless_vs_selfhosted.md](serverless_vs_selfhosted.md) §0(이미지 한도가 첫 천장), [migration_plan.md](../plans/migration_plan.md) §3(파일: 1GB 초과 시 R2 병행 검토)
+> 관련: [serverless_vs_selfhosted.md](serverless_vs_selfhosted.md) §0(이미지 한도가 첫 천장), [migration_plan.md](../plans/migration_plan.md) §3(파일: 1GB 초과 시 R2 병행 검토), [budget_prod_traffic.md](budget_prod_traffic.md)(실측 90GB/월 트래픽 기준 예산 — R2 egress-무료 오프로딩이 전제로 확정됨)
 
 ## 1. 문제 정의
 
