@@ -27,6 +27,9 @@ export type PostViewData = {
   author: { id: string; nickname: string } | null;
   // 서명 URL을 본문에 박지 않는다(정적 캐시 동결 방지). 다운로드는 /dl/{id} 프록시로.
   attachments: { id: string; file_name: string; byte_size: number; mime_type: string | null }[];
+  // 인라인 이미지 소스(GFM-64) — 회원 글(클라 fetch)만 배치 서명 URL 직링크를 넘긴다.
+  // undefined(공개 ISR 경로)=/dl 프록시, "loading"=서명 대기 placeholder, 객체=id→서명 URL.
+  imageUrls?: Record<string, string> | "loading";
   comments: Parameters<typeof CommentSection>[0]["comments"];
   prevPost: { id: string; title: string } | null;
   nextPost: { id: string; title: string } | null;
@@ -42,6 +45,7 @@ export default function PostView({
   comments,
   prevPost,
   nextPost,
+  imageUrls,
 }: PostViewData) {
   const deletePostAction = deletePost.bind(null, slug, post.id);
 
@@ -101,10 +105,19 @@ export default function PostView({
                       {f.file_name}
                     </a>
                     <span className="text-xs text-slate-400 ml-2">{(f.byte_size / 1024 / 1024).toFixed(2)}MB</span>
-                    {isImage && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={`/dl/${f.id}?inline=1`} alt={f.file_name} loading="lazy" className="mt-2 max-w-full h-auto rounded-xl" />
-                    )}
+                    {isImage &&
+                      (imageUrls === "loading" ? (
+                        // 배치 서명 URL 대기 중 — /dl로 먼저 그리면 서명 도착 후 이중 로드되므로 placeholder
+                        <div className="mt-2 h-48 max-w-full rounded-xl bg-slate-100 animate-pulse" />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={imageUrls?.[f.id] ?? `/dl/${f.id}?inline=1`}
+                          alt={f.file_name}
+                          loading="lazy"
+                          className="mt-2 max-w-full h-auto rounded-xl"
+                        />
+                      ))}
                   </li>
                 );
               })}
