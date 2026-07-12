@@ -17,11 +17,24 @@ type Nav = { id: string; title: string } | null;
 // 인라인 이미지는 배치 서명 URL 직링크로 렌더한다(GFM-64) — 이 경로는 클라 fetch라 정적 HTML에
 // 서명 URL이 동결될 일이 없고, 이미지당 /dl 함수 호출+302 왕복이 사라진다. 다운로드 <a>는
 // 원본 파일명 disposition·영구 링크가 필요하므로 /dl/{id} 프록시를 유지한다.
+// 재방문은 세션 메모리 캐시로 즉시 표시하고 같은 fetch가 백그라운드 재검증이 된다(GFM-68).
 type State =
   | { kind: "loading" }
   | { kind: "denied"; loggedIn: boolean }
   | { kind: "notfound" }
   | { kind: "ready"; data: PostViewData };
+
+// 세션 메모리 캐시(GFM-68) — 목록↔글 왕복(지배적 사용 패턴) 재방문 시 스켈레톤 없이 즉시
+// 표시하고, 기존 fetch 흐름이 그대로 백그라운드 재검증이 되어 최신으로 교체한다(SWR, 무의존성).
+// 키에 uid를 포함해 같은 브라우저 세션에서 계정이 바뀌어도 타인의 캐시가 노출되지 않는다.
+// 페이지 새로고침이면 모듈째 초기화되는 휘발성 캐시라 무효화 로직이 따로 필요 없다.
+type CacheEntry = {
+  data: PostViewData;
+  nav: { prevPost: Nav; nextPost: Nav };
+  imageUrls?: Record<string, string>;
+};
+const sessionCache = new Map<string, CacheEntry>();
+const CACHE_MAX = 30;
 
 export default function MemberPostLoader({
   slug,
@@ -56,6 +69,15 @@ export default function MemberPostLoader({
         return;
       }
 
+      // 캐시 적중 시 즉시 렌더 — 아래 fetch는 그대로 진행되어 백그라운드 재검증이 된다
+      const cacheKey = `${uid}:${postId}`;
+      const cached = sessionCache.get(cacheKey);
+      if (cached) {
+        setState({ kind: "ready", data: cached.data });
+        setNav(cached.nav);
+        setImageUrls(cached.imageUrls);
+      }
+
       // 단일 왕복: 역할·글·댓글·첨부를 한 번에 병렬 요청(서로 의존 없음, postId는 URL에서 이미 앎)
       const [{ data: prof }, { data: post }, { data: comments }, { data: attachments }] =
         await Promise.all([
@@ -83,36 +105,44 @@ export default function MemberPostLoader({
 
       const role = (prof?.role ?? null) as AppRole | null;
       if (!canReadBoard(readRoles, role)) {
+        sessionCache.delete(cacheKey); // 재검증에서 권한 상실 확인 — 캐시도 함께 무효화
         setState({ kind: "denied", loggedIn: true });
         return;
       }
       if (!post) {
+        sessionCache.delete(cacheKey);
         setState({ kind: "notfound" });
         return;
       }
 
-      setState({
-        kind: "ready",
-        data: {
-          slug,
-          boardName,
-          writeRoles,
-          post: {
-            id: post.id, title: post.title, content: post.content, view_count: post.view_count,
-            created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
-            content_html: post.content_html,
-          },
-          author: post.author as PostViewData["author"],
-          attachments: (attachments ?? []) as PostViewData["attachments"],
-          comments: (comments ?? []) as PostViewData["comments"],
-          prevPost: null,
-          nextPost: null,
+      const data: PostViewData = {
+        slug,
+        boardName,
+        writeRoles,
+        post: {
+          id: post.id, title: post.title, content: post.content, view_count: post.view_count,
+          created_at: post.created_at, event_date: post.event_date, legacy_document_srl: post.legacy_document_srl,
+          content_html: post.content_html,
         },
-      });
+        author: post.author as PostViewData["author"],
+        attachments: (attachments ?? []) as PostViewData["attachments"],
+        comments: (comments ?? []) as PostViewData["comments"],
+        prevPost: null,
+        nextPost: null,
+      };
+      setState({ kind: "ready", data });
 
-      // 인라인으로 보여줄 이미지 첨부 — 서명 URL이 오기 전까지 placeholder 렌더
+      // 캐시 저장 — entry 참조를 아래 2차 왕복이 이어서 채운다. 재삽입으로 최신을 뒤로 보내
+      // 상한 초과 시 가장 오래된 항목부터 밀려나게 한다(간이 LRU).
+      const entry: CacheEntry = { data, nav: { prevPost: null, nextPost: null }, imageUrls: cached?.imageUrls };
+      sessionCache.delete(cacheKey);
+      sessionCache.set(cacheKey, entry);
+      if (sessionCache.size > CACHE_MAX) sessionCache.delete(sessionCache.keys().next().value!);
+
+      // 인라인으로 보여줄 이미지 첨부 — 서명 URL이 오기 전까지 placeholder 렌더.
+      // 단, 캐시된 서명 URL을 이미 그렸다면 placeholder로 되돌리지 않는다(새 URL 도착 시 교체).
       const imageAtts = (attachments ?? []).filter((a) => a.mime_type?.startsWith("image/"));
-      if (imageAtts.length > 0) setImageUrls("loading");
+      if (imageAtts.length > 0 && !cached?.imageUrls) setImageUrls("loading");
 
       // 이전/다음 글(created_at 의존)·이미지 배치 서명(storage_path 의존)은
       // 본문 렌더 후 비차단 2번째 왕복에서 병렬로 채운다
@@ -125,8 +155,9 @@ export default function MemberPostLoader({
           ? supabase.storage.from("attachments").createSignedUrls(imageAtts.map((a) => a.storage_path), 3600)
           : Promise.resolve(null),
       ]);
-      if (!active) return;
-      setNav({ prevPost: prevPost ?? null, nextPost: nextPost ?? null });
+      const newNav = { prevPost: prevPost ?? null, nextPost: nextPost ?? null };
+      entry.nav = newNav; // 언마운트 후 완료돼도 캐시는 갱신(다음 방문이 최신을 받음)
+      let newImageUrls = entry.imageUrls;
       if (imageAtts.length > 0) {
         const byPath = new Map((signed?.data ?? []).map((s) => [s.path, s.signedUrl]));
         const map: Record<string, string> = {};
@@ -135,8 +166,12 @@ export default function MemberPostLoader({
           if (url) map[a.id] = url;
         }
         // 서명 전면 실패 시 undefined → PostView가 /dl 프록시로 폴백(자가 복구)
-        setImageUrls(Object.keys(map).length > 0 ? map : undefined);
+        newImageUrls = Object.keys(map).length > 0 ? map : undefined;
+        entry.imageUrls = newImageUrls;
       }
+      if (!active) return;
+      setNav(newNav);
+      if (imageAtts.length > 0) setImageUrls(newImageUrls);
     })();
     return () => {
       active = false;
