@@ -1,7 +1,14 @@
 # GitHub Actions → AWS 배포용 OIDC 신뢰. 장기 액세스 키를 GitHub에 저장하지 않는다.
 # 신뢰 조건: gforest-or-kr/gforest 저장소의 main 브랜치 push 또는 PR 워크플로만.
+# sub 클레임은 GitHub의 ID 포함 형식(repo:<owner>@<owner_id>/<repo>@<repo_id>:...)을 따른다.
 
 data "aws_caller_identity" "current" {}
+
+locals {
+  github_owner     = split("/", var.github_repo)[0]
+  github_repo_name = split("/", var.github_repo)[1]
+  github_repo_sub  = "${local.github_owner}@${var.github_owner_id}/${local.github_repo_name}@${var.github_repo_id}"
+}
 
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
@@ -29,9 +36,9 @@ data "aws_iam_policy_document" "github_assume" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo}:pull_request",
-        "repo:${var.github_repo}:environment:*",
+        "repo:${local.github_repo_sub}:ref:refs/heads/main",
+        "repo:${local.github_repo_sub}:pull_request",
+        "repo:${local.github_repo_sub}:environment:*",
       ]
     }
   }

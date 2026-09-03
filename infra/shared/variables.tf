@@ -15,3 +15,16 @@ variable "app_name" {
   type        = string
   default     = "gforest"
 }
+
+# GitHub OIDC sub 클레임에 포함되는 ID (이름 변경 공격 방지용으로 고정)
+variable "github_owner_id" {
+  description = "GitHub Organization ID (gh api orgs/<org> --jq .id)"
+  type        = number
+  default     = 324632415
+}
+
+variable "github_repo_id" {
+  description = "GitHub 저장소 ID (gh api repos/<owner>/<repo> --jq .id)"
+  type        = number
+  default     = 1265071773
+}
