@@ -36,3 +36,16 @@ output "acm_certificate_arn_alb" {
 output "acm_certificate_arn_cloudfront" {
   value = aws_acm_certificate.cloudfront.arn
 }
+
+# --- env 스택이 참조하는 값 (terraform_remote_state) ---
+output "vpc_id" { value = aws_vpc.main.id }
+output "public_subnet_ids" { value = aws_subnet.public[*].id }
+output "app_security_group_id" { value = aws_security_group.app.id }
+output "db_security_group_id" { value = aws_security_group.db.id }
+output "alb_arn" { value = aws_lb.main.arn }
+output "alb_dns_name" { value = aws_lb.main.dns_name }
+output "alb_zone_id" { value = aws_lb.main.zone_id }
+output "alb_https_listener_arn" { value = aws_lb_listener.https.arn }
+output "ecs_cluster_arn" { value = aws_ecs_cluster.main.arn }
+output "ecs_cluster_name" { value = aws_ecs_cluster.main.name }
+output "task_execution_role_arn" { value = aws_iam_role.task_execution.arn }
