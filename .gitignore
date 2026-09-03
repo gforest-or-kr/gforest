@@ -51,6 +51,7 @@ supabase/.temp/
 infra/**/.terraform/
 infra/**/*.tfstate
 infra/**/*.tfstate.*
-infra/**/*.tfvars
+infra/**/*.auto.tfvars
+infra/**/secret*.tfvars
 !infra/**/*.auto.tfvars.example
 infra/**/crash.log
