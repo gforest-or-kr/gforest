@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   # 워크스페이스(dev/prod)별로 env/<workspace>/terraform.tfstate 경로에 저장된다.

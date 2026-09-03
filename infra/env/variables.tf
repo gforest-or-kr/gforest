@@ -42,3 +42,20 @@ variable "use_spot" {
   type        = bool
   default     = false
 }
+
+variable "db_instance_class" {
+  type    = string
+  default = "db.t4g.micro"
+}
+
+variable "db_publicly_accessible" {
+  description = "이관·운영 작업용 임시 공개 접근. prod는 컷오버 기간에만 true"
+  type        = bool
+  default     = false
+}
+
+variable "db_allowed_cidrs" {
+  description = "db_publicly_accessible=true 일 때 허용할 CIDR 목록"
+  type        = list(string)
+  default     = []
+}

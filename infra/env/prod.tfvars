@@ -7,4 +7,10 @@ use_spot      = false
 
 environment = {
   NEXT_PUBLIC_SITE_URL = "https://gforest.or.kr"
+  MEDIA_BUCKET         = "gforest-media-prod-106360388338"
+  AWS_REGION           = "ap-northeast-2"
+}
+
+secret_parameters = {
+  DATABASE_URL = "/gforest/prod/DATABASE_URL"
 }
