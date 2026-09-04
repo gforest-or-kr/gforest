@@ -5,8 +5,15 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- auth.users (외부) -->
-        <mxCell id="users" value="auth.users (RDS, Auth.js)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12" vertex="1" parent="1">
+
+        <!-- auth.password_reset_tokens (비밀번호 재설정 1회용 토큰) -->
+        <mxCell id="prt" value="auth.password_reset_tokens" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="740" width="230" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="prt1" value="token_hash PK · user_id FK → auth.users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=10" vertex="1" parent="prt"><mxGeometry y="28" width="230" height="22" as="geometry" /></mxCell>
+        <mxCell id="prt2" value="expires_at (1h) — SES 메일 링크, 비밀번호 재설정" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=10;fontColor=#888888" vertex="1" parent="prt"><mxGeometry y="50" width="230" height="22" as="geometry" /></mxCell>
+        <!-- auth.users (RDS 부트스트랩) -->
+        <mxCell id="users" value="auth.users (RDS · Auth.js)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12" vertex="1" parent="1">
           <mxGeometry x="40" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="users1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="users"><mxGeometry y="28" width="200" height="26" as="geometry" /></mxCell>
@@ -31,7 +38,7 @@
         <mxCell id="au3" value="changed_by / changed_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="audit"><mxGeometry y="80" width="220" height="26" as="geometry" /></mxCell>
 
         <!-- boards -->
-        <mxCell id="boards" value="boards (38개 시드)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
+        <mxCell id="boards" value="boards (33개 시드)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
           <mxGeometry x="430" y="40" width="250" height="184" as="geometry" />
         </mxCell>
         <mxCell id="bd1" value="id  uuid  PK / slug  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="boards"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
@@ -48,7 +55,7 @@
         <mxCell id="po1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
         <mxCell id="po2" value="board_id  FK → boards" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="54" width="250" height="26" as="geometry" /></mxCell>
         <mxCell id="po3" value="author_id  FK → profiles" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="80" width="250" height="26" as="geometry" /></mxCell>
-        <mxCell id="po4" value="title / content / is_notice / view_count" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="posts"><mxGeometry y="106" width="250" height="26" as="geometry" /></mxCell>
+        <mxCell id="po4" value="title / content / content_html / is_notice / view_count" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="posts"><mxGeometry y="106" width="250" height="26" as="geometry" /></mxCell>
         <mxCell id="po5" value="event_date / event_start / event_end" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="132" width="250" height="26" as="geometry" /></mxCell>
         <mxCell id="po6" value="space_id  FK → spaces  (시간중복 EXCLUDE)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="158" width="250" height="26" as="geometry" /></mxCell>
         <mxCell id="po7" value="deleted_at  (soft delete)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="posts"><mxGeometry y="184" width="250" height="26" as="geometry" /></mxCell>
@@ -69,7 +76,7 @@
         <mxCell id="cm1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="28" width="230" height="26" as="geometry" /></mxCell>
         <mxCell id="cm2" value="post_id  FK → posts" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="54" width="230" height="26" as="geometry" /></mxCell>
         <mxCell id="cm3" value="author_id  FK / parent_id  자기참조(1단계)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="comments"><mxGeometry y="80" width="230" height="26" as="geometry" /></mxCell>
-        <mxCell id="cm4" value="content / deleted_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="comments"><mxGeometry y="106" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="cm4" value="content / edited_at / deleted_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="comments"><mxGeometry y="106" width="230" height="26" as="geometry" /></mxCell>
         <mxCell id="cm5" value="legacy_comment_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="comments"><mxGeometry y="132" width="230" height="26" as="geometry" /></mxCell>
 
         <!-- attachments -->
@@ -77,7 +84,7 @@
           <mxGeometry x="760" y="500" width="230" height="132" as="geometry" />
         </mxCell>
         <mxCell id="at1" value="id  uuid  PK / post_id  FK → posts" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="attach"><mxGeometry y="28" width="230" height="26" as="geometry" /></mxCell>
-        <mxCell id="at2" value="storage_path  (Storage 버킷)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="attach"><mxGeometry y="54" width="230" height="26" as="geometry" /></mxCell>
+        <mxCell id="at2" value="storage_path  (S3 키 attachments/{uid}/…)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="attach"><mxGeometry y="54" width="230" height="26" as="geometry" /></mxCell>
         <mxCell id="at3" value="file_name / byte_size / mime_type" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="attach"><mxGeometry y="80" width="230" height="26" as="geometry" /></mxCell>
         <mxCell id="at4" value="legacy_file_srl  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#b85450" vertex="1" parent="attach"><mxGeometry y="106" width="230" height="26" as="geometry" /></mxCell>
 
