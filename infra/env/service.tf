@@ -78,6 +78,44 @@ resource "aws_ecs_task_definition" "app" {
   # 워크플로는 항상 "가장 최근 리비전"을 복제해 이미지만 바꾸므로 여기서 등록한 값이 다음 배포에 반영된다.
 }
 
+# DB 마이그레이션 일회성 태스크. 앱과 같은 이미지·네트워크로 `node db/migrate.mjs` 만 실행한다.
+# 관리자 접속 문자열(RLS 우회)은 이 태스크에만 주고 앱(web) 태스크에는 주지 않는다.
+# 배포 워크플로가 이미지를 바꿔 새 리비전을 등록하고 run-task 로 실행 → 종료 코드 0 이어야 서비스 갱신으로 넘어간다.
+resource "aws_ecs_task_definition" "migrate" {
+  family                   = "${local.name}-migrate"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = local.shared.task_execution_role_arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+
+  container_definitions = jsonencode([{
+    name        = "web"
+    image       = "${local.shared.ecr_repository_url}:${var.image_tag}"
+    essential   = true
+    command     = ["node", "db/migrate.mjs"]
+    environment = [{ name = "APP_ENV", value = local.env }]
+    secrets = [{
+      name      = "DATABASE_ADMIN_URL"
+      valueFrom = "arn:aws:ssm:ap-northeast-2:${local.shared.account_id}:parameter/gforest/${local.env}/DATABASE_ADMIN_URL"
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.app.name
+        awslogs-region        = "ap-northeast-2"
+        awslogs-stream-prefix = "migrate"
+      }
+    }
+  }])
+}
+
 resource "aws_lb_target_group" "app" {
   name        = local.name
   port        = 3000

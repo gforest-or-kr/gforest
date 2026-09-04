@@ -17,6 +17,7 @@ if [ "$env_name" = local ]; then
   # 컨테이너 안의 psql. SQL 파일은 stdin 으로 넘긴다(./db 가 /db 로 마운트돼 있지만 경로 의존을 피함).
   psql_cmd=(docker compose -f "$repo/docker-compose.yml" exec -T db psql -U gforest_admin -d gforest)
   app_password="gforest_app"
+  admin_url="postgresql://gforest_admin:gforest@localhost:5432/gforest" # docker-compose.yml 의 고정값
 else
   export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
   admin_url=$(aws ssm get-parameter --with-decryption --name "/gforest/${env_name}/DATABASE_ADMIN_URL" --query Parameter.Value --output text)
@@ -33,29 +34,13 @@ run_psql() { "${psql_cmd[@]}" -v ON_ERROR_STOP=1 -q "$@"; }
 echo "== bootstrap (auth schema, uid(), gforest_app)"
 run_psql -v app_password="$app_password" < "$here/bootstrap_rds.sql"
 
-echo "== migrations"
-run_psql -c "create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz not null default now())"
-for f in "$repo"/db/migrations/*.sql; do
-  v=$(basename "$f" .sql)
-  if "${psql_cmd[@]}" -tAc "select 1 from public.schema_migrations where version='$v'" | grep -q 1; then
-    echo "   skip $v"; continue
-  fi
-  echo "   apply $v"
-  # 파일 + 기록 insert 를 한 트랜잭션(-1)으로: 실패하면 통째로 롤백되고 기록도 남지 않는다
-  { cat "$f"; echo; echo "insert into public.schema_migrations(version) values ('$v');"; } | run_psql -1
-done
+echo "== migrations (db/migrate.mjs — 배포 파이프라인과 같은 구현)"
+DATABASE_ADMIN_URL="$admin_url" node "$here/migrate.mjs"
 
 if [ "$("${psql_cmd[@]}" -tAc "select count(*) from public.boards")" = 0 ]; then
   echo "== seed (boards 비어 있음)"
   run_psql -1 < "$here/seed.sql"
 fi
-
-echo "== grants on existing objects"
-run_psql <<'SQL'
-grant select, insert, update, delete on all tables in schema public to gforest_app;
-grant usage, select on all sequences in schema public to gforest_app;
-grant execute on all functions in schema public to gforest_app;
-SQL
 
 if [ "$env_name" = local ]; then
   echo "== local sample data"

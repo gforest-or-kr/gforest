@@ -82,9 +82,16 @@ data "aws_iam_policy_document" "github_deploy" {
       "ecs:DescribeTasks",
       "ecs:ListTasks",
       "ecs:RegisterTaskDefinition",
+      "ecs:RunTask", # 배포 전 DB 마이그레이션 일회성 태스크
       "ecs:UpdateService",
     ]
     resources = ["*"]
+  }
+
+  statement {
+    sid       = "MigrationLogs" # 마이그레이션 태스크의 출력을 워크플로 로그에 그대로 보여주기 위해
+    actions   = ["logs:GetLogEvents"]
+    resources = ["arn:aws:logs:${var.region}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/${var.app_name}-*:*"]
   }
 
   statement {

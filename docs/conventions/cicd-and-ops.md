@@ -29,15 +29,16 @@
 ## 배포 = GitHub Actions → ECR → ECS (`.github/workflows/ecs-deploy.yml`)
 
 - **main push → dev 자동 배포**, **`vX.Y.Z` 태그 push → prod 배포**, 수동 실행(workflow_dispatch)은 롤백·재배포용. 규칙은 [branching-and-release.md](./branching-and-release.md). 이미지 태그 `sha-<commit>` + `<env>-latest`.
-- ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
+- ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → **DB 마이그레이션**(같은 이미지로 `gforest-<env>-migrate` 태스크를 VPC 안에서 `run-task`, `node db/migrate.mjs`, 종료 코드 0 필수) → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
+- 마이그레이션이 실패하면 서비스는 이전 버전 그대로 남는다. 관리자 접속 문자열(`DATABASE_ADMIN_URL`)은 migrate 태스크에만 주입되고 web 태스크에는 없다(RLS 우회 방지).
 - 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.
 - PR 게이트는 `ci.yml`(tsc·eslint·`next build`). **빌드는 DB 없이 통과해야 한다** — 빌드 시점 DB 접근 금지.
 
 ## DB 마이그레이션 · 부트스트랩 (`db/`)
 
-- 스키마 단일 진실은 `db/migrations/*.sql`(규칙은 `db/README.md`). 적용: `AWS_PROFILE=gforest db/bootstrap.sh <env>` —
-  ① `bootstrap_rds.sql`(auth.users 테이블·`auth.uid()` 셔임·RLS 적용 롤 `gforest_app`) ② 미적용 마이그레이션 순차 적용(`public.schema_migrations` 추적)
-  ③ 앱 접속 문자열을 SSM에 기록.
+- 스키마 단일 진실은 `db/migrations/*.sql`(규칙은 `db/README.md`). **평소 적용은 배포 파이프라인이**(`db/migrate.mjs`, `public.schema_migrations` 추적).
+  최초 1회(새 RDS)만 사람이 `AWS_PROFILE=gforest db/bootstrap.sh <env>` — ① `bootstrap_rds.sql`(auth.users·`auth.uid()` 셔임·앱 롤 `gforest_app`)
+  ② 같은 `migrate.mjs` ③ 앱 접속 문자열을 SSM에 기록. 이때만 RDS 를 잠깐 연다.
 - 앱은 `gforest_app`(테이블 소유자 아님 → RLS 강제)으로 접속. 관리자 접속(`DATABASE_ADMIN_URL`)은 마이그레이션·이관에만.
 - **RDS는 비공개**(인터넷 경로 없음). 평소 DB에 닿는 것은 ECS 태스크뿐이다. 비상 시(수동 복구·데이터 점검)에만
   `db_publicly_accessible=true` + `db_allowed_cidrs=["<내 IP>/32"]`로 apply → 작업 → **즉시 false로 되돌려 apply**. 켜 둔 채 퇴근하지 않는다.
