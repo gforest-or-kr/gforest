@@ -41,7 +41,7 @@ resource "aws_db_instance" "main" {
   port     = 5432
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = concat([local.shared.db_security_group_id], var.db_publicly_accessible ? [aws_security_group.db_public[0].id] : [])
+  vpc_security_group_ids = [local.shared.db_security_group_id, aws_security_group.db_ops.id]
   parameter_group_name   = aws_db_parameter_group.pg17.name
   publicly_accessible    = var.db_publicly_accessible
 
@@ -61,17 +61,18 @@ resource "aws_db_instance" "main" {
   }
 }
 
-# 이관·운영 작업용 임시 공개 접근 (dev 또는 컷오버 기간). 허용 CIDR만.
-resource "aws_security_group" "db_public" {
-  count       = var.db_publicly_accessible ? 1 : 0
-  name        = "${local.name}-db-public"
-  description = "RDS temporary public access from allowed CIDRs"
+# 운영 작업용 SG — 항상 RDS에 붙어 있되 평소에는 규칙이 없다(= 아무 효과 없음). 비상 시
+# db_publicly_accessible=true + db_allowed_cidrs 로 규칙만 켠다. SG 자체를 count 로 만들었다 지우면
+# Terraform 이 RDS 갱신보다 SG 삭제를 먼저 시도해 "ENI detach AuthFailure" 로 실패한다(2026-09-05 겪음).
+resource "aws_security_group" "db_ops" {
+  name        = "${local.name}-db-ops"
+  description = "RDS emergency access from allowed CIDRs (rules only when db_publicly_accessible)"
   vpc_id      = local.shared.vpc_id
 }
 
-resource "aws_vpc_security_group_ingress_rule" "db_public" {
+resource "aws_vpc_security_group_ingress_rule" "db_ops" {
   for_each          = var.db_publicly_accessible ? toset(var.db_allowed_cidrs) : toset([])
-  security_group_id = aws_security_group.db_public[0].id
+  security_group_id = aws_security_group.db_ops.id
   ip_protocol       = "tcp"
   from_port         = 5432
   to_port           = 5432
