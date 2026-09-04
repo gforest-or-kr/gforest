@@ -45,7 +45,7 @@
 
 - **백업**: RDS 자동 백업(prod 7일 보존, dev 1일) + 최종 스냅샷. **복원 검증까지 해야 백업이다** — 분기 1회 스냅샷을 dev에 복원해 행수 대조(절차 TODO, GFM 이슈로 관리).
 - 로그: CloudWatch `/ecs/gforest-<env>` 14일. 느린 쿼리(>500ms)는 RDS 로그.
-- 알림: Budgets 메일(+billing, 담당자). Discord 배포 알림은 이전 후 재연결 예정.
+- 알림: Budgets 메일(+billing, 담당자). **배포 결과는 Discord**(`ecs-deploy.yml` 마지막 단계, 성공/실패 모두, 시크릿 `DISCORD_WEBHOOK_URL`).
 
 ## ⚠️ 실제로 겪은 함정 — 어기면 깨진다
 

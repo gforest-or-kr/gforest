@@ -104,3 +104,28 @@ jobs:
             sleep 6
           done
           echo "::error::$host /api/health 응답 없음"; exit 1
+
+      # 배포 결과 Discord 알림 — 성공/실패/취소 모두(if: always). 시크릿 DISCORD_WEBHOOK_URL 없으면 건너뜀.
+      - name: Discord 알림
+        if: always()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message || github.ref_name }}
+        run: |
+          [ -n "$WEBHOOK" ] || { echo "DISCORD_WEBHOOK_URL 없음 — 알림 생략"; exit 0; }
+          case "$STATUS" in
+            success) icon="✅"; color=3066993 ;;
+            failure) icon="🚨"; color=15158332 ;;
+            *)       icon="⚠️"; color=9807270 ;;
+          esac
+          title="$icon [$ENV_NAME] 배포 $STATUS — $VERSION"
+          desc=$(printf '%s\n' "$COMMIT_MSG" | head -1 | cut -c1-200)
+          jq -n --arg t "$title" --arg d "$desc" --arg url "$RUN_URL" --arg env "$ENV_NAME" --arg site "$SITE_URL" --arg actor "$ACTOR" --argjson c "$color" '{
+            embeds: [{ title: $t, description: $d, url: $url, color: $c,
+              fields: [ {name:"환경", value:$env, inline:true}, {name:"실행자", value:$actor, inline:true},
+                        {name:"확인", value:($site + "/version"), inline:false} ] }] }' \
+            | curl -sS -o /dev/null -w "discord %{http_code}\n" -H "Content-Type: application/json" -d @- "$WEBHOOK"
