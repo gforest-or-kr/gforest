@@ -34,6 +34,17 @@ jobs:
       SITE_URL: ${{ (inputs.environment || 'dev') == 'prod' && 'https://gforest.or.kr' || 'https://dev.gforest.or.kr' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # git describe(태그 기반 버전)용
+
+      - name: 버전 문자열 계산
+        id: ver
+        run: |
+          # 태그가 있으면 v1.2.0 또는 v1.2.0-3-gabc1234, 없으면 0.0.0-gabc1234
+          v=$(git describe --tags --always --match 'v*' 2>/dev/null || true)
+          case "$v" in v*) ;; *) v="0.0.0-g${v}";; esac
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -57,6 +68,10 @@ jobs:
             ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ env.ENV_NAME }}-latest
           build-args: |
             NEXT_PUBLIC_SITE_URL=${{ env.SITE_URL }}
+            APP_VERSION=${{ steps.ver.outputs.version }}
+            APP_COMMIT=${{ github.sha }}
+            APP_BUILT_AT=${{ steps.ver.outputs.built_at }}
+            APP_BUILD_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -65,9 +80,13 @@ jobs:
           set -euo pipefail
           family="gforest-${ENV_NAME}"
           image="${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:sha-${{ github.sha }}"
+          # 이미지 교체 + 배포 메타(버전·배포자·실행 URL)를 태스크 정의 env에 기록 → /version 이력의 출처
           aws ecs describe-task-definition --task-definition "$family" --query taskDefinition \
-            | jq --arg img "$image" '
+            | jq --arg img "$image" --arg ver "${{ steps.ver.outputs.version }}" --arg by "${{ github.actor }}" \
+                 --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" '
                 .containerDefinitions[0].image = $img
+                | .containerDefinitions[0].environment |= (map(select(.name | IN("APP_VERSION","APP_DEPLOYED_BY","APP_BUILD_URL") | not))
+                    + [{name:"APP_VERSION",value:$ver},{name:"APP_DEPLOYED_BY",value:$by},{name:"APP_BUILD_URL",value:$url}])
                 | del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy)' \
             > td.json
           arn=$(aws ecs register-task-definition --cli-input-json file://td.json --query taskDefinition.taskDefinitionArn --output text)

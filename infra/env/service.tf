@@ -16,6 +16,20 @@ resource "aws_iam_role" "task" {
   })
 }
 
+# 버전 페이지(/version)가 현재 배포·이력을 ECS API에서 읽기 위한 읽기 전용 권한
+data "aws_iam_policy_document" "task_deploy_info" {
+  statement {
+    actions   = ["ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:ListTaskDefinitions"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "task_deploy_info" {
+  name   = "deploy-info-read"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.task_deploy_info.json
+}
+
 resource "aws_ecs_task_definition" "app" {
   family                   = local.name
   requires_compatibilities = ["FARGATE"]
@@ -35,7 +49,10 @@ resource "aws_ecs_task_definition" "app" {
     image        = "${local.shared.ecr_repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = 3000, protocol = "tcp" }]
-    environment  = [for k, v in merge({ NODE_ENV = "production", PORT = "3000", HOSTNAME = "0.0.0.0" }, var.environment) : { name = k, value = v }]
+    environment = [for k, v in merge({
+      NODE_ENV = "production", PORT = "3000", HOSTNAME = "0.0.0.0",
+      APP_ENV  = local.env, ECS_CLUSTER = local.shared.ecs_cluster_name, ECS_SERVICE = local.name,
+    }, var.environment) : { name = k, value = v }]
     secrets = [for k, p in var.secret_parameters : {
       name      = k
       valueFrom = "arn:aws:ssm:ap-northeast-2:${local.shared.account_id}:parameter${p}"
