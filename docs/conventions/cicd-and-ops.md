@@ -12,7 +12,8 @@
 - **AWS**: 계정 1개(서울). root는 **봉인**(MFA, 액세스 키 없음, 일상 로그인 금지). 사람은 **IAM Identity Center**
   포털 `https://gforest.awsapps.com/start`(그룹 `admins` = AdministratorAccess 8h). CI는 **OIDC 롤** `gforest-github-deploy`.
   **장기 액세스 키는 어디에도 만들지 않는다.**
-- 로컬 CLI: `aws sso login --profile gforest --use-device-code` → `AWS_PROFILE=gforest`. 비용 상한은 Budgets `gforest-monthly`.
+- 로컬 CLI(인프라 담당): `aws sso login --profile gforest --use-device-code` → `AWS_PROFILE=gforest`. 비용 상한은 Budgets `gforest-monthly`.
+- **접근 등급**: 개발자 = GitHub write + Jira/Confluence, **AWS 없음**(로컬 Docker 로 개발) · 운영(Owner + 예비 1명) = Identity Center `admins` · 자동화 = GitHub Actions OIDC 롤. 읽기 전용 그룹은 필요가 생길 때 만든다.
 
 ## 인프라 = Terraform (`infra/`)
 

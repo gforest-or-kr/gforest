@@ -16,20 +16,24 @@
 | 인프라 | Terraform `infra/` (shared + env dev/prod), 비밀값은 SSM Parameter Store |
 | 배포 | GitHub Actions → ECR → ECS (`ecs-deploy.yml`) |
 
-## 로컬 개발
+## 로컬 개발 (AWS 계정 불필요)
+
+개발은 각자 로컬에서 한다 — Docker Compose 의 Postgres 17 + MinIO(S3 호환)가 DB·미디어 저장소를 대신한다. **AWS 접근은 필요 없다.**
 
 ```bash
 git clone git@github.com:gforest-or-kr/gforest.git && cd gforest
 npm ci
-cp .env.local.example .env.local
-# DATABASE_URL(dev RDS)은 SSM에서 가져온다 — 먼저 aws sso login --profile gforest --use-device-code
-AWS_PROFILE=gforest aws ssm get-parameter --with-decryption --name /gforest/dev/DATABASE_URL --query Parameter.Value --output text
+cp .env.local.example .env.local   # 기본값이 docker compose 기준이라 그대로 쓰면 된다
+npm run db:up                      # Postgres·MinIO 기동 + 스키마·시드·샘플 데이터 적용
 npm run dev                        # http://localhost:3000
 ```
 
-- Node 20+ 필요. Docker는 로컬에 필요 없다(이미지는 CI가 빌드).
-- `.env.local`: `DATABASE_URL`, `AUTH_SECRET`, `MEDIA_BUCKET`, `AWS_REGION` — S3 접근은 `AWS_PROFILE=gforest`로 실행.
-- DB 스키마: `db/migrations/` + 게시판 시드 `db/seed.sql`. 적용은 `db/bootstrap.sh <env>` (규칙은 `db/README.md`).
+- 필요한 것: Node 22, Docker Desktop, `gh`. (`psql` 불필요 — 컨테이너 안의 psql 을 쓴다)
+- 테스트 계정: `admin.test@gforest.kr` / `member.test@gforest.kr` 등, 비밀번호 `DevTest!2026` (`db/local/sample.sql` 상단). 로컬 전용이며 dev/prod 에는 없다.
+- `npm run db:reset` — 볼륨까지 지우고 처음부터. 스키마를 만지다 꼬였을 때. `npm run db:down` — 컨테이너 정지.
+- **PR 올리기 전 `npm run check`**(tsc·eslint·`next build`) — CI 의 `ci` 잡과 같은 검사다.
+- 메일은 `MAIL_FROM` 이 없으면 서버 콘솔에 출력된다(비밀번호 재설정 링크 확인용). MinIO 콘솔은 http://localhost:9001 (minioadmin/minioadmin).
+- DB 스키마: `db/migrations/` + 게시판 시드 `db/seed.sql`. 규칙은 `db/README.md`. dev/prod 에는 배포 파이프라인이 적용한다.
 
 ## 디렉터리
 

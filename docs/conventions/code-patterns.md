@@ -5,7 +5,7 @@
 
 ## 1. 권한 — RLS가 단일 진실
 
-- 게시판 33개의 읽기/쓰기 권한은 `boards.read_roles[] / write_roles[]` **데이터** + RLS 함수
+- 게시판 38개의 읽기/쓰기 권한은 `boards.read_roles[] / write_roles[]` **데이터** + RLS 함수
   `can_read_board()` / `can_write_board()`(SECURITY DEFINER)로 강제된다. `read_roles is null` = 익명 공개.
 - **앱 코드의 권한 검사(`lib/menu.ts`의 `canReadBoard` 등)는 UI 노출 제어용일 뿐, 게이트가 아니다.**
   같은 판단을 앱에 중복 구현하지 말 것 — 쿼리가 RLS로 이미 걸러진다(권한 없으면 빈 결과/거부).

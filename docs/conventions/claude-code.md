@@ -18,17 +18,18 @@
 
 1. `git pull` — main 최신화. 작업은 `<type>/<GFM-키>-<slug>` 브랜치에서 ([branching-and-release.md](./branching-and-release.md)).
 2. Jira 이슈를 `진행 중`으로. 없으면 만든다. **세션 간 맥락 인수인계의 단일 진실은 Jira 이슈 코멘트 + PR 본문**이다 — 개인 메모리·채팅 기록은 머신을 넘어가지 않는다.
-3. 도구 로그인: `aws sso login --profile gforest --use-device-code`(필요 시), `gh auth status`.
-4. 끝낼 때: PR 올리고 Jira에 "어디까지 했고 다음은 무엇" 한 줄. 미완성 브랜치는 push해 둔다(로컬에만 두지 않는다).
+3. 로컬 인프라: `npm run db:up`(Docker Compose Postgres·MinIO). `gh auth status`. AWS 는 인프라 담당만(`aws sso login --profile gforest --use-device-code`).
+4. PR 전에 `npm run check`(tsc·eslint·build) 통과. Claude 에게도 "check 통과 후 PR" 을 시킨다 — CI 는 필요조건이지 로컬 검증의 대체가 아니다.
+5. 끝낼 때: PR 올리고 Jira에 "어디까지 했고 다음은 무엇" 한 줄. 미완성 브랜치는 push해 둔다(로컬에만 두지 않는다).
 
 ## 3. 머신마다 맞춰야 하는 것 (1회)
 
 | 항목 | 방법 | 비고 |
 |---|---|---|
 | repo | `git clone git@github.com:gforest-or-kr/gforest.git` | 개인 GitHub 계정 + 2FA, Org 멤버 |
-| Node 22, `gh`, `aws` CLI v2, Terraform ≥1.10, `psql`(libpq) | brew | Docker는 **불필요**(CI가 빌드) |
-| AWS | `~/.aws/config`에 `gforest` SSO 프로필 (`infra/shared/README.md`) | Identity Center 사용자는 Owner가 만들어 준다 |
-| `.env.local` | `.env.local.example` 복사, `DATABASE_URL`은 SSM에서 | dev RDS는 허용 IP만 열려 있음 — 자기 IP 추가는 Owner에게 |
+| Node 22, **Docker Desktop**, `gh` | brew / Docker 공식 설치 | 로컬 DB·미디어는 `npm run db:up`(Postgres 17 + MinIO). `psql` 불필요 |
+| `.env.local` | `.env.local.example` 복사 — 기본값이 로컬 compose 기준 | dev RDS 에는 개발자가 직접 붙지 않는다(비공개). 마이그레이션은 배포 파이프라인이 |
+| AWS (**인프라 담당만**) | `aws` CLI v2, Terraform ≥1.10, `~/.aws/config`에 `gforest` SSO 프로필 (`infra/shared/README.md`) | Identity Center 사용자는 Owner가 만들어 준다. 일반 개발자는 AWS 계정이 없다 |
 | `.env` | `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`(본인 계정 토큰) | Jira/Confluence MCP·스크립트 공용 |
 | Claude Code MCP | repo의 `.mcp.json`이 `atlassian-gforest` 서버를 정의(`.env`를 읽음). `uv` 설치 필요 | 회사 Atlassian 등 **다른 MCP는 이 프로젝트에서 쓰지 않는다** |
 | Claude Code 권한 | repo의 `.claude/settings.json`(공유 허용 목록). 개인 추가는 `.claude/settings.local.json`(gitignore) | 위험 명령(rm -rf, terraform apply, git push --force)은 허용 목록에 넣지 않는다 |
