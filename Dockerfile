@@ -29,6 +29,8 @@ RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nextjs /app/public ./public
+# 마이그레이션 러너 — 배포 워크플로가 이 이미지로 `node db/migrate.mjs` 일회성 태스크를 돌린다 (pg 는 standalone 에 포함)
+COPY --from=build --chown=nextjs:nextjs /app/db ./db
 # RDS TLS 검증용 CA 번들 — repo에 두지 않고(.gitignore *.pem) 빌드 시 AWS 트러스트스토어에서 받는다
 ADD --chown=nextjs:nextjs https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem ./rds-ca.pem
 USER nextjs
