@@ -6,7 +6,7 @@
         <mxCell id="1" parent="0" />
 
         <!-- auth.users (외부) -->
-        <mxCell id="users" value="auth.users (Supabase Auth)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12" vertex="1" parent="1">
+        <mxCell id="users" value="auth.users (RDS, Auth.js)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12" vertex="1" parent="1">
           <mxGeometry x="40" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="users1" value="id  uuid  PK" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="users"><mxGeometry y="28" width="200" height="26" as="geometry" /></mxCell>

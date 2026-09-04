@@ -1,127 +1,161 @@
-<mxfile host="app.diagrams.net" modified="2026-06-12T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
-  <diagram name="cicd" id="cicd-1">
+<mxfile host="app.diagrams.net" modified="2026-09-04T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="cicd" id="cicd-aws-1">
     <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="820" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- 개발자 -->
-        <mxCell id="dev" value="👩‍💻 개발자 (협업자 누구나)&#10;git push main / Pull Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="40" y="80" width="220" height="70" as="geometry" />
+        <!-- ===== 개발자 · 수동 실행 · infra.yml ===== -->
+        <mxCell id="dev" value="👩‍💻 개발자 (협업자 누구나)&#10;브랜치 → Pull Request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wfInfra" value="⚙️ infra.yml (infra/** PR만)&#10;terraform fmt -check / validate&#10;+ OIDC 롤 인수 확인&#10;(sts get-caller-identity)&#10;apply는 CI에서 하지 않음" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="manual" value="🖱️ 수동 실행 (workflow_dispatch)&#10;environment = prod&#10;GitHub environment 승인 규칙 적용 가능" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="200" height="70" as="geometry" />
         </mxCell>
 
-        <!-- GitHub -->
+        <!-- ===== GitHub ===== -->
         <mxCell id="gh" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#24292f;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="330" y="40" width="300" height="410" as="geometry" />
+          <mxGeometry x="290" y="40" width="300" height="420" as="geometry" />
         </mxCell>
-        <mxCell id="ghTitle" value="GitHub — dongyoub-sinn/gforest (private)" style="text;html=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="345" y="50" width="280" height="20" as="geometry" />
+        <mxCell id="ghTitle" value="GitHub — gforest-or-kr/gforest (public · 브랜치 보호)" style="text;html=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="48" width="280" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="repo" value="main 브랜치&#10;(코드·스키마 SQL·워크플로 = 단일 진실)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="350" y="80" width="260" height="60" as="geometry" />
+        <mxCell id="pr" value="Pull Request (feature 브랜치)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="310" y="80" width="260" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="wfDeploy" value="⚙️ Actions: deploy&#10;main push=production / PR=preview&#10;vercel pull → build → deploy --prebuilt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="350" y="170" width="260" height="70" as="geometry" />
+        <mxCell id="wfCi" value="⚙️ ci.yml (PR 게이트)&#10;npm ci → tsc --noEmit → eslint → next build&#10;DB 없이 통과해야 한다 (빌드 시점 DB 접근 금지)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="350" y="160" width="220" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="wfBackup" value="⚙️ Actions: db-backup (매일 03:00 KST)&#10;pg_dump → 스크래치 DB 복원 → 행수 대조&#10;→ 아티팩트 30일 보관" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="350" y="260" width="260" height="70" as="geometry" />
-        </mxCell>
-        <mxCell id="wfKeep" value="⚙️ Actions: keep-alive (월·목 09:00)&#10;REST 쿼리로 DB 활동 발생 (7일 정지 방지)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="350" y="350" width="260" height="55" as="geometry" />
+        <mxCell id="main" value="main 브랜치 (squash 병합 전용)&#10;코드·SQL 마이그레이션·워크플로 = 단일 진실" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#24292f;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="360" width="260" height="60" as="geometry" />
         </mxCell>
 
-        <!-- Vercel -->
-        <mxCell id="vercel" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#000000;verticalAlign=top;" vertex="1" parent="1">
-          <mxGeometry x="730" y="40" width="260" height="210" as="geometry" />
+        <!-- ===== ecs-deploy.yml ===== -->
+        <mxCell id="deploy" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="640" y="40" width="340" height="500" as="geometry" />
         </mxCell>
-        <mxCell id="vercelTitle" value="▲ Vercel Hobby — 서울(icn1) 고정" style="text;html=1;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="745" y="50" width="230" height="20" as="geometry" />
+        <mxCell id="deployTitle" value="⚙️ ecs-deploy.yml — ARM 러너(ubuntu-24.04-arm)" style="text;html=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="48" width="320" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="prod" value="Production&#10;gforest.vercel.app" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="745" y="80" width="230" height="60" as="geometry" />
+        <mxCell id="s1" value="① OIDC 롤 인수 — gforest-github-deploy&#10;(장기 액세스 키 없음, id-token: write)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="80" width="300" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="preview" value="Preview — PR마다 고유 URL&#10;(PR 코멘트로 자동 안내)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;dashed=1;" vertex="1" parent="1">
-          <mxGeometry x="745" y="180" width="230" height="55" as="geometry" />
+        <mxCell id="s2" value="② Docker 빌드 — linux/arm64 네이티브 (QEMU 없음)&#10;build-arg NEXT_PUBLIC_SITE_URL · GHA 캐시" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="150" width="300" height="50" as="geometry" />
         </mxCell>
-
-        <!-- Supabase -->
-        <mxCell id="supa" value="🟩 Supabase Free — Seoul&#10;Postgres + RLS · Auth · Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="730" y="310" width="260" height="70" as="geometry" />
+        <mxCell id="s3" value="③ ECR push — sha-&lt;commit&gt; + &lt;env&gt;-latest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="220" width="300" height="50" as="geometry" />
         </mxCell>
-
-        <!-- UptimeRobot -->
-        <mxCell id="uptime" value="🟢 UptimeRobot (무료)&#10;5분 간격 핑 — 워밍 + 다운 감지&#10;상태: stats.uptimerobot.com/CeCXtI9BZ9" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#3bd671;fontSize=12;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="730" y="430" width="260" height="70" as="geometry" />
+        <mxCell id="s4" value="④ 태스크 정의 갱신 — 최신 리비전 복제, 이미지만 교체&#10;(환경변수·시크릿·크기는 Terraform 값 유지)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="290" width="300" height="50" as="geometry" />
         </mxCell>
-
-        <!-- 백업 아티팩트 -->
-        <mxCell id="artifact" value="📦 백업 아티팩트&#10;(GitHub, 30일)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="80" y="270" width="150" height="55" as="geometry" />
+        <mxCell id="s5" value="⑤ ECS 롤아웃 — update-service → services-stable 대기&#10;실패 시 서킷 브레이커가 이전 태스크 정의로 자동 롤백" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="660" y="360" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" value="⑥ 스모크 — ALB에 직접 curl -H &quot;Host: …&quot; /api/health&#10;(DNS 전환 여부와 무관, 10회 재시도)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="450" width="300" height="50" as="geometry" />
         </mxCell>
 
-        <!-- Discord -->
-        <mxCell id="discord" value="💬 Discord 알림 채널&#10;배포 ✅🚨 | 백업·keep-alive 실패 🚨 | 사이트 다운 🔴" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="330" y="640" width="660" height="70" as="geometry" />
+        <!-- ===== AWS 대상 ===== -->
+        <mxCell id="aws" value="☁️ AWS 서울" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;verticalAlign=top;fontSize=12;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="40" width="170" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="ecr" value="📦 ECR&#10;gforest/web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="220" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ecsDev" value="🐳 ECS dev 서비스&#10;Fargate × 1&#10;dev.gforest.or.kr" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="335" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ecsProd" value="🐳 ECS prod 서비스&#10;Fargate × 2&#10;gforest.or.kr" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="415" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" value="⚖️ ALB&#10;/api/health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="485" width="140" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 하단: 인프라·DB (사람) ===== -->
+        <mxCell id="sep" value="— 인프라 · DB 변경은 사람이 로컬(SSO 세션)에서 한다 —" style="text;html=1;fontSize=11;fontStyle=2;fontColor=#57606a;align=center;" vertex="1" parent="1">
+          <mxGeometry x="290" y="565" width="690" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="human" value="👤 운영자 (로컬)&#10;aws sso login --profile gforest&#10;Identity Center · admins 8h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="tfApply" value="🧱 terraform apply (plan 눈으로 확인 후)&#10;infra/shared · infra/env workspace dev|prod&#10;-var-file=&lt;env&gt;.tfvars" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="600" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="bootstrap" value="🗂️ infra/db/bootstrap.sh &lt;env&gt;&#10;bootstrap_rds.sql (auth 셔임 · gforest_app 롤)&#10;→ 미적용 supabase/migrations/*.sql 순차 적용&#10;→ SSM DATABASE_URL 기록" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="700" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="awsInfra" value="☁️ AWS 인프라 (VPC · ALB · ECS · RDS · S3 · SSM)&#10;tfstate: s3://gforest-tfstate-… (네이티브 락)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="600" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rds" value="🗄️ RDS Postgres 17 (dev / prod)&#10;schema_migrations로 적용 이력 추적&#10;이관·운영 시에만 db_publicly_accessible 잠깐 개방" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="660" y="700" width="320" height="80" as="geometry" />
         </mxCell>
 
         <!-- ===== 화살표 ===== -->
-        <mxCell id="e1" value="push / PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#24292f;fontSize=11;" edge="1" parent="1" source="dev" target="repo">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e1" value="PR 생성" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#24292f;fontSize=11;" edge="1" parent="1" source="dev" target="pr">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
         </mxCell>
-        <mxCell id="e2" value="트리거" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;" edge="1" parent="1" source="repo" target="wfDeploy">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e2" value="트리거" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="pr" target="wfCi">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="24" y="0" as="offset" /></mxGeometry>
         </mxCell>
-
-        <!-- deploy → prod : 라벨을 수평 구간 위에 -->
-        <mxCell id="e3" value="토큰 배포 (author 무관)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#1d6845;fontSize=11;fontStyle=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="wfDeploy" target="prod">
-          <mxGeometry x="-0.15" relative="1" as="geometry">
-            <mxPoint x="0" y="-12" as="offset" />
-            <Array as="points"><mxPoint x="680" y="187" /><mxPoint x="680" y="110" /></Array>
-          </mxGeometry>
-        </mxCell>
-        <!-- deploy → preview -->
-        <mxCell id="e3b" value="PR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;dashed=1;fontSize=11;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="wfDeploy" target="preview">
-          <mxGeometry x="-0.3" relative="1" as="geometry">
+        <mxCell id="e2b" value="infra/** 변경 시" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;dashed=1;fontSize=11;exitX=0.06;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="pr" target="wfInfra">
+          <mxGeometry x="0.2" relative="1" as="geometry">
             <mxPoint x="0" y="-10" as="offset" />
-            <Array as="points"><mxPoint x="700" y="222" /><mxPoint x="700" y="207" /></Array>
+            <Array as="points"><mxPoint x="326" y="290" /></Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- prod → supa : 오른쪽 바깥 레인 x=1040 -->
-        <mxCell id="e4" value="런타임 쿼리 (RLS)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="prod" target="supa">
-          <mxGeometry x="0.45" relative="1" as="geometry">
-            <mxPoint x="34" y="0" as="offset" />
-            <Array as="points"><mxPoint x="1040" y="110" /><mxPoint x="1040" y="331" /></Array>
+        <mxCell id="e3" value="통과 + 리뷰 승인 → squash 병합" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#24292f;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.6;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="wfCi" target="main">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="70" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="main push&#10;→ dev 자동" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="main" target="deploy">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-18" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e4b" value="environment=prod → prod 배포 (같은 파이프라인)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;dashed=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.06;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="manual" target="deploy">
+          <mxGeometry x="0.15" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="140" y="545" /><mxPoint x="660" y="545" /></Array>
           </mxGeometry>
         </mxCell>
-
-        <!-- backup → supa -->
-        <mxCell id="e5" value="pg_dump (풀러)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="wfBackup" target="supa">
-          <mxGeometry x="-0.1" relative="1" as="geometry"><mxPoint x="0" y="-12" as="offset" /></mxGeometry>
+        <mxCell id="es12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;" edge="1" parent="1" source="s1" target="s2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="es23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;" edge="1" parent="1" source="s2" target="s3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="es34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;" edge="1" parent="1" source="s3" target="s4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="es45" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;" edge="1" parent="1" source="s4" target="s5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="es56" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;" edge="1" parent="1" source="s5" target="s6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s3" target="ecr">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-8" as="offset" /></mxGeometry>
         </mxCell>
-        <!-- keep-alive → supa -->
-        <mxCell id="e6" value="ping" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="wfKeep" target="supa">
-          <mxGeometry x="-0.2" relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        <mxCell id="e6" value="dev" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=10;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s5" target="ecsDev">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-8" as="offset" /></mxGeometry>
         </mxCell>
-        <!-- backup → artifact -->
-        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;fontSize=11;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="wfBackup" target="artifact">
+        <mxCell id="e7" value="prod (수동)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;dashed=1;fontSize=10;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s5" target="ecsProd">
+          <mxGeometry x="0.3" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="985" y="416" /><mxPoint x="985" y="445" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="s6" target="alb">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="990" y="475" /><mxPoint x="990" y="507" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="human" target="tfApply">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
-        <!-- uptime → prod : 더 바깥 레인 x=1080 -->
-        <mxCell id="eU1" value="HTTP 핑 (5분)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3bd671;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="uptime" target="prod">
-          <mxGeometry x="0.45" relative="1" as="geometry">
-            <mxPoint x="36" y="0" as="offset" />
-            <Array as="points"><mxPoint x="1080" y="465" /><mxPoint x="1080" y="125" /></Array>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="human" target="bootstrap">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="275" y="707" /><mxPoint x="275" y="740" /></Array>
           </mxGeometry>
         </mxCell>
-        <!-- Actions → Discord -->
-        <mxCell id="e9" value="워크플로 알림 — 배포 결과·실패" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#5865f2;fontSize=11;exitX=0.6;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gh" target="discord">
-          <mxGeometry x="0.4" relative="1" as="geometry"><mxPoint x="58" y="0" as="offset" /></mxGeometry>
+        <mxCell id="e11" value="생성·변경" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;" edge="1" parent="1" source="tfApply" target="awsInfra">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-8" as="offset" /></mxGeometry>
         </mxCell>
-        <!-- uptime → Discord -->
-        <mxCell id="eU2" value="다운 알림" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#3bd671;dashed=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="uptime" target="discord">
-          <mxGeometry x="0.5" relative="1" as="geometry"><mxPoint x="32" y="0" as="offset" /></mxGeometry>
+        <mxCell id="e12" value="psql (admin URL)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=10;" edge="1" parent="1" source="bootstrap" target="rds">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-8" as="offset" /></mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
