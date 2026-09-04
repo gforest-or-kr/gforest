@@ -43,7 +43,7 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
 | `getMenuData()` | 10분 | `menu` | 게시판/권한 변경 시 `revalidateTag('menu', 'max')` |
 | `getBoardMeta(slug)` | 10분 | `menu`, `board:slug` | 동일 |
 | `getPublicBoardList(slug,page)` | 백업 TTL | `board:slug` | 글 작성/수정/삭제 시 무효화 |
-| 글 상세 (ISR) | `revalidate=300` | `post:id`, `board:slug` | 댓글·수정·삭제 시 무효화 |
+| 글 상세 `getPostDetail`(공개 게시판) | 300초 | `post:id`, `board:slug` | 댓글·수정·삭제 시 무효화. 회원 게시판은 캐시 없이 사용자 컨텍스트로 조회 |
 
 - **무효화는 서버 액션에서 `revalidateTag(tag, "max")`** — Next 16은 두 번째 인자(`"max"`)가 필요하다.
   예: `app/boards/[slug]/actions.ts`의 글 작성 → `revalidateTag('board:'+slug, 'max')`,
@@ -75,5 +75,5 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
 ## 8. 커밋 · 검증
 
 - 커밋 메시지에 Jira 이슈 키 포함(`feat: ... (GFM-N)`). 작업 시작/완료 시 Jira 전환(`atlassian.md`).
-- 렌더링/데이터패칭 변경 후 **`bash scripts/isr-smoke.sh`로 글 상세 200 선검증**(배포 CI도 자동 실행).
-- 빌드 검증은 `next build` — dev 서버로는 ISR 오류가 안 잡힌다.
+- 렌더링/데이터패칭 변경 후 로컬 `next build`(DB 없이 통과해야 함) → 병합 후 dev 배포에서 공개 글·회원 글·로그인 확인.
+- PR 게이트 `ci`(tsc·eslint·build)가 자동으로 돈다.

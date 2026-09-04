@@ -1,3 +1,4 @@
+-- [RDS 미적용] Supabase Storage 전용 정책. 2026-09부터 S3 + presigned URL(lib/storage.ts)로 대체. infra/db/bootstrap.sh가 이 파일을 건너뛴다.
 -- 첨부파일 Storage 버킷 + 읽기 정책
 -- 다운로드(서명 URL 생성)는 게시판 read 권한과 동일하게 RLS로 강제한다.
 -- 업로드는 현재 ETL(service key)만 수행 — 글쓰기 첨부 기능 추가 시 insert 정책 별도 작성.

@@ -1,3 +1,4 @@
+-- [RDS 미적용] Supabase Storage 전용 정책. 2026-09부터 S3 + presigned URL(lib/storage.ts)로 대체. infra/db/bootstrap.sh가 이 파일을 건너뛴다.
 -- 첨부파일 Storage 업로드(insert)·삭제(delete) 정책
 -- 00000000000002가 예고한 글쓰기 첨부용 insert 정책. 업로드는 브라우저에서 직접 수행한다(anon key + 사용자 세션).
 -- 경로 규칙: 첫 번째 폴더 = 본인 uid ({auth.uid()}/{uuid}.{ext})

@@ -123,4 +123,4 @@
 
 - 실제 키·토큰·DB 비밀번호·테스트 계정·웹훅 URL → Confluence **05 운영 > "인프라·자격증명
   레퍼런스"** 페이지(팀 전용 보안 경계). repo·이 문서에는 두지 않는다.
-- 로컬 비밀값: `.env`(Atlassian), `.env.local`(Supabase). 둘 다 gitignore.
+- 로컬 비밀값: `.env`(Atlassian), `.env.local`(DB 접속 문자열·AUTH_SECRET·S3 설정). 둘 다 gitignore.

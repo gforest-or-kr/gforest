@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """첨부 이관: 브라우저 세션 다운로드 → Storage 업로드 → attachments 행 (멱등)"""
+# [미사용] 2026-06 Supabase 프리뷰 ETL. RDS/S3 백엔드에서는 실행 불가.
 import json, os, subprocess, base64, mimetypes, re, urllib.request, urllib.parse, time
 
 SUPA = "https://ifqgenuuwuxiqndpcjea.supabase.co"

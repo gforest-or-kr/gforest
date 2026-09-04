@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Supabase Storage → S3 미디어 버킷 복사. 객체 키는 "<supabase bucket>/<object name>" 으로 유지한다.
+# 1회성 이관 도구(2026-09-04 dev 완료). .env.local의 NEXT_PUBLIC_SUPABASE_URL·SUPABASE_SECRET_KEY 필요(현재 example에는 없음).
 # 사용: AWS_PROFILE=gforest infra/db/copy_storage.sh dev
 # 전제: .env.local 의 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY / 소스 DB 접속 문자열 SB_URL(환경변수)
 set -euo pipefail

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """작성자 프로필 생성: auth admin API → legacy_member_srl 매핑 (멱등)"""
+# [미사용] 2026-06 Supabase 프리뷰 ETL. RDS/S3 백엔드에서는 실행 불가.
 import json, os, subprocess, urllib.request, secrets, time
 
 SUPA = "https://ifqgenuuwuxiqndpcjea.supabase.co"

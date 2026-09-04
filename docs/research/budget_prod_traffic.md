@@ -1,5 +1,7 @@
 # 실운영 트래픽 기반 예산 분석 — Vercel Pro + R2 + Supabase (2026-07)
 
+> **역사적 문서** — 2026-09 AWS(ECS Fargate·RDS·S3) 이전으로 이 문서의 결론은 대체되었다. 현재 구성은 CLAUDE.md, 예산 근거는 Confluence 02 리서치 "AWS 이전 예산·리소스 검토"(2026-08) 참조.
+
 > 곽대종 학부모의 **2026-06-26 서버·DB 직접 실측**(Confluence MFS/7241730 하위 07·08)으로 현 사이트의 실제 트래픽·규모가 확정되면서, 기존 "저트래픽 무료 운영" 가정을 실데이터로 재산출한 예산 문서.
 > 관련: [serverless_vs_selfhosted.md](serverless_vs_selfhosted.md)(§0 "10% 미만" 가정은 본 문서로 대체) · [media_storage_strategy.md](media_storage_strategy.md)(R2 미디어) · [performance_and_environments.md](performance_and_environments.md)
 
@@ -83,4 +85,4 @@
 
 ---
 
-출처(2026-07): [Vercel Pricing](https://vercel.com/pricing) · [Vercel Limits](https://vercel.com/docs/limits) · [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/) · [Supabase Pricing](https://supabase.com/pricing) · 트래픽·규모 실측: Confluence MFS/7241730(07·08), repo `docs/2026-06/`(곽대종)
+출처(2026-07): [Vercel Pricing](https://vercel.com/pricing) · [Vercel Limits](https://vercel.com/docs/limits) · [Cloudflare R2 Pricing](https://developers.cloudflare.com/r2/pricing/) · [Supabase Pricing](https://supabase.com/pricing) · 트래픽·규모 실측: Confluence MFS/7241730(07·08) (곽대종; 원본 실측 자료는 Confluence MFS/7241730)

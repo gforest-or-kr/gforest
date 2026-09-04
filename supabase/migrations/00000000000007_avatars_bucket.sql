@@ -1,3 +1,4 @@
+-- [RDS 미적용] Supabase Storage 전용 정책. 2026-09부터 S3 + presigned URL(lib/storage.ts)로 대체. infra/db/bootstrap.sh가 이 파일을 건너뛴다.
 -- 프로필 아바타 Storage 버킷 (GFM-55)
 --
 -- 아바타는 민감하지 않고 다른 회원(헤더·마이페이지 등)에게도 노출되므로 public 버킷이 적절하다
