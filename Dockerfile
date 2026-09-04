@@ -23,7 +23,8 @@ RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nextjs /app/public ./public
-COPY --from=build /app/lib/db/rds-global-bundle.pem ./rds-ca.pem
+# RDS TLS 검증용 CA 번들 — repo에 두지 않고(.gitignore *.pem) 빌드 시 AWS 트러스트스토어에서 받는다
+ADD --chown=nextjs:nextjs https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem ./rds-ca.pem
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
