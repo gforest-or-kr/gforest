@@ -18,7 +18,13 @@ RUN npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 DB_CA_PATH=/app/rds-ca.pem
+# 빌드 정보(버전 페이지용) — 배포 시각은 여기 넣지 않는다(ECS API가 진실). ecs-deploy.yml이 채운다.
+ARG APP_VERSION=dev
+ARG APP_COMMIT=unknown
+ARG APP_BUILT_AT=unknown
+ARG APP_BUILD_URL=
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 DB_CA_PATH=/app/rds-ca.pem \
+    APP_VERSION=$APP_VERSION APP_COMMIT=$APP_COMMIT APP_BUILT_AT=$APP_BUILT_AT APP_BUILD_URL=$APP_BUILD_URL
 RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
 COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static

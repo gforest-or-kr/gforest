@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-ecs": "^3.1126.0",
     "@aws-sdk/client-s3": "^3.1126.0",
     "@aws-sdk/client-sesv2": "^3.1126.0",
     "@aws-sdk/s3-request-presigner": "^3.1126.0",
