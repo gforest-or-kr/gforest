@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
+import { avatarUrl } from "@/lib/avatar";
 import { ROLE_LABEL } from "@/lib/menu";
 import { shortDate } from "@/lib/format";
 import ProfileEditForm from "@/components/profile-edit-form";
@@ -13,14 +14,21 @@ export default async function MePage() {
   const profile = await getSessionProfile();
   if (!profile) redirect("/login?returnTo=/me");
 
-  const supabase = await createClient();
-  const { data: myPosts } = await supabase
-    .from("posts")
-    .select("id, title, created_at, boards(slug, name)")
-    .eq("author_id", profile.id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  // 본인 RLS 컨텍스트로 조회 — 읽기 권한이 없어진 게시판의 글은 posts_select가 걸러낸다
+  const [myPosts, avatar] = await Promise.all([
+    withUser(profile.id, (c) =>
+      many<{ id: string; title: string; created_at: string; boards: { slug: string; name: string } | null }>(
+        c,
+        `select p.id, p.title, p.created_at::text as created_at,
+                json_build_object('slug', b.slug, 'name', b.name) as boards
+           from posts p join boards b on b.id = p.board_id
+          where p.author_id = $1 and p.deleted_at is null
+          order by p.created_at desc limit 20`,
+        [profile.id],
+      ),
+    ),
+    avatarUrl(profile.avatar_path),
+  ]);
 
   return (
     <main className="max-w-3xl mx-auto px-4 pb-16">
@@ -37,6 +45,7 @@ export default async function MePage() {
           name: profile.name,
           avatar_path: profile.avatar_path,
         }}
+        avatarUrl={avatar}
       />
 
       {profile.role === "pending" && (
@@ -53,7 +62,7 @@ export default async function MePage() {
         ) : (
           <ul className="divide-y divide-slate-50">
             {(myPosts ?? []).map((p) => {
-              const board = p.boards as { slug: string; name: string } | null;
+              const board = p.boards;
               return (
                 <li key={p.id} className="py-3 flex justify-between gap-3 text-sm">
                   <Link

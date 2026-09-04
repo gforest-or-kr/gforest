@@ -13,4 +13,5 @@ environment = {
 
 secret_parameters = {
   DATABASE_URL = "/gforest/prod/DATABASE_URL"
+  AUTH_SECRET  = "/gforest/prod/AUTH_SECRET"
 }

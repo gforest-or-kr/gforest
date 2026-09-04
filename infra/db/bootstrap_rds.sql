@@ -23,6 +23,14 @@ create table if not exists auth.users (
 );
 create unique index if not exists users_email_lower_idx on auth.users (lower(email));
 
+-- 비밀번호 재설정 1회용 토큰 (해시만 저장, 만료 1시간). lib/auth-actions.ts
+create table if not exists auth.password_reset_tokens (
+  token_hash text primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
 -- 앱이 요청마다 set local app.user_id = '<uuid>' 로 설정. 미설정/빈 값이면 null (= 비로그인).
 create or replace function auth.uid() returns uuid
   language sql stable
@@ -30,18 +38,14 @@ create or replace function auth.uid() returns uuid
     select nullif(current_setting('app.user_id', true), '')::uuid;
   $$;
 
--- 앱 전용 롤. 비밀번호는 bootstrap.sh 가 psql 변수(:app_password)로 넘긴다.
-do $$
-begin
-  if not exists (select 1 from pg_roles where rolname = 'gforest_app') then
-    execute format('create role gforest_app login password %L', :'app_password');
-  else
-    execute format('alter role gforest_app password %L', :'app_password');
-  end if;
-end $$;
+-- 앱 전용 롤. 비밀번호는 bootstrap.sh 가 psql 변수(:app_password)로 넘긴다 (\gexec — DO 블록 안에서는 psql 변수가 치환되지 않음).
+select format('create role gforest_app login password %L', :'app_password')
+ where not exists (select 1 from pg_roles where rolname = 'gforest_app') \gexec
+select format('alter role gforest_app password %L', :'app_password') \gexec
 
 grant usage on schema public, auth to gforest_app;
 grant select, insert, update on auth.users to gforest_app;
+grant select, insert, delete on auth.password_reset_tokens to gforest_app;
 -- public 스키마 객체는 마이그레이션 적용 후에도 자동으로 권한이 붙도록 기본 권한을 설정
 alter default privileges for role gforest_admin in schema public grant select, insert, update, delete on tables to gforest_app;
 alter default privileges for role gforest_admin in schema public grant usage, select on sequences to gforest_app;

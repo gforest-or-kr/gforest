@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { publicClient } from "@/lib/supabase/public";
-import { getSessionProfile } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
+import { presignGetMany } from "@/lib/storage";
+import { getSessionProfile, getSessionUserId } from "@/lib/auth";
 import { canReadBoard } from "@/lib/menu";
-import { getBoardMeta, getPublicBoardList } from "@/lib/boards";
+import { getBoardMeta, getPublicBoardList, getBoardListForUser } from "@/lib/boards";
 import { shortDate } from "@/lib/format";
 import AccessNotice from "@/components/access-notice";
 
@@ -12,8 +12,8 @@ const PAGE_SIZE = 20;
 type Board = NonNullable<Awaited<ReturnType<typeof getBoardMeta>>>;
 
 // 게시판 목록 영역 — Suspense 안에서 스트리밍된다(동적). searchParams를 여기서 await하므로
-// 이 컴포넌트만 동적이고, page 셸(헤더/제목/검색/글쓰기)은 정적으로 prerender된다.
-// 권한 게시판은 여기서 서버 인증(getSessionProfile)을 하므로 dynamicParams 경로로 동작한다.
+// 이 컴포넌트만 동적이고, page 셸(헤더/제목/검색/글쓰기)은 먼저 그려진다.
+// 권한 게시판은 여기서 서버 인증(getSessionProfile)을 하고 사용자 RLS 컨텍스트로 조회한다.
 export default async function BoardList({
   slug,
   board,
@@ -41,6 +41,9 @@ export default async function BoardList({
     }
   }
 
+  // 로그인 사용자 id(없으면 null=anon) — 동적 경로·썸네일 조회의 RLS 컨텍스트
+  const userId = await getSessionUserId();
+
   type ListData = Awaited<ReturnType<typeof getPublicBoardList>>;
   let notices: ListData["notices"];
   let posts: ListData["posts"];
@@ -53,42 +56,12 @@ export default async function BoardList({
     posts = data.posts;
     count = data.count;
   } else {
-    // 게이트 게시판 또는 검색(?q=) — RLS 동적 경로
-    const supabase = await createClient();
-    let listQuery = supabase
-      .from("posts")
-      .select(
-        "id, title, created_at, view_count, is_notice, author:profiles(nickname), comments(count), attachments(count), boards!inner(slug)",
-        { count: "exact" },
-      )
-      .eq("boards.slug", slug)
-      .is("deleted_at", null)
-      .eq("is_notice", false)
-      .order("created_at", { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-    if (q) {
-      // PostgREST .or() 필터에 검색어를 그대로 넣으면 쉼표·괄호가 구분자로 파싱돼 깨진다.
-      // 패턴 값을 큰따옴표로 감싸 리터럴로 처리하고, 값 안의 "·\ 만 이스케이프한다.
-      const safe = q.replace(/[\\"]/g, (m) => "\\" + m);
-      listQuery = listQuery.or(`title.ilike."%${safe}%",content.ilike."%${safe}%"`);
-    }
-
-    const [{ data: noticeRows }, { data: postRows, count: postCount }] = await Promise.all([
-      q
-        ? Promise.resolve({ data: [] as never[] })
-        : supabase
-            .from("posts")
-            .select("id, title, created_at, boards!inner(slug)")
-            .eq("boards.slug", slug)
-            .is("deleted_at", null)
-            .eq("is_notice", true)
-            .order("created_at", { ascending: false })
-            .limit(5),
-      listQuery,
-    ]);
-    notices = noticeRows ?? [];
-    posts = postRows ?? [];
-    count = postCount ?? 0;
+    // 게이트 게시판 또는 검색(?q=) — 사용자 RLS 동적 경로. 검색어는 SQL 파라미터로 바인딩되며
+    // ilike 메타문자(% _)는 lib/boards.ts에서 이스케이프해 리터럴로 취급한다.
+    const data = await getBoardListForUser(userId, slug, page, PAGE_SIZE, q);
+    notices = data.notices;
+    posts = data.posts;
+    count = data.count;
   }
 
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
@@ -100,24 +73,31 @@ export default async function BoardList({
   }));
 
   // 갤러리 게시판: 글마다 첫 이미지 첨부를 썸네일로 보여준다. 목록 데이터 경로(공개=캐시/
-  // 회원=RLS)와 별개로, 보이는 글들의 이미지 첨부 id만 한 번에 모아 /dl 프록시로 렌더한다.
-  // (BoardList는 이미 Suspense 안에서 동적 스트리밍 — 셸 정적/prefetch는 그대로 유지된다.)
+  // 회원=RLS)와 별개로, 보이는 글들의 첫 이미지 첨부를 RLS로 한 번에 모아 S3 서명 URL(1시간)로
+  // 렌더한다 — 첨부 버킷은 비공개라 서명이 필요하고, 서명은 로컬 연산이라 배치 비용이 없다.
+  // (BoardList는 이미 Suspense 안에서 동적 스트리밍이라 만료 URL이 캐시에 동결되지 않는다.)
   const isGallery = board.board_type === "gallery";
   const thumb: Record<string, string> = {};
   if (isGallery && rows.length > 0) {
-    const sb = board.read_roles === null ? publicClient() : await createClient();
-    const { data: atts } = await sb
-      .from("attachments")
-      .select("id, post_id, mime_type, created_at")
-      .in("post_id", rows.map((r) => r.id))
-      .like("mime_type", "image/%")
-      .order("created_at", { ascending: true });
-    for (const a of (atts ?? []) as { id: string; post_id: string }[]) {
-      if (!thumb[a.post_id]) thumb[a.post_id] = a.id; // 글당 첫 이미지
+    const atts = await withUser(userId, (c) =>
+      many<{ post_id: string; storage_path: string }>(
+        c,
+        `select distinct on (post_id) post_id, storage_path
+         from attachments
+         where post_id = any($1::uuid[]) and mime_type like 'image/%'
+         order by post_id, created_at asc`, // 글당 첫 이미지
+        [rows.map((r) => r.id)],
+      ),
+    );
+    const urls = await presignGetMany("attachments", atts.map((a) => a.storage_path));
+    for (const a of atts) {
+      const u = urls.get(a.storage_path);
+      if (u) thumb[a.post_id] = u;
     }
   }
 
-  const Pager = () => (
+  // 페이저 — 렌더 중 컴포넌트 생성(react-hooks/static-components) 대신 JSX 요소로 둔다
+  const pager = (
     <div className="flex justify-center items-center gap-1 mt-6 text-sm">
       {Array.from({ length: totalPages }, (_, i) => i + 1)
         .filter((n) => Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
@@ -184,7 +164,7 @@ export default async function BoardList({
                     {thumb[p.id] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={`/dl/${thumb[p.id]}?inline=1`}
+                        src={thumb[p.id]}
                         alt={p.title}
                         loading="lazy"
                         className="w-full h-full object-cover group-active:opacity-90"
@@ -207,7 +187,7 @@ export default async function BoardList({
             ))}
           </ul>
 
-          {totalPages > 1 && <Pager />}
+          {totalPages > 1 && pager}
         </>
       ) : (
         <>
@@ -263,7 +243,7 @@ export default async function BoardList({
             ))}
           </ul>
 
-          {totalPages > 1 && <Pager />}
+          {totalPages > 1 && pager}
         </>
       )}
     </>

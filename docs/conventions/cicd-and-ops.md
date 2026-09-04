@@ -1,83 +1,65 @@
 # CI/CD · 운영 구조
 
-> repo 접근만으로 배포·백업·모니터링이 어떻게 도는지 이해하기 위한 문서.
-> 시각 다이어그램과 팀 전용 상세는 Confluence **05 운영 > "CI/CD 구성"**·"인프라·자격증명
-> 레퍼런스". 여기는 repo 안에서 자급되는 요약 + 실제로 겪은 함정.
+> repo 접근만으로 배포·인프라·계정 체계가 어떻게 도는지 이해하기 위한 문서. 팀 전용 상세(실제
+> 비밀값·계정 정보)는 Confluence **05 운영 > "인프라·자격증명 레퍼런스"**. 여기는 repo 안에서
+> 자급되는 요약 + 실제로 겪은 함정. 2026-09 AWS 이전 기준(Vercel/Supabase 시절 내용은 git 이력 참조).
 
-## 배포 = GitHub Actions CI (Vercel Git 연동 아님)
+## 계정·접근 체계 (인수인계 가능하게)
 
-Vercel 대시보드의 Git 자동 배포는 **해제**돼 있다. 대신 `.github/workflows/deploy.yml`이
-토큰으로 배포한다.
+- **공용 앵커 계정 1개**: `gforest.or.kr@gmail.com` — AWS root(`+aws`)·GitHub Org 청구(`+github`)·AWS 청구(`+billing`) 수신함.
+  비밀번호·TOTP 시드·백업코드는 **Bitwarden Organization "gforest"** 금고에만 있다. 사람은 개인 계정, 권한은 조직 단위.
+- **GitHub**: Org `gforest-or-kr`, repo `gforest` (public — Free Org에서 브랜치 보호는 public에서만). 멤버는 개인 계정 + 2FA 필수.
+- **AWS**: 계정 1개(서울). root는 **봉인**(MFA, 액세스 키 없음, 일상 로그인 금지). 사람은 **IAM Identity Center**
+  포털 `https://gforest.awsapps.com/start`(그룹 `admins` = AdministratorAccess 8h). CI는 **OIDC 롤** `gforest-github-deploy`.
+  **장기 액세스 키는 어디에도 만들지 않는다.**
+- 로컬 CLI: `aws sso login --profile gforest --use-device-code` → `AWS_PROFILE=gforest`. 비용 상한은 Budgets `gforest-monthly`.
 
-- **왜**: Vercel Hobby는 **프로젝트 소유자 외 계정의 커밋을 배포 차단**한다("Deployment was
-  blocked"). 토큰 기반 CI 배포는 커밋 author와 무관 → **협업자 누구나 push/머지로 배포**된다.
-- **트리거**: `main` push = **production**, PR = **preview**(PR에 URL 코멘트), `workflow_dispatch` 수동.
-- **흐름**: `vercel pull` → `vercel build` → **ISR 스모크 게이트** → `vercel deploy --prebuilt` → Discord 알림.
+## 인프라 = Terraform (`infra/`)
 
-## 브랜치·병합 전략 (squash 전용, 2026-06-19)
-
-`main`이 production 단일 트렁크. 모든 작업은 **기능 브랜치 → PR → squash 병합**으로 들어간다.
-
-- **브랜치명**: `feat/` · `perf/` · `fix/` · `docs/` · `chore/` + 짧은 설명 (예: `feat/design-a-prototype`).
-- **병합은 squash만** — 리포 설정에서 **merge commit·rebase 비활성**. `gh pr merge --squash` 또는 GitHub UI의 Squash 버튼만 쓸 수 있다. 병합 후 브랜치는 **자동 삭제**, main 히스토리는 기능당 1커밋(선형).
-- **PR 제목 = 커밋 컨벤션으로 작성** (`feat:`/`perf:`/`docs:` … + 관련 `GFM-키`). squash 설정이 **커밋 제목을 PR 제목으로 고정**하므로, PR 제목이 그대로 main 커밋 제목이자 **Discord 배포 알림 문구**가 된다.
-- **왜 merge commit이 아닌가**: `--merge`는 `Merge pull request #N from …`가 main 최신 커밋이 돼, `deploy.yml`이 `head_commit.message` 첫 줄을 띄우는 Discord 알림이 **비설명적**이 된다. squash면 PR 제목이 알림에 떠 설명적으로 유지된다(근본 원인=병합 전략을 바꾼 업계 통상 방식, 워크플로 수정 불필요).
-
-## 워크플로 3종
-
-| 파일 | 트리거 | 역할 |
+| 스택 | 상태 파일 | 내용 |
 |---|---|---|
-| `deploy.yml` | push main / PR / dispatch | 빌드 + ISR 스모크 게이트 + 배포 + Discord 알림 |
-| `db-backup.yml` | 매일 03:00 KST (cron) | `pg_dump`(public+auth) → **스크래치 DB에 실제 복원 → 행수 대조** → 아티팩트 30일. 실패 시 Discord 🚨 |
-| `keep-alive.yml` | 월·목 09:00 KST | REST 쿼리로 DB 활동 발생 (Free 7일 무활동 정지 방지) |
+| `infra/shared` | `s3://gforest-tfstate-…/shared/` | OIDC 롤, ECR, Route 53 존, ACM, VPC(퍼블릭 2AZ, **NAT 없음**), ALB(호스트 라우팅), ECS 클러스터 |
+| `infra/env` (workspace `dev`/`prod`) | `…/env/<ws>/` | Fargate 서비스(ARM64), RDS Postgres 17, S3 미디어 버킷, SSM 파라미터, 로그 |
 
-**ISR 스모크 게이트** (`scripts/isr-smoke.sh`): 배포 직전 `next build && next start`로 글 상세가
-HTTP 200 + 제목 렌더 + `DYNAMIC_SERVER_USAGE` 부재인지 검증. 실패 시 배포 중단. **dev 서버로는
-ISR 오류가 안 잡히므로**(dev는 항상 동적) 이 게이트가 프로덕션 500을 막는 최후 방어선이다. 배경은
-`docs/design/rendering.md`.
+- 적용은 사람이 로컬에서: `terraform workspace select dev && terraform apply -var-file=dev.tfvars`. CI(`infra.yml`)는 PR에서 fmt/validate + OIDC 확인만.
+- 비밀값은 **SSM Parameter Store** `/gforest/<env>/{DATABASE_URL,DATABASE_ADMIN_URL,AUTH_SECRET}` → `secret_parameters`로 태스크에 주입. 평문 환경변수는 `*.tfvars`의 `environment`.
+- 리소스 크기·월 예산 근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토"(권장 월 ~$110).
 
-## Secrets (이름만 — 값은 Confluence 인프라 페이지)
+## 배포 = GitHub Actions → ECR → ECS (`.github/workflows/ecs-deploy.yml`)
 
-GitHub → Settings → Secrets and variables → Actions:
+- **main push → dev 자동 배포**, **prod는 수동 실행**(workflow_dispatch, environment=prod). 이미지 태그 `sha-<commit>` + `<env>-latest`.
+- ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
+- 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.
+- PR 게이트는 `ci.yml`(tsc·eslint·`next build`). **빌드는 DB 없이 통과해야 한다** — 빌드 시점 DB 접근 금지.
 
-| 이름 | 용도 |
-|---|---|
-| `VERCEL_TOKEN` · `VERCEL_ORG_ID` · `VERCEL_PROJECT_ID` | CI 배포 인증·대상 |
-| `SUPABASE_DB_URL` | 백업용 풀러 접속 문자열(비밀번호 포함) |
-| `DISCORD_WEBHOOK_URL` | 알림 발송 |
+## DB 마이그레이션 · 부트스트랩 (`infra/db/`)
 
-## 모니터링 · 알림
+- 스키마 단일 진실은 `supabase/migrations/*.sql`(폴더명은 역사적). 적용: `AWS_PROFILE=gforest infra/db/bootstrap.sh <env>` —
+  ① `bootstrap_rds.sql`(auth.users 대체 테이블·`auth.uid()` 셔임·RLS 적용 롤 `gforest_app`) ② 미적용 마이그레이션 순차 적용(`public.schema_migrations` 추적,
+  Supabase Storage 전용 파일은 건너뜀) ③ 앱 접속 문자열을 SSM에 기록.
+- 앱은 `gforest_app`(테이블 소유자 아님 → RLS 강제)으로 접속. 관리자 접속(`DATABASE_ADMIN_URL`)은 마이그레이션·이관에만.
+- RDS는 기본 비공개. 이관·운영 작업 때만 `db_publicly_accessible=true` + `db_allowed_cidrs=[내 IP/32]`로 잠깐 열고 닫는다.
+- Supabase → RDS 이관 절차(1회성): `pg_dump --schema=public`, `auth.users` CSV(bcrypt 해시 그대로), `copy_storage.sh`(Storage → S3). `session_replication_role=replica`로 FK 순서 무시 복원.
 
-- **UptimeRobot**(무료): production에 5분 간격 핑 → **워밍(콜드 스타트 빈도↓) + 다운 감지**.
-  상태 페이지는 조합원 공유용. 다운 시 Discord로도 알림.
-- **Discord 채널 알림**: ✅🚨 배포 결과 / 🚨 백업·keep-alive 실패 / 🔴 사이트 다운.
-  (커밋·PR Discord 알림은 중복이라 **비활성**됨 — GitHub repo 웹훅 삭제.)
+## 백업 · 모니터링
 
-## DB 마이그레이션 (자동 적용, GFM-60)
-
-스키마 변경의 단일 진실은 `supabase/migrations/*.sql`. **이제 prod DB 적용은 배포 CI가 자동으로 한다**(과거엔 수동 psql이라 mig3·4가 누락돼 첨부·슬라이드 업로드가 깨졌던 드리프트 사고가 있었다).
-
-- `deploy.yml`이 코드 빌드 **전에** `supabase db push --db-url "$SUPABASE_DB_URL" --yes`를 실행(push=production에서만; PR preview는 공유 prod DB를 안 건드리도록 제외).
-- 적용 이력은 `supabase_migrations.schema_migrations` 테이블이 추적 — 아직 안 올라간 마이그레이션만 골라 적용한다. 실패하면 잡이 죽어 배포가 막힌다(스키마 불일치 차단).
-- **베이스라인(1회성, 완료)**: 기존 mig1~8은 순수 psql로 적용돼 추적 테이블이 없었다. 그대로 push하면 전부 재적용하다 충돌하므로 `schema_migrations`에 mig1~8 버전을 "기적용"으로 선등록했다. 이후부터는 새 마이그레이션만 자동 적용된다.
-- **새 마이그레이션 작성법**: `supabase/migrations/`에 `<14자리>_name.sql` 추가(기존 `0000…NN` 접두사 이어가기) → main에 push하면 CI가 적용. 로컬 선검증: `npx supabase db push --db-url <세션풀러 URL> --dry-run`.
-- **필요 시크릿**: `SUPABASE_DB_URL` = 세션 풀러 연결문자열(비밀번호 percent-encoded), 포트 5432. 직접 호스트(db.\<ref\>.supabase.co)는 IPv6 전용이라 GitHub 러너에서 실패 — 반드시 풀러.
+- **백업**: RDS 자동 백업(prod 7일 보존, dev 1일) + 최종 스냅샷. **복원 검증까지 해야 백업이다** — 분기 1회 스냅샷을 dev에 복원해 행수 대조(절차 TODO, GFM 이슈로 관리).
+- 로그: CloudWatch `/ecs/gforest-<env>` 14일. 느린 쿼리(>500ms)는 RDS 로그.
+- 알림: Budgets 메일(+billing, 담당자). Discord 배포 알림은 이전 후 재연결 예정.
 
 ## ⚠️ 실제로 겪은 함정 — 어기면 깨진다
 
 | 함정 | 내용 | 위반 시 |
 |---|---|---|
-| **Vercel Git 재연결 금지** | 대시보드에서 GitHub 연동을 다시 켜지 말 것 | author 차단 부활 + 이중 배포 |
-| **환경변수는 일반(encrypted) 타입** | "sensitive" 타입은 CI `vercel pull`이 값을 못 받음 | `NEXT_PUBLIC_*`가 undefined로 빌드 → **전 페이지 500** |
-| **`vercel.json`의 `regions:["icn1"]` 유지** | 함수를 서울 고정 (DB와 리전 정렬) | 전 페이지 +1초 지연 |
-| **60일 무커밋 시 schedule 정지** | GitHub가 예약 워크플로를 자동 비활성화 | 백업·keep-alive 중단 → 방학 중 DB 정지. Actions 탭에서 재활성화 |
-| **pg_dump 버전 정렬** | 백업 워크플로는 PG17 클라이언트를 설치·PATH 선두 배치 | 러너 기본(16) ≠ 서버(17) → 즉시 실패 |
-| **ISR 스모크 통과 필수** | 렌더링 변경 후 `bash scripts/isr-smoke.sh` 선검증 | 글 상세 프로덕션 500 (`rendering.md`) |
-| **커밋 author** | (참고) CI 배포라 author 무관해졌지만, 소유 계정 권장 | — |
+| **GitHub OIDC `sub`는 ID 포함 형식** | `repo:gforest-or-kr@<org_id>/gforest@<repo_id>:…` — 이름만으로 매칭하면 실패 | `Not authorized to perform sts:AssumeRoleWithWebIdentity` |
+| **IAM 롤 description에 한글 금지** | ASCII만 허용 | CreateRole ValidationError |
+| **HTTPS 리스너는 ACM ISSUED 이후** | DNS 검증 CNAME이 전파돼야 발급. cafe24 NS는 노드별 동기화가 느림(~1h) | `UnsupportedCertificate` |
+| **NAT Gateway 만들지 말 것** | 퍼블릭 서브넷 + SG(ALB→앱만)로 충분 | 월 +$45 |
+| **`--disable-triggers` 복원 불가** | RDS는 슈퍼유저 없음 → `set session_replication_role = replica` | system trigger permission denied |
+| **psql 변수는 DO 블록 안에서 치환 안 됨** | `\gexec` 패턴 사용(`bootstrap_rds.sql`) | syntax error at ":" |
+| **`while read` 안에서 aws/curl 호출 시 stdin 격리** | `read -u 3` + `</dev/null` | 루프가 첫 줄에서 끝남 |
 
 ## 성능 메모
 
-- 현재 워밍 TTFB ~0.2s, 콜드 스타트(유휴 후 첫 요청) ~1–3s는 Hobby 제약(UptimeRobot 워밍으로 빈도 완화).
-- 콜드 스타트 자체 제거는 Vercel Pro($20)가 유일한 직접 해법 — 근거·대안 비교는
-  `docs/research/performance_and_environments.md`.
-- dev/prd 환경 분리는 현 구성에서 무비용 가능(Vercel preview 스코프 + Supabase Free 2호 프로젝트) — 같은 문서 참조.
+- 상시 Fargate라 **콜드 스타트 없음**. dev(0.25vCPU/0.5GB) 워밍 TTFB ~0.18–0.25s(ALB 경유). prod는 0.5vCPU/1GB ×2.
+- 공개 데이터는 `unstable_cache`(프로세스 내) — 태스크가 2개면 캐시가 각각이므로 태그 무효화는 요청이 닿은 태스크에만 즉시 반영, 나머지는 TTL로 수렴한다(짧은 TTL 유지).

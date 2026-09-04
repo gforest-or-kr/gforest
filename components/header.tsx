@@ -1,10 +1,14 @@
 import { getMenuData } from "@/lib/menu-data";
+import { getSessionProfile } from "@/lib/auth";
+import { avatarUrl } from "@/lib/avatar";
 import HeaderNav from "./header-nav";
 
-// 공통 헤더 — 메뉴 데이터(공개, 10분 캐시)만 서버에서 가져온다. 개인화(세션 role 기반 메뉴
-// 필터·로그인 상태)는 HeaderNav가 클라이언트에서 처리한다. 이렇게 해야 layout이 쿠키를
-// 읽지 않아, layout을 포함하는 글 상세 등의 페이지가 ISR(정적 생성)될 수 있다.
+// 공통 헤더 — 메뉴 데이터(공개, 10분 캐시)와 세션 프로필을 서버에서 읽어 HeaderNav(클라)에 넘긴다.
+// 상시 서버 렌더링이라 layout에서 세션(쿠키)을 읽어도 되고, 로그인 상태가 첫 페인트부터 반영된다.
 export default async function Header() {
-  const { boards, staticPages } = await getMenuData();
-  return <HeaderNav boards={boards} staticPages={staticPages} />;
+  const [{ boards, staticPages }, p] = await Promise.all([getMenuData(), getSessionProfile()]);
+  const profile = p
+    ? { nickname: p.nickname, role: p.role, avatarUrl: await avatarUrl(p.avatar_path) }
+    : null;
+  return <HeaderNav boards={boards} staticPages={staticPages} profile={profile} />;
 }

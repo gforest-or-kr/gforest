@@ -2,8 +2,9 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/supabase/types";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser, pgCode } from "@/lib/db";
+import type { Database } from "@/lib/db/types";
 
 // 권한 강제는 boards_admin RLS(admin 전용)에 위임. 액션은 입력 검증·파싱만 담당.
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -46,9 +47,20 @@ export async function createBoard(formData: FormData) {
   if (!b.slug || !b.name || !b.menu_group) fail("슬러그·이름·메뉴그룹은 필수입니다");
   if (!/^[a-z0-9-]+$/.test(b.slug)) fail("슬러그는 영문 소문자·숫자·하이픈만 가능합니다");
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("boards").insert(b);
-  if (error) fail(error.code === "23505" ? "이미 사용 중인 슬러그입니다" : "생성에 실패했습니다(권한 확인)");
+  // RLS(boards_admin)가 거부하면 42501 예외
+  let errCode: string | undefined;
+  try {
+    await withUser(await getSessionUserId(), (c) =>
+      c.query(
+        `insert into boards (slug, name, menu_group, sort_order, board_type, read_roles, write_roles, is_active)
+         values ($1, $2, $3, $4, $5::board_type, $6::app_role[], $7::app_role[], $8)`,
+        [b.slug, b.name, b.menu_group, b.sort_order, b.board_type, b.read_roles, b.write_roles, b.is_active],
+      ),
+    );
+  } catch (e) {
+    errCode = pgCode(e) ?? "error";
+  }
+  if (errCode) fail(errCode === "23505" ? "이미 사용 중인 슬러그입니다" : "생성에 실패했습니다(권한 확인)");
   done();
 }
 
@@ -57,20 +69,22 @@ export async function updateBoard(id: string, formData: FormData) {
   if (!b.name || !b.menu_group) fail("이름·메뉴그룹은 필수입니다");
 
   // slug는 기존 글 URL(/boards/{slug}/...)·북마크가 걸려 있어 수정에서 제외(생성 시에만 지정).
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("boards")
-    .update({
-      name: b.name,
-      menu_group: b.menu_group,
-      sort_order: b.sort_order,
-      board_type: b.board_type,
-      read_roles: b.read_roles,
-      write_roles: b.write_roles,
-      is_active: b.is_active,
-    })
-    .eq("id", id)
-    .select("id");
-  if (error || !data?.length) fail("수정에 실패했습니다(권한 확인)");
+  // RLS가 막으면 0행 → 검증해서 알린다
+  let ok = false;
+  try {
+    ok = await withUser(await getSessionUserId(), async (c) => {
+      const r = await c.query(
+        `update boards
+            set name = $1, menu_group = $2, sort_order = $3, board_type = $4::board_type,
+                read_roles = $5::app_role[], write_roles = $6::app_role[], is_active = $7
+          where id = $8`,
+        [b.name, b.menu_group, b.sort_order, b.board_type, b.read_roles, b.write_roles, b.is_active, id],
+      );
+      return (r.rowCount ?? 0) > 0;
+    });
+  } catch {
+    ok = false;
+  }
+  if (!ok) fail("수정에 실패했습니다(권한 확인)");
   done();
 }

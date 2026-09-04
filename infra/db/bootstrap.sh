@@ -14,18 +14,24 @@ admin_url=$(aws ssm get-parameter --with-decryption --name "/gforest/${env_name}
 if app_url=$(aws ssm get-parameter --with-decryption --name "/gforest/${env_name}/DATABASE_URL" --query Parameter.Value --output text 2>/dev/null); then
   app_password=$(sed -E 's#^postgresql://[^:]+:([^@]+)@.*#\1#' <<<"$app_url")
 else
-  app_password=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+  app_password=$(openssl rand -hex 16)
 fi
 
 echo "== bootstrap (auth schema, uid(), gforest_app)"
 psql "$admin_url" -v ON_ERROR_STOP=1 -v app_password="$app_password" -q -f "$here/bootstrap_rds.sql"
 
 echo "== migrations"
+# Supabase Storage 전용(storage.buckets/objects 정책) 마이그레이션은 RDS에 적용 대상이 아님 — 적용됨으로만 기록
+SKIP_STORAGE_ONLY="00000000000002_storage_attachments 00000000000003_storage_upload_policy 00000000000004_storage_slides 00000000000007_avatars_bucket"
 psql "$admin_url" -v ON_ERROR_STOP=1 -q -c "create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz not null default now())"
 for f in "$repo"/supabase/migrations/*.sql; do
   v=$(basename "$f" .sql)
   if psql "$admin_url" -tAc "select 1 from public.schema_migrations where version='$v'" | grep -q 1; then
     echo "   skip $v"; continue
+  fi
+  if [[ " $SKIP_STORAGE_ONLY " == *" $v "* ]]; then
+    echo "   skip(storage-only) $v"
+    psql "$admin_url" -q -c "insert into public.schema_migrations(version) values ('$v')"; continue
   fi
   echo "   apply $v"
   psql "$admin_url" -v ON_ERROR_STOP=1 -q -1 -f "$f" -c "insert into public.schema_migrations(version) values ('$v')"

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ROLE_LABEL } from "@/lib/menu";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/db/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 

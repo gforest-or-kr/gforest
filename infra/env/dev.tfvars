@@ -13,6 +13,7 @@ environment = {
 
 secret_parameters = {
   DATABASE_URL = "/gforest/dev/DATABASE_URL"
+  AUTH_SECRET  = "/gforest/dev/AUTH_SECRET"
 }
 
 # 이관 작업 동안 홈 맥북에서 직접 접속 (작업 후 false로)

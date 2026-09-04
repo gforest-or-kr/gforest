@@ -1,4 +1,4 @@
-import type { Database } from "./supabase/types";
+import type { Database } from "./db/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type BoardRow = Pick<

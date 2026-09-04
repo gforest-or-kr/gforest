@@ -2,8 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { avatarUrl } from "@/lib/avatar";
+import { createUploadUrl } from "@/lib/storage-actions";
+import { updateProfileAction } from "@/app/(site)/me/actions";
 
 const OUT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const SIZE = 400; // 정사각 축소 — 아바타엔 충분, egress/Storage 절약
@@ -30,14 +30,16 @@ async function resizeAvatar(file: File): Promise<{ blob: Blob; ext: string }> {
 
 export default function ProfileEditForm({
   profile,
+  avatarUrl,
 }: {
   profile: { id: string; nickname: string; name: string; avatar_path: string | null };
+  avatarUrl: string | null; // 서버 부모가 풀어 준 현재 아바타 공개 URL
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nickname, setNickname] = useState(profile.nickname);
   const [name, setName] = useState(profile.name);
-  const [preview, setPreview] = useState<string | null>(avatarUrl(profile.avatar_path));
+  const [preview, setPreview] = useState<string | null>(avatarUrl);
   const [picked, setPicked] = useState<{ blob: Blob; ext: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,31 +80,31 @@ export default function ProfileEditForm({
     setError(null);
     setSaved(false);
     try {
-      const supabase = createClient();
       let avatar_path = profile.avatar_path;
 
       if (picked) {
-        const path = `${profile.id}/${Date.now()}.${picked.ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("avatars")
-          .upload(path, picked.blob, { contentType: picked.blob.type, upsert: false });
-        if (upErr) {
+        // presigned PUT으로 S3 avatars/{uid}/… 에 직접 업로드(서버 액션이 경로·권한 결정)
+        const r = await createUploadUrl("avatars", `avatar.${picked.ext}`, picked.blob.size, picked.blob.type);
+        if ("error" in r) {
+          setError(r.error);
+          return;
+        }
+        const res = await fetch(r.url, {
+          method: "PUT",
+          body: picked.blob,
+          headers: { "Content-Type": picked.blob.type },
+        });
+        if (!res.ok) {
           setError("사진 업로드에 실패했어요");
           return;
         }
-        // 이전 아바타 정리(있으면, 실패 무시)
-        if (profile.avatar_path) {
-          await supabase.storage.from("avatars").remove([profile.avatar_path]);
-        }
-        avatar_path = path;
+        avatar_path = r.storage_path;
       }
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ nickname: nn, name: nm, avatar_path })
-        .eq("id", profile.id);
-      if (error) {
-        setError(error.code === "23505" ? "이미 사용 중인 닉네임이에요" : "저장에 실패했어요");
+      // 프로필 갱신(+ 이전 아바타 정리)은 서버 액션 — RLS(본인 행) 강제
+      const result = await updateProfileAction({ nickname: nn, name: nm, avatar_path });
+      if ("error" in result) {
+        setError(result.error);
         return;
       }
       setPicked(null);

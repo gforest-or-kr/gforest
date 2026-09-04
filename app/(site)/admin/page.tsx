@@ -1,11 +1,21 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
 import { ROLE_LABEL } from "@/lib/menu";
 import { shortDate, fullDate } from "@/lib/format";
 import { updateRole } from "./actions";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/db/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 const ROLES: AppRole[] = ["pending", "member", "operator", "teacher", "student", "admin"];
+
+type Member = { id: string; name: string; nickname: string; role: AppRole; created_at: string };
+type Audit = {
+  id: number;
+  old_role: AppRole | null;
+  new_role: AppRole;
+  changed_at: string;
+  user: { nickname: string } | null;
+};
 
 // SCR-600 회원·역할 승인 — 기존 등업게시판 워크플로 대체
 export default async function AdminMembersPage({
@@ -14,20 +24,26 @@ export default async function AdminMembersPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error: errMsg } = await searchParams;
-  const supabase = await createClient();
-  const [{ data: profiles }, { data: audit }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, name, nickname, role, created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("role_audit")
-      .select("id, old_role, new_role, changed_at, user:profiles!role_audit_user_id_fkey(nickname)")
-      .order("changed_at", { ascending: false })
-      .limit(10),
-  ]);
+  // admin 컨텍스트로 조회 — role_audit은 role_audit_select RLS(admin만)가 걸러낸다
+  const userId = await getSessionUserId();
+  const [profiles, audit] = await withUser(userId, (c) =>
+    Promise.all([
+      many<Member>(
+        c,
+        `select id, name, nickname, role, created_at::text as created_at
+           from profiles order by created_at desc`,
+      ),
+      many<Audit>(
+        c,
+        `select a.id, a.old_role, a.new_role, a.changed_at::text as changed_at,
+                case when u.id is null then null else json_build_object('nickname', u.nickname) end as "user"
+           from role_audit a left join profiles u on u.id = a.user_id
+          order by a.changed_at desc limit 10`,
+      ),
+    ]),
+  );
 
-  const members = profiles ?? [];
+  const members = profiles;
   const pending = members.filter((m) => m.role === "pending");
   const others = members.filter((m) => m.role !== "pending");
 
@@ -108,7 +124,7 @@ export default async function AdminMembersPage({
         ) : (
           <ul className="text-xs text-slate-500 space-y-1.5">
             {(audit ?? []).map((a) => {
-              const user = a.user as { nickname: string } | null;
+              const user = a.user;
               return (
                 <li key={a.id}>
                   {fullDate(a.changed_at)} — <b>{user?.nickname ?? "?"}</b>:{" "}

@@ -1,10 +1,14 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { withUser, one, many } from "@/lib/db";
 import { getSessionProfile } from "@/lib/auth";
+import type { Database } from "@/lib/db/types";
 import { updatePost } from "../../actions";
 import PostForm from "@/components/post-form";
 
 export const dynamic = "force-dynamic";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type BoardRow = Database["public"]["Tables"]["boards"]["Row"];
 
 // SCR-320 수정 — 글쓰기 폼을 재사용해 제목·본문(달력은 일정)·기존 첨부를 채운 상태로 진입.
 export default async function EditPostPage({
@@ -16,30 +20,38 @@ export default async function EditPostPage({
 }) {
   const { slug, postId } = await params;
   const { error } = await searchParams;
+  if (!UUID_RE.test(postId)) notFound();
 
-  const supabase = await createClient();
-  const [profile, { data: board }, { data: post }, { data: attachments }] = await Promise.all([
-    getSessionProfile(),
-    supabase.from("boards").select("*").eq("slug", slug).single(),
-    supabase
-      .from("posts")
-      .select("title, content, event_date, is_notice, legacy_document_srl, author:profiles(id), boards!inner(slug)")
-      .eq("id", postId)
-      .eq("boards.slug", slug)
-      .is("deleted_at", null)
-      .single(),
-    supabase
-      .from("attachments")
-      .select("id, file_name, byte_size, mime_type")
-      .eq("post_id", postId)
-      .order("created_at"),
-  ]);
-  if (!board || !post) notFound();
+  const profile = await getSessionProfile();
   if (!profile)
     redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/${postId}/edit`)}`);
 
+  // 사용자 RLS 컨텍스트로 조회 — 읽기 권한이 없으면 posts_select가 0행을 돌려준다
+  const [board, post, attachments] = await withUser(profile.id, (c) =>
+    Promise.all([
+      one<BoardRow>(c, "select * from boards where slug = $1 and is_active", [slug]),
+      one<{
+        title: string; content: string; event_date: string | null; is_notice: boolean;
+        legacy_document_srl: number | null; author_id: string;
+      }>(
+        c,
+        `select p.title, p.content, to_char(p.event_date, 'YYYY-MM-DD') as event_date, p.is_notice,
+                p.legacy_document_srl::int as legacy_document_srl, p.author_id
+           from posts p join boards b on b.id = p.board_id
+          where p.id = $1 and b.slug = $2 and p.deleted_at is null`,
+        [postId, slug],
+      ),
+      many<{ id: string; file_name: string; byte_size: number; mime_type: string | null }>(
+        c,
+        "select id, file_name, byte_size::int as byte_size, mime_type from attachments where post_id = $1 order by created_at",
+        [postId],
+      ),
+    ]),
+  );
+  if (!board || !post) notFound();
+
   // UI 차단 — 최종 차단은 RLS(posts_update: author/admin). 비작성자·비admin은 상세로 되돌린다.
-  const isAuthor = profile.id === (post.author as { id: string } | null)?.id;
+  const isAuthor = profile.id === post.author_id;
   const isAdmin = profile.role === "admin";
   if (!(isAuthor || isAdmin)) redirect(`/boards/${slug}/${postId}`);
 
@@ -61,7 +73,7 @@ export default async function EditPostPage({
           isNotice: post.is_notice,
         }}
         showAttachments
-        initialAttachments={attachments ?? []}
+        initialAttachments={attachments}
         canPinNotice={profile.role === "admin" || profile.role === "operator"}
         richText={!post.legacy_document_srl}
       />

@@ -1,14 +1,31 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
+import { publicMediaUrl } from "@/lib/storage";
 import { createSlide, updateSlide, deleteSlide } from "./actions";
 
-// SCR-602 메인 슬라이더 관리 — admin 전용(차단은 admin 레이아웃 + RLS/Storage 정책)
+type Slide = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  link_url: string | null;
+  image_desktop_path: string;
+  is_active: boolean;
+  sort_order: number;
+};
+
+// SCR-602 메인 슬라이더 관리 — admin 전용(차단은 admin 레이아웃 + slides_admin RLS)
 export default async function AdminSlidesPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("slides")
-    .select("id, title, subtitle, link_url, image_desktop_path, is_active, sort_order")
-    .order("sort_order");
-  const slides = data ?? [];
+  const rows = await withUser(await getSessionUserId(), (c) =>
+    many<Slide>(
+      c,
+      `select id, title, subtitle, link_url, image_desktop_path, is_active, sort_order
+         from slides order by sort_order`,
+    ),
+  );
+  // 썸네일은 공개 S3 "site/<path>" URL (서버에서 미리 풀어 둔다)
+  const slides = await Promise.all(
+    rows.map(async (s) => ({ ...s, thumb: (await publicMediaUrl("site", s.image_desktop_path)) ?? "" })),
+  );
 
   const input = "border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white";
 
@@ -32,9 +49,7 @@ export default async function AdminSlidesPage() {
               {slides.map((s) => {
                 const update = updateSlide.bind(null, s.id);
                 const del = deleteSlide.bind(null, s.id);
-                const thumb = supabase.storage
-                  .from("site")
-                  .getPublicUrl(s.image_desktop_path).data.publicUrl;
+                const thumb = s.thumb;
                 return (
                   <li key={s.id} className="flex items-center gap-3 py-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
