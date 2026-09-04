@@ -38,7 +38,9 @@
   ① `bootstrap_rds.sql`(auth.users 테이블·`auth.uid()` 셔임·RLS 적용 롤 `gforest_app`) ② 미적용 마이그레이션 순차 적용(`public.schema_migrations` 추적)
   ③ 앱 접속 문자열을 SSM에 기록.
 - 앱은 `gforest_app`(테이블 소유자 아님 → RLS 강제)으로 접속. 관리자 접속(`DATABASE_ADMIN_URL`)은 마이그레이션·이관에만.
-- RDS는 기본 비공개. 이관·운영 작업 때만 `db_publicly_accessible=true` + `db_allowed_cidrs=[내 IP/32]`로 잠깐 열고 닫는다.
+- **RDS는 비공개**(인터넷 경로 없음). 평소 DB에 닿는 것은 ECS 태스크뿐이다. 비상 시(수동 복구·데이터 점검)에만
+  `db_publicly_accessible=true` + `db_allowed_cidrs=["<내 IP>/32"]`로 apply → 작업 → **즉시 false로 되돌려 apply**. 켜 둔 채 퇴근하지 않는다.
+  (SG `gforest-<env>-db-ops`는 항상 붙어 있고 규칙만 토글된다 — 순서 문제 없이 켜고 끌 수 있다.)
 - 이전 시스템 → RDS 이관 절차(1회성, dev 완료·컷오버 때 prod에 반복): `pg_dump --schema=public`, `auth.users` CSV(bcrypt 해시 그대로), `db/tools/` 의 1회성 복사 스크립트(미디어 → S3). `session_replication_role=replica`로 FK 순서 무시 복원. 절차 상세는 `docs/plans/migration_plan.md` §5.
 
 ## 백업 · 모니터링

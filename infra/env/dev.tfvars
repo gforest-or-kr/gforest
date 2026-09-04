@@ -16,6 +16,6 @@ secret_parameters = {
   AUTH_SECRET  = "/gforest/dev/AUTH_SECRET"
 }
 
-# 이관 작업 동안 홈 맥북에서 직접 접속 (작업 후 false로)
-db_publicly_accessible = true
-db_allowed_cidrs       = ["112.168.240.74/32"]
+# RDS는 비공개가 기본. 비상 시에만 true + 본인 IP/32 로 잠깐 열고 즉시 되돌린다(docs/conventions/cicd-and-ops.md).
+db_publicly_accessible = false
+db_allowed_cidrs       = []

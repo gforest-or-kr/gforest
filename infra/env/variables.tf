@@ -49,7 +49,7 @@ variable "db_instance_class" {
 }
 
 variable "db_publicly_accessible" {
-  description = "이관·운영 작업용 임시 공개 접근. prod는 컷오버 기간에만 true"
+  description = "비상 DB 접근(공개 엔드포인트 + 허용 CIDR). 평소 false. 켰으면 작업 직후 되돌린다"
   type        = bool
   default     = false
 }
