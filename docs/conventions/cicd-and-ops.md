@@ -2,7 +2,7 @@
 
 > repo 접근만으로 배포·인프라·계정 체계가 어떻게 도는지 이해하기 위한 문서. 팀 전용 상세(실제
 > 비밀값·계정 정보)는 Confluence **05 운영 > "인프라·자격증명 레퍼런스"**. 여기는 repo 안에서
-> 자급되는 요약 + 실제로 겪은 함정. 2026-09 AWS 이전 기준(Vercel/Supabase 시절 내용은 git 이력 참조).
+> 자급되는 요약 + 실제로 겪은 함정. 2026-09 AWS 이전 기준(그 이전 프로토타입의 기록은 Confluence 02 리서치·03 설계에만 있다).
 
 ## 계정·접근 체계 (인수인계 가능하게)
 
@@ -32,14 +32,14 @@
 - 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.
 - PR 게이트는 `ci.yml`(tsc·eslint·`next build`). **빌드는 DB 없이 통과해야 한다** — 빌드 시점 DB 접근 금지.
 
-## DB 마이그레이션 · 부트스트랩 (`infra/db/`)
+## DB 마이그레이션 · 부트스트랩 (`db/`)
 
-- 스키마 단일 진실은 `supabase/migrations/*.sql`(폴더명은 역사적). 적용: `AWS_PROFILE=gforest infra/db/bootstrap.sh <env>` —
-  ① `bootstrap_rds.sql`(auth.users 대체 테이블·`auth.uid()` 셔임·RLS 적용 롤 `gforest_app`) ② 미적용 마이그레이션 순차 적용(`public.schema_migrations` 추적,
-  Supabase Storage 전용 파일은 건너뜀) ③ 앱 접속 문자열을 SSM에 기록.
+- 스키마 단일 진실은 `db/migrations/*.sql`(규칙은 `db/README.md`). 적용: `AWS_PROFILE=gforest db/bootstrap.sh <env>` —
+  ① `bootstrap_rds.sql`(auth.users 테이블·`auth.uid()` 셔임·RLS 적용 롤 `gforest_app`) ② 미적용 마이그레이션 순차 적용(`public.schema_migrations` 추적)
+  ③ 앱 접속 문자열을 SSM에 기록.
 - 앱은 `gforest_app`(테이블 소유자 아님 → RLS 강제)으로 접속. 관리자 접속(`DATABASE_ADMIN_URL`)은 마이그레이션·이관에만.
 - RDS는 기본 비공개. 이관·운영 작업 때만 `db_publicly_accessible=true` + `db_allowed_cidrs=[내 IP/32]`로 잠깐 열고 닫는다.
-- Supabase → RDS 이관 절차(1회성): `pg_dump --schema=public`, `auth.users` CSV(bcrypt 해시 그대로), `copy_storage.sh`(Storage → S3). `session_replication_role=replica`로 FK 순서 무시 복원.
+- 이전 시스템 → RDS 이관 절차(1회성, dev 완료·컷오버 때 prod에 반복): `pg_dump --schema=public`, `auth.users` CSV(bcrypt 해시 그대로), `db/tools/` 의 1회성 복사 스크립트(미디어 → S3). `session_replication_role=replica`로 FK 순서 무시 복원. 절차 상세는 `docs/plans/migration_plan.md` §5.
 
 ## 백업 · 모니터링
 

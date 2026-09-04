@@ -58,7 +58,7 @@
 
 | 증상 | 원인·해결 |
 |---|---|
-| Claude가 Supabase/Vercel 방식으로 코드를 짠다 | 오래된 설계 문서를 읽었을 가능성. `docs/research`는 역사 배너가 있다. CLAUDE.md §스택을 다시 읽게 한다 |
+| Claude가 현행 스택과 다른 방식(매니지드 BaaS SDK·서버리스 증분 정적 재생성 등)으로 코드를 짠다 | 오래된 기억이나 외부 예제를 따라간 것. CLAUDE.md §스택·§기술 원칙 9와 `docs/conventions/code-patterns.md`를 다시 읽게 한다 |
 | Confluence 쓰기가 "cloud id not granted" | 회사 Atlassian MCP를 탔다. gforest 사이트는 `atlassian-gforest` 서버(`.mcp.json`)만 |
 | `gh` 401 / AWS "Token has expired" | 각각 `gh auth login -h github.com`, `aws sso login --profile gforest --use-device-code` |
 | 빌드는 되는데 CI `ci`가 실패 | CI는 DB 없이 `next build`한다. 빌드 시점 DB 접근(`generateStaticParams`, 정적 라우트)이 들어갔는지 확인 |

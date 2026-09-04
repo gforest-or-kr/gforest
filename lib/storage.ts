@@ -2,7 +2,7 @@ import "server-only";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// S3 미디어 버킷(MEDIA_BUCKET). 객체 키 = "<종류>/<storage_path>" 로 Supabase 버킷 구조를 그대로 승계:
+// S3 미디어 버킷(MEDIA_BUCKET). 객체 키 = "<종류>/<storage_path>" (이전 시스템의 버킷 구조를 2026-09 이관 때 그대로 승계):
 //   attachments/{uid}/{uuid}.{ext}  (비공개 — 서명 URL로만)
 //   avatars/{uid}/{ts}.{ext}        (공개 — CloudFront 경로, 없으면 서명 URL)
 //   site/{...}                      (슬라이드 등 공개)

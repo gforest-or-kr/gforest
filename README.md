@@ -29,7 +29,7 @@ npm run dev                        # http://localhost:3000
 
 - Node 20+ 필요. Docker는 로컬에 필요 없다(이미지는 CI가 빌드).
 - `.env.local`: `DATABASE_URL`, `AUTH_SECRET`, `MEDIA_BUCKET`, `AWS_REGION` — S3 접근은 `AWS_PROFILE=gforest`로 실행.
-- DB 스키마: `supabase/migrations/` + 게시판 시드 `supabase/seed.sql`. 적용은 `infra/db/bootstrap.sh <env>`.
+- DB 스키마: `db/migrations/` + 게시판 시드 `db/seed.sql`. 적용은 `db/bootstrap.sh <env>` (규칙은 `db/README.md`).
 
 ## 디렉터리
 
@@ -39,20 +39,18 @@ components/             UI 컴포넌트
 lib/db/                 pg 풀 + withUser() 트랜잭션(RLS 컨텍스트), Row 타입
 lib/auth.ts             Auth.js 세션 (getSessionUserId / getSessionProfile)
 lib/storage.ts          S3 presigned URL (서버 전용)
-supabase/migrations/    스키마 SQL — 단일 진실 (폴더명은 역사적)
+db/                     스키마 SQL(migrations/, 단일 진실)·seed.sql·bootstrap.sh — db/README.md
 infra/shared/           Terraform: OIDC 롤·ECR·Route 53·ACM·VPC·ALB·ECS 클러스터
 infra/env/              Terraform: Fargate 서비스·RDS·S3·SSM (workspace dev/prod)
-infra/db/               bootstrap.sh(마이그레이션 적용)·bootstrap_rds.sql·copy_storage.sh(1회성)
 .github/workflows/      ci.yml(PR 게이트) · ecs-deploy.yml(배포) · infra.yml(Terraform 검증)
 docs/                   plans/ research/ design/ conventions/ diagrams/
-scripts/legacy-preview/ 1회성 프리뷰 ETL(2026-06, 미사용)
 ```
 
 ## 배포 흐름
 
 1. PR → `ci.yml` (tsc · eslint · `next build`, DB 없이 통과해야 함)
 2. squash merge → `main` push → `ecs-deploy.yml`이 **dev 자동 배포** (ALB `/api/health` 스모크 포함)
-3. **prod는 GitHub Actions에서 수동 실행**(workflow_dispatch, environment=prod)
+3. **prod는 `vX.Y.Z` 태그**(Owner가 main 커밋에 생성) → `ecs-deploy.yml`이 prod 배포. 롤백·재배포는 workflow_dispatch ([docs/conventions/branching-and-release.md](./docs/conventions/branching-and-release.md))
 4. 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백
 
 ## 문서
