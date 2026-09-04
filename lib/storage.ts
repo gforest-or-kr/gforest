@@ -12,7 +12,10 @@ export type MediaKind = "attachments" | "avatars" | "site";
 
 const region = process.env.AWS_REGION ?? "ap-northeast-2";
 const bucket = () => process.env.MEDIA_BUCKET ?? "";
-const s3 = new S3Client({ region });
+// 로컬 개발: S3_ENDPOINT(docker compose 의 MinIO, http://localhost:9000)를 주면 그쪽으로. 자격증명은 SDK 기본 체인
+// (로컬은 .env.local 의 AWS_ACCESS_KEY_ID/SECRET = minioadmin, ECS 는 태스크 롤). 운영에서는 S3_ENDPOINT 를 두지 않는다.
+const endpoint = process.env.S3_ENDPOINT;
+const s3 = new S3Client({ region, ...(endpoint ? { endpoint, forcePathStyle: true } : {}) });
 
 export const mediaKey = (kind: MediaKind, storagePath: string) => `${kind}/${storagePath}`;
 

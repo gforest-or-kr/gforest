@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "tsc --noEmit -p . && eslint . && next build",
+    "db:up": "docker compose up -d --wait && db/bootstrap.sh local",
+    "db:reset": "db/local/reset.sh",
+    "db:down": "docker compose down"
   },
   "dependencies": {
     "@aws-sdk/client-ecs": "^3.1126.0",

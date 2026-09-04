@@ -19,7 +19,14 @@
       "Bash(terraform fmt *)",
       "Bash(terraform validate)",
       "Bash(terraform plan *)",
-      "Bash(aws sts get-caller-identity)"
+      "Bash(aws sts get-caller-identity)",
+      "Bash(npm run check)",
+      "Bash(npm run db:up)",
+      "Bash(npm run db:reset)",
+      "Bash(npm run db:down)",
+      "Bash(docker compose ps *)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose exec -T db psql *)"
     ],
     "deny": [
       "Bash(git push --force *)",

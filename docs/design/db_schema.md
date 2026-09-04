@@ -1,7 +1,7 @@
 # DB 스키마 설계 v1 (2026-06-11)
 
 > 근거: 게시판 권한 매트릭스(4단계+ 역할), 화면설계서 v1.1, 마이그레이션 계획서 운영 원칙.
-> SQL 원본: `db/migrations/00000000000001_initial_schema.sql`(+ 이후 번호) + `db/seed.sql` (게시판 33개 시드). 적용은 `db/bootstrap.sh <env>` (`db/README.md`).
+> SQL 원본: `db/migrations/00000000000001_initial_schema.sql`(+ 이후 번호) + `db/seed.sql` (게시판 38개 시드). 적용은 `db/bootstrap.sh <env>` (`db/README.md`).
 > 원칙: 표준 Postgres 중심(`pg_dump` 탈출 가능), 게시판·권한은 **데이터로 관리** — 게시판 추가/권한 변경에 코드 수정 불필요.
 
 ## 1. ERD 개요
@@ -28,7 +28,7 @@ posts ◄─── boards (slug, menu_group, board_type, read_roles[], write_rol
 | 역할 = enum 6종 | `pending → member / operator / teacher / student / admin` | 기존 등업 체계 계승. 익명은 행 없음(비로그인). 신규 가입 = `pending`(공개 열람만) → 관리자 승인 시 `member` |
 | 게시판 권한 = 역할 배열 | `boards.read_roles[]` / `write_roles[]`. **null = 공개(익명 읽기)** | 권한이 선형 계층이 아님(운영위/교사/학생이 병렬). 배열이 매트릭스를 그대로 표현. admin은 함수에서 항상 통과 |
 | RLS가 단일 진실 | `can_read_board()` / `can_write_board()` security definer 함수를 posts·comments·attachments 정책이 공유 | "본인 글만 수정", "권한 게시판 차단"을 DB에서 강제 — 앱 버그가 데이터 유출로 이어지지 않음 |
-| 게시판 33개 = 시드 데이터 | seed.sql에 권한 매트릭스 그대로 입력, `legacy_mid` 보존 | 검증된 매트릭스의 1:1 이전 + ETL 멱등성 |
+| 게시판 38개 = 시드 데이터 | seed.sql에 권한 매트릭스 그대로 입력, `legacy_mid` 보존 | 검증된 매트릭스의 1:1 이전 + ETL 멱등성 |
 | 일정·예약 = posts 확장 | `event_date/start/end`, `space_id` 컬럼. 별도 테이블 없음 | 캘린더·예약도 "게시글"인 기존 모델 유지(이관 단순). 예약 중복은 `EXCLUDE USING gist` 제약으로 DB에서 차단 |
 | soft delete | `deleted_at` (posts/comments) | 운영 실수 복구. RLS select에서 자동 제외 |
 | 역할 변경 보호 | 트리거로 본인 role 변경 차단 + `role_audit` 자동 기록 | profiles update 정책을 단순하게 유지하면서 권한 상승 방지 |
@@ -40,7 +40,7 @@ posts ◄─── boards (slug, menu_group, board_type, read_roles[], write_rol
 |---|---|---|
 | profiles | 회원 (auth.users 1:1) | nickname unique, `legacy_member_srl` |
 | role_audit | 역할 변경 이력 | admin만 열람 |
-| boards | 게시판 33개 | `legacy_mid`, SCR-603에서 CRUD |
+| boards | 게시판 38개 | `legacy_mid`, SCR-603에서 CRUD |
 | spaces | 예약 공간 | 강당/음악실/도서관/운동장 (시드, 확인 후 조정) |
 | posts | 게시글 + 일정/예약 확장 | `legacy_document_srl`, soft delete, 시간중복 제약 |
 | comments | 댓글 (1단계 대댓글) | `legacy_comment_srl` |

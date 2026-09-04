@@ -16,7 +16,7 @@
 
 1. **이식성 우선**: 표준 Postgres/SQL 중심(`pg` 드라이버, 파라미터 쿼리). ORM·클라우드 전용 기능 의존 최소화. `pg_dump` 하나로 탈출 가능해야 한다
 2. **스키마는 코드로만 변경**: `db/migrations/*.sql`이 단일 진실. 적용은 `db/bootstrap.sh <env>`(순차 적용 + `schema_migrations` 추적, 규칙은 `db/README.md`). 콘솔 수동 변경 금지. `lib/db/types.ts`의 Row 타입을 함께 갱신
-3. **권한은 DB가 강제한다**: 게시판 33개의 읽기/쓰기 권한은 `boards.read_roles[]/write_roles[]` 데이터 + RLS(`can_read_board`/`can_write_board`)로 처리. 앱은 RLS가 적용되는 `gforest_app` 롤로 접속하고 **모든 쿼리를 `withUser(userId, …)` 트랜잭션 안에서** 실행한다(`set_config('app.user_id')` → DB의 `auth.uid()`). **앱 코드에 권한 분기를 중복 구현하지 말 것** — UI 노출 제어용으로만 사용
+3. **권한은 DB가 강제한다**: 게시판 38개의 읽기/쓰기 권한은 `boards.read_roles[]/write_roles[]` 데이터 + RLS(`can_read_board`/`can_write_board`)로 처리. 앱은 RLS가 적용되는 `gforest_app` 롤로 접속하고 **모든 쿼리를 `withUser(userId, …)` 트랜잭션 안에서** 실행한다(`set_config('app.user_id')` → DB의 `auth.uid()`). **앱 코드에 권한 분기를 중복 구현하지 말 것** — UI 노출 제어용으로만 사용
 4. **역할 모델**: `pending → member / operator / teacher / student / admin` (선형 계층 아님). 역할 변경은 admin 전용이며 트리거가 차단·감사한다
 5. **단순함 유지**: 학부모조합 게시판이다. 과한 추상화·라이브러리 추가 지양. 게시판 추가/변경은 코드가 아니라 `boards` 데이터로 해결되어야 한다
 6. **모바일 퍼스트 단일 반응형**: 별도 모바일 마크업 금지. 탭 타겟 44px+, 호버 의존 금지. 다크모드 미지원(확정). 디자인 토큰은 `app/globals.css`의 forest 팔레트
@@ -26,6 +26,7 @@
 
 ## 개발 워크플로
 
+- **로컬 우선**: 개발자는 AWS 계정 없이 로컬(Docker Compose Postgres·MinIO, `npm run db:up`)에서 개발·검증한다. dev RDS 에 직접 붙지 않는다. **PR 전에 `npm run check`**(tsc·eslint·build) 통과가 필수 — CI 초록은 필요조건일 뿐이다
 - **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `main` 하나. 작업은 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합** → **dev 자동 배포**. **prod 배포는 `vX.Y.Z` 태그**(Owner만 생성, main 커밋에만). `develop` 등 두 번째 장기 브랜치·태그 삭제·main 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
 - **Jira 동기화**: 작업 시작 시 해당 GFM 이슈를 `진행 중`으로, 완료 시 `완료`(리뷰 필요 시 `검토 중`)로 전환. 없는 작업은 이슈를 먼저 만든다. **세션·머신 간 인수인계는 Jira 코멘트 + PR 본문으로**(개인 메모리는 머신을 넘지 않는다). Confluence 계획서의 진행 현황은 Jira 매크로로 자동 연동되므로 위키를 수동 갱신하지 않는다
 - **커밋**: 관련 이슈 키를 메시지에 포함 (예: `feat: ... (GFM-2)`). PR 제목 = squash 커밋 제목

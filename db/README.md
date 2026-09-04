@@ -5,21 +5,21 @@ RDS Postgres 스키마·시드·부트스트랩. **콘솔 수동 변경 금지**
 | 경로 | 내용 |
 |---|---|
 | `migrations/*.sql` | 스키마 마이그레이션. 번호 순서대로 1회씩 적용되며 `public.schema_migrations` 에 기록 |
-| `seed.sql` | 게시판 33개 데이터(템플릿 5종). 게시판 추가/권한 변경은 코드가 아니라 이 데이터로 |
+| `seed.sql` | 게시판 38개 데이터(템플릿 5종). 게시판 추가/권한 변경은 코드가 아니라 이 데이터로 |
 | `bootstrap_rds.sql` | RDS 최초 1회: `auth.users`·`auth.uid()` 셔임·RLS 적용 앱 롤 `gforest_app` |
-| `bootstrap.sh` | 위 두 가지를 순서대로 적용하고 앱 접속 문자열을 SSM 에 기록 |
-| `tools/` | 1회성 컷오버 도구(이전 시스템 미디어 → S3 복사 스크립트). 평소에는 쓰지 않으며 이전 시스템 폐기 후 삭제한다 |
+| `bootstrap.sh` | 위 두 가지 + (boards 가 비어 있으면) seed 를 순서대로 적용. `local` 이면 샘플 데이터까지 |
+| `local/` | 로컬 전용: `sample.sql`(테스트 계정·글), `reset.sh`(`npm run db:reset`) |
+| `tools/` | 1회성 컷오버 도구. 평소에는 쓰지 않는다 |
 
 ## 적용
 
-```sh
-aws sso login --profile gforest --use-device-code   # 필요 시
-AWS_PROFILE=gforest db/bootstrap.sh dev              # prod 도 같은 방식
-```
+| 환경 | 방법 |
+|---|---|
+| **local** | `npm run db:up` (= `docker compose up` + `db/bootstrap.sh local`). 컨테이너 안 psql 을 쓰므로 libpq 불필요 |
+| **dev / prod** | 배포 파이프라인(`ecs-deploy.yml`)이 새 이미지로 서비스를 갱신하기 전에 VPC 안에서 미적용 마이그레이션을 적용한다. 사람이 손으로 돌리지 않는다 |
+| 비상(수동) | `AWS_PROFILE=gforest db/bootstrap.sh dev` — RDS 를 잠깐 열어야 한다(`docs/conventions/cicd-and-ops.md` 비상 절차). 끝나면 즉시 닫는다 |
 
-- 재실행해도 안전하다 — 이미 기록된 version 은 건너뛴다.
-- 관리자 접속 문자열(`/gforest/<env>/DATABASE_ADMIN_URL`)이 SSM 에 있어야 하고, RDS 가 이 머신에서 접근 가능해야 한다
-  (`infra/env` 의 `db_publicly_accessible` + `db_allowed_cidrs`).
+- 재실행해도 안전하다 — 이미 기록된 version 은 건너뛴다. 시드는 `boards` 가 비어 있을 때만 들어간다.
 
 ## 마이그레이션 규칙
 

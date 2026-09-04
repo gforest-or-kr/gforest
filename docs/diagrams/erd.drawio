@@ -38,7 +38,7 @@
         <mxCell id="au3" value="changed_by / changed_at" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontColor=#888888" vertex="1" parent="audit"><mxGeometry y="80" width="220" height="26" as="geometry" /></mxCell>
 
         <!-- boards -->
-        <mxCell id="boards" value="boards (33개 시드)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
+        <mxCell id="boards" value="boards (38개 시드)" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=0;collapsible=0;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12" vertex="1" parent="1">
           <mxGeometry x="430" y="40" width="250" height="184" as="geometry" />
         </mxCell>
         <mxCell id="bd1" value="id  uuid  PK / slug  UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11" vertex="1" parent="boards"><mxGeometry y="28" width="250" height="26" as="geometry" /></mxCell>
