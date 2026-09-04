@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """글·댓글 인서트 SQL 생성 + 실행 (legacy_* 멱등)"""
+# [미사용] 2026-06 Supabase 프리뷰 ETL. RDS/S3 백엔드에서는 실행 불가.
 import json, os, re, subprocess
 
 DBURL = os.environ["SUPABASE_DB_URL"]

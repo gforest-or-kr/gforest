@@ -1,5 +1,7 @@
 # gforest-web — 학부모조합 학교 홈페이지 재구축
 
+> **2026-09 AWS 이전 안내** — Vercel Hobby + Supabase에서 AWS(ECS Fargate·RDS Postgres·S3)로 옮기면서 §3(스택)·§5(체크리스트)의 Vercel/Supabase 항목은 대체되었다. 현행 구성은 [CLAUDE.md](../../CLAUDE.md)와 [docs/conventions/cicd-and-ops.md](../conventions/cicd-and-ops.md)가 단일 진실이며, 아래는 최초 계획(2026-06)의 기록이다.
+
 > 이 문서는 Claude.ai 사전 검토 대화(2026-06)의 결정사항을 정리한 것이다.
 > Claude Code는 모든 작업 시 이 문서의 결정사항과 운영 원칙을 따른다.
 
@@ -20,17 +22,17 @@
 
 ```
 브라우저
-  → Vercel (Next.js: 정적/ISR 페이지 + Server Actions)
-  → Supabase (Postgres / Auth / Storage / RLS)
+  → ALB → ECS Fargate (Next.js: 서버 렌더 + 태그 캐시 + Server Actions)
+  → RDS Postgres 17 (RLS) / S3 (presigned 미디어)   ※ 2026-09 AWS 이전 반영
 ```
 
 | 레이어 | 선택 | 비고 |
 |---|---|---|
 | 프론트 + 서버 로직 | Next.js (App Router, TypeScript) | 별도 백엔드 서버 없음 |
-| 호스팅 | Vercel (Hobby) | 약관 이슈 시 Cloudflare Pages로 전환 가능하게 설계 |
-| DB | Supabase Postgres, **Seoul(ap-northeast-2) 리전** | |
-| 인증 | Supabase Auth (이메일/비밀번호) | 카카오 OAuth는 추후 옵션 |
-| 파일 | Supabase Storage | 1GB 초과 시 R2 병행 검토 — [media_storage_strategy.md](../research/media_storage_strategy.md) 참조 |
+| 호스팅 | AWS ECS Fargate(ARM64) + ALB, 서울 리전 | Terraform `infra/`로 관리. 2026-09 Vercel Hobby에서 이전 |
+| DB | RDS Postgres 17, **Seoul(ap-northeast-2) 리전** | RLS는 `auth.uid()` 셔임으로 동일하게 유지 |
+| 인증 | Auth.js Credentials (이메일/비밀번호, JWT 쿠키) | bcrypt 해시 그대로 이관. 카카오 OAuth는 추후 옵션 |
+| 파일 | S3 미디어 버킷 + presigned URL(`lib/storage.ts`) | 옛 검토: [media_storage_strategy.md](../research/media_storage_strategy.md) |
 | 권한 | Postgres RLS 정책 | "본인 글만 수정" 등은 DB에서 강제 |
 | 스타일 | Tailwind CSS | |
 
@@ -55,7 +57,7 @@ XE1 MySQL 덤프에서 Supabase Postgres로 ETL 스크립트 작성:
 | `xe_files` | Storage 버킷 업로드 | 업로드 후 본문 내 파일 경로 일괄 치환 |
 | `xe_member_group` | `profiles.role` 등 | 운영진/일반회원 권한 매핑 |
 
-- **비밀번호**: XE1은 MD5 계열 해시 → Supabase Auth로 이전 불가. **전 회원 비밀번호 재설정 메일 일괄 발송**으로 처리 (사전 공지 필요)
+- **비밀번호**: bcrypt 해시를 그대로 이관해 기존 비밀번호 유지(2026-09 확인)
 - ETL은 멱등(idempotent)하게 작성하여 반복 실행 가능하게 (원본 `*_srl`을 매핑 테이블로 보존)
 - 마이그레이션 검증: 건수 대조 + 샘플 게시글/첨부파일 수동 확인
 
@@ -65,15 +67,15 @@ XE1 MySQL 덤프에서 Supabase Postgres로 ETL 스크립트 작성:
 > Confluence 계획서 페이지는 Jira 매크로로 실시간 연동된다. 아래 목록은 최초 계획 기록용.
 
 - [ ] GitHub repo 생성 (코드 + 마이그레이션 SQL 모두 포함)
-- [ ] Supabase 프로젝트 생성 (Seoul 리전), URL/anon key 확보
-- [ ] `create-next-app` 스캐폴드 + `@supabase/supabase-js`, `@supabase/ssr`
-- [ ] `supabase init` → 초기 스키마 마이그레이션 (profiles/posts/comments/RLS)
-- [ ] Vercel에 repo Import, 환경변수 설정 → 자동 배포 확인
+- [ ] ~~Supabase 프로젝트 생성 (Seoul 리전), URL/anon key 확보~~ → (AWS 대체: Terraform `infra/shared`·`infra/env` apply — RDS·S3·ECS 생성)
+- [ ] `create-next-app` 스캐폴드 + ~~`@supabase/supabase-js`, `@supabase/ssr`~~ → (AWS 대체: `pg` + Auth.js — `lib/db`, `lib/auth.ts`)
+- [ ] ~~`supabase init`~~ → 초기 스키마 마이그레이션 (profiles/posts/comments/RLS) — (AWS 대체: `infra/db/bootstrap.sh <env>`로 적용)
+- [ ] ~~Vercel에 repo Import, 환경변수 설정 → 자동 배포 확인~~ → (AWS 대체: `.github/workflows/ecs-deploy.yml` — main push → dev 자동, prod 수동 승격)
 - [ ] Auth 설정: 이메일 템플릿 한글화, 리다이렉트 URL 등록
-- [ ] GitHub Actions: pg_dump 백업 + keep-alive ping
+- [ ] ~~GitHub Actions: pg_dump 백업 + keep-alive ping~~ → (AWS 대체: RDS 자동 백업, 상시 구동이라 keep-alive 불필요)
 - [ ] XE 데이터 ETL 스크립트 작성·실행·검증
-- [ ] 도메인 gforest.or.kr DNS → Vercel 연결 (HTTPS 자동)
-- [ ] 전 회원 비밀번호 재설정 안내 발송
+- [ ] ~~도메인 gforest.or.kr DNS → Vercel 연결 (HTTPS 자동)~~ → (AWS 대체: Route 53 NS 전환, ACM + ALB HTTPS)
+- [ ] ~~전 회원 비밀번호 재설정 안내 발송~~ → (불필요: bcrypt 해시 그대로 이관, 기존 비밀번호 유지)
 
 ## 6. 미확인 사항 (작업 전 사용자에게 확인할 것)
 

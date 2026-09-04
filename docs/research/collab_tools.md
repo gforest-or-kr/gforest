@@ -41,4 +41,4 @@ claude mcp add --transport http atlassian https://mcp.atlassian.com/v1/mcp
 ## 결정 사항
 
 - 프로젝트 전용 Atlassian Cloud 무료 사이트 신규 생성 (회사 계정과 분리)
-- Discord를 커뮤니케이션 툴로 사용, GitHub/Vercel/Jira·Confluence 알림을 webhook으로 연결
+- Discord를 커뮤니케이션 툴로 사용, GitHub/AWS/Jira·Confluence 알림을 webhook으로 연결
