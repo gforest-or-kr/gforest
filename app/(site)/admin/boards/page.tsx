@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
 import { ROLE_LABEL } from "@/lib/menu";
 import { createBoard, updateBoard } from "./actions";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/db/types";
 
 type Board = Database["public"]["Tables"]["boards"]["Row"];
 const ROLE_OPTS = ["member", "operator", "teacher", "student"] as const;
@@ -14,6 +15,64 @@ const TYPES: [Board["board_type"], string][] = [
 
 const input = "border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white";
 
+// 생성·수정 폼 공용 필드(서버 컴포넌트, 클라 상태 없음). b 없으면 생성 폼.
+function Fields({ b }: { b?: Board }) {
+  const publicRead = b ? b.read_roles === null : true;
+  const read = (r: string) => (b?.read_roles ?? []).includes(r as never);
+  const write = (r: string) => (b?.write_roles ?? ["member", "operator", "teacher"]).includes(r as never);
+  return (
+    <div className="grid gap-2.5">
+      <div className="flex flex-wrap gap-2">
+        {b ? (
+          <input value={b.slug} disabled className={`${input} grow min-w-40 bg-slate-50 text-slate-400`} />
+        ) : (
+          <input name="slug" required placeholder="슬러그 (영문/숫자/-)" className={`${input} grow min-w-40`} />
+        )}
+        <input name="name" defaultValue={b?.name} required placeholder="게시판 이름" className={`${input} grow min-w-40`} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <input name="menu_group" defaultValue={b?.menu_group} required placeholder="메뉴 그룹 (예: 커뮤니티)" className={`${input} grow min-w-40`} />
+        <input name="sort_order" type="number" defaultValue={b?.sort_order ?? 0} placeholder="정렬" className={`${input} w-24`} />
+        <select name="board_type" defaultValue={b?.board_type ?? "list"} className={input}>
+          {TYPES.map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="public_read" defaultChecked={publicRead} className="w-4 h-4 accent-forest-600" />
+        <span className="font-medium">공개 읽기 (비로그인 포함 전체) — 켜면 아래 읽기 역할은 무시</span>
+      </label>
+
+      <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <span className="text-slate-500 w-16">읽기 역할</span>
+        {ROLE_OPTS.map((r) => (
+          <label key={r} className="flex items-center gap-1.5">
+            <input type="checkbox" name={`read_${r}`} defaultChecked={read(r)} className="w-4 h-4 accent-forest-600" />
+            {ROLE_LABEL[r]}
+          </label>
+        ))}
+      </fieldset>
+      <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <span className="text-slate-500 w-16">쓰기 역할</span>
+        {ROLE_OPTS.map((r) => (
+          <label key={r} className="flex items-center gap-1.5">
+            <input type="checkbox" name={`write_${r}`} defaultChecked={write(r)} className="w-4 h-4 accent-forest-600" />
+            {ROLE_LABEL[r]}
+          </label>
+        ))}
+      </fieldset>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="is_active" defaultChecked={b ? b.is_active : true} className="w-4 h-4 accent-forest-600" />
+        <span className="font-medium">활성 (메뉴·목록에 노출)</span>
+      </label>
+      <p className="text-xs text-slate-400">관리자(admin)는 권한 설정과 무관하게 항상 읽기·쓰기가 허용됩니다.</p>
+    </div>
+  );
+}
+
 // SCR-603 게시판 관리 — admin 전용(차단: admin 레이아웃 + boards_admin RLS). 게시판 추가/권한은
 // 데이터로 처리(CLAUDE.md #5) — 이 화면이 boards 테이블 CRUD를 대신해 SQL 수동 편집을 없앤다.
 export default async function AdminBoardsPage({
@@ -22,71 +81,14 @@ export default async function AdminBoardsPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("boards")
-    .select("*")
-    .order("menu_group")
-    .order("sort_order");
-  const boards = data ?? [];
-
-  // 생성·수정 폼 공용 필드(서버 컴포넌트, 클라 상태 없음). b 없으면 생성 폼.
-  function Fields({ b }: { b?: Board }) {
-    const publicRead = b ? b.read_roles === null : true;
-    const read = (r: string) => (b?.read_roles ?? []).includes(r as never);
-    const write = (r: string) => (b?.write_roles ?? ["member", "operator", "teacher"]).includes(r as never);
-    return (
-      <div className="grid gap-2.5">
-        <div className="flex flex-wrap gap-2">
-          {b ? (
-            <input value={b.slug} disabled className={`${input} grow min-w-40 bg-slate-50 text-slate-400`} />
-          ) : (
-            <input name="slug" required placeholder="슬러그 (영문/숫자/-)" className={`${input} grow min-w-40`} />
-          )}
-          <input name="name" defaultValue={b?.name} required placeholder="게시판 이름" className={`${input} grow min-w-40`} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <input name="menu_group" defaultValue={b?.menu_group} required placeholder="메뉴 그룹 (예: 커뮤니티)" className={`${input} grow min-w-40`} />
-          <input name="sort_order" type="number" defaultValue={b?.sort_order ?? 0} placeholder="정렬" className={`${input} w-24`} />
-          <select name="board_type" defaultValue={b?.board_type ?? "list"} className={input}>
-            {TYPES.map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="public_read" defaultChecked={publicRead} className="w-4 h-4 accent-forest-600" />
-          <span className="font-medium">공개 읽기 (비로그인 포함 전체) — 켜면 아래 읽기 역할은 무시</span>
-        </label>
-
-        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <span className="text-slate-500 w-16">읽기 역할</span>
-          {ROLE_OPTS.map((r) => (
-            <label key={r} className="flex items-center gap-1.5">
-              <input type="checkbox" name={`read_${r}`} defaultChecked={read(r)} className="w-4 h-4 accent-forest-600" />
-              {ROLE_LABEL[r]}
-            </label>
-          ))}
-        </fieldset>
-        <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <span className="text-slate-500 w-16">쓰기 역할</span>
-          {ROLE_OPTS.map((r) => (
-            <label key={r} className="flex items-center gap-1.5">
-              <input type="checkbox" name={`write_${r}`} defaultChecked={write(r)} className="w-4 h-4 accent-forest-600" />
-              {ROLE_LABEL[r]}
-            </label>
-          ))}
-        </fieldset>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="is_active" defaultChecked={b ? b.is_active : true} className="w-4 h-4 accent-forest-600" />
-          <span className="font-medium">활성 (메뉴·목록에 노출)</span>
-        </label>
-        <p className="text-xs text-slate-400">관리자(admin)는 권한 설정과 무관하게 항상 읽기·쓰기가 허용됩니다.</p>
-      </div>
-    );
-  }
+  const boards = await withUser(await getSessionUserId(), (c) =>
+    many<Board>(
+      c,
+      `select id, slug, name, description, menu_group, sort_order, board_type, read_roles, write_roles,
+              is_active, legacy_mid, created_at::text as created_at
+         from boards order by menu_group, sort_order`,
+    ),
+  );
 
   return (
     <main className="pb-16">

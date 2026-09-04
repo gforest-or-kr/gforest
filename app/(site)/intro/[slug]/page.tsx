@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { withUser, one, many } from "@/lib/db";
 
 // SCR-200 정적 페이지 — D: 좌측 서브메뉴 / M: 가로 스크롤 칩
-export const revalidate = 600; // 콘텐츠 변경이 드물어 10분 ISR
+export const revalidate = 600; // 콘텐츠 변경이 드물어 10분 캐시
 
 export default async function IntroPage({
   params,
@@ -11,18 +11,23 @@ export default async function IntroPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
 
-  const [{ data: page }, { data: siblings }] = await Promise.all([
-    supabase.from("static_pages").select("*").eq("slug", slug).single(),
-    supabase
-      .from("static_pages")
-      .select("slug, title, sort_order")
-      .order("sort_order"),
-  ]);
+  // static_pages는 공개 읽기(static_pages_select) — anon 컨텍스트로 조회
+  const { page, siblings } = await withUser(null, async (c) => {
+    const page = await one<{ id: string; slug: string; title: string; content: string }>(
+      c,
+      "select id, slug, title, content from static_pages where slug = $1",
+      [slug],
+    );
+    const siblings = await many<{ slug: string; title: string; sort_order: number }>(
+      c,
+      "select slug, title, sort_order from static_pages order by sort_order",
+    );
+    return { page, siblings };
+  });
   if (!page) notFound();
 
-  const menu = siblings ?? [];
+  const menu = siblings;
 
   return (
     <main className="max-w-6xl mx-auto px-4 pb-16">

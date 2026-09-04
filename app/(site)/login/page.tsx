@@ -1,36 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { Suspense, useActionState, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { loginAction } from "@/lib/auth-actions";
 
-// SCR-400 로그인
+// SCR-400 로그인 — 인증은 서버 액션(loginAction)이 처리하고 성공 시 returnTo로 리다이렉트한다
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") ?? "/";
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const reset = searchParams.get("reset") === "1";
   const [showPw, setShowPw] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const form = new FormData(e.currentTarget);
-    const { error } = await createClient().auth.signInWithPassword({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
-    if (error) {
-      setError("이메일 또는 비밀번호가 올바르지 않습니다.");
-      setLoading(false);
-      return;
-    }
-    router.push(returnTo);
-    router.refresh();
-  }
+  const [error, submit, loading] = useActionState(
+    async (_prev: string | null, formData: FormData) => (await loginAction(formData))?.error ?? null,
+    null,
+  );
 
   return (
     <main className="max-w-sm mx-auto px-4 py-12">
@@ -45,7 +29,12 @@ function LoginForm() {
         이 필요합니다.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-3">
+      {reset && (
+        <p className="mt-3 text-sm text-forest-700 text-center">비밀번호가 변경되었습니다. 다시 로그인해 주세요.</p>
+      )}
+
+      <form action={submit} className="mt-6 space-y-3">
+        <input type="hidden" name="returnTo" value={returnTo} />
         <input
           name="email"
           type="email"

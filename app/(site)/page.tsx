@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { withUser, many, type DbClient } from "@/lib/db";
+import { publicMediaUrl } from "@/lib/storage";
 import { getSessionProfile } from "@/lib/auth";
 import { shortDate } from "@/lib/format";
 import PopupLayer from "@/components/popup-layer-client";
@@ -17,16 +18,17 @@ type WidgetPost = {
   boards: { slug: string } | null;
 };
 
-async function latestPosts(boardSlug: string, limit: number) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("posts")
-    .select("id, title, created_at, event_date, boards!inner(slug)")
-    .eq("boards.slug", boardSlug)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return (data ?? []) as WidgetPost[];
+// 게시판 최신 글 — 호출자의 RLS 컨텍스트(공개 위젯=anon, 회원 위젯=사용자)를 따른다
+async function latestPosts(c: DbClient, boardSlug: string, limit: number) {
+  return many<WidgetPost>(
+    c,
+    `select p.id, p.title, to_json(p.created_at)#>>'{}' as created_at, p.event_date::text as event_date,
+       json_build_object('slug', b.slug) as boards
+     from posts p join boards b on b.id = p.board_id
+     where b.slug = $1 and p.deleted_at is null
+     order by p.created_at desc limit $2`,
+    [boardSlug, limit],
+  );
 }
 
 function PostList({ posts, slug, empty }: { posts: WidgetPost[]; slug: string; empty: string }) {
@@ -85,21 +87,21 @@ function WidgetSkeleton({ title }: { title: string }) {
   );
 }
 
-// ②③ 공지 + 일정
+// ②③ 공지 + 일정 (공개 게시판 — anon 컨텍스트)
 async function NewsWidgets() {
-  const supabase = await createClient();
-  const [notices, events] = await Promise.all([
-    latestPosts("notice", 4),
-    supabase
-      .from("posts")
-      .select("id, title, created_at, event_date, boards!inner(slug)")
-      .eq("boards.slug", "calendar")
-      .is("deleted_at", null)
-      .gte("event_date", new Date().toISOString().slice(0, 10))
-      .order("event_date", { ascending: true })
-      .limit(4)
-      .then((r) => (r.data ?? []) as WidgetPost[]),
-  ]);
+  const { notices, events } = await withUser(null, async (c) => {
+    const notices = await latestPosts(c, "notice", 4);
+    const events = await many<WidgetPost>(
+      c,
+      `select p.id, p.title, to_json(p.created_at)#>>'{}' as created_at, p.event_date::text as event_date,
+         json_build_object('slug', b.slug) as boards
+       from posts p join boards b on b.id = p.board_id
+       where b.slug = 'calendar' and p.deleted_at is null and p.event_date >= $1::date
+       order by p.event_date asc limit 4`,
+      [new Date().toISOString().slice(0, 10)],
+    );
+    return { notices, events };
+  });
 
   return (
     <>
@@ -135,10 +137,11 @@ async function NewsWidgets() {
 
 // ④ 최신글 (공개)
 async function LatestWidgets() {
-  const [stories, exchanges] = await Promise.all([
-    latestPosts("story", 3),
-    latestPosts("exchange", 3),
-  ]);
+  const { stories, exchanges } = await withUser(null, async (c) => {
+    const stories = await latestPosts(c, "story", 3);
+    const exchanges = await latestPosts(c, "exchange", 3);
+    return { stories, exchanges };
+  });
   return (
     <>
       <Widget title="학교이야기" moreHref="/boards/story">
@@ -151,14 +154,14 @@ async function LatestWidgets() {
   );
 }
 
-// ②' 회원 위젯 — 로그인(승인) 회원에게만
+// ②' 회원 위젯 — 로그인(승인) 회원에게만. 회원 게시판이라 사용자 RLS 컨텍스트로 읽는다.
 async function MemberWidget() {
   const profile = await getSessionProfile();
   if (!profile || profile.role === "pending") return null;
 
-  const [free, parents] = await Promise.all([
-    latestPosts("free", 3),
-    latestPosts("parents", 3),
+  const [free, parents] = await withUser(profile.id, async (c) => [
+    await latestPosts(c, "free", 3),
+    await latestPosts(c, "parents", 3),
   ]);
   const memberPosts = [free, parents];
 
@@ -194,36 +197,47 @@ async function MemberWidget() {
   );
 }
 
+// 팝업 — 공개 읽기(popups_select), 노출 기간 안의 활성 팝업만
 async function Popups() {
-  const supabase = await createClient();
-  const now = new Date().toISOString();
-  const { data } = await supabase
-    .from("popups")
-    .select("id, title, body, link_url, dismiss_days")
-    .eq("is_active", true)
-    .lte("starts_at", now)
-    .gte("ends_at", now)
-    .order("sort_order");
-  return <PopupLayer popups={data ?? []} />;
+  const popups = await withUser(null, (c) =>
+    many<{ id: string; title: string; body: string; link_url: string | null; dismiss_days: number }>(
+      c,
+      `select id, title, body, link_url, dismiss_days from popups
+       where is_active = true and starts_at <= now() and ends_at >= now()
+       order by sort_order`,
+    ),
+  );
+  return <PopupLayer popups={popups} />;
 }
 
 // ① 히어로 — 활성 슬라이드가 있으면 슬라이더, 없으면 정적 폴백
 async function Hero() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("slides")
-    .select("id, title, subtitle, link_url, image_desktop_path, image_mobile_path")
-    .eq("is_active", true)
-    .order("sort_order");
+  const rows = await withUser(null, (c) =>
+    many<{
+      id: string;
+      title: string;
+      subtitle: string | null;
+      link_url: string | null;
+      image_desktop_path: string;
+      image_mobile_path: string;
+    }>(
+      c,
+      `select id, title, subtitle, link_url, image_desktop_path, image_mobile_path
+       from slides where is_active = true order by sort_order`,
+    ),
+  );
 
-  const slides: Slide[] = (data ?? []).map((s) => ({
-    id: s.id,
-    title: s.title,
-    subtitle: s.subtitle,
-    link_url: s.link_url,
-    desktopUrl: supabase.storage.from("site").getPublicUrl(s.image_desktop_path).data.publicUrl,
-    mobileUrl: supabase.storage.from("site").getPublicUrl(s.image_mobile_path).data.publicUrl,
-  }));
+  // 슬라이드 이미지는 공개 미디어(site/) — CloudFront 경로(없으면 서명 URL)
+  const slides: Slide[] = await Promise.all(
+    rows.map(async (s) => ({
+      id: s.id,
+      title: s.title,
+      subtitle: s.subtitle,
+      link_url: s.link_url,
+      desktopUrl: (await publicMediaUrl("site", s.image_desktop_path)) ?? "",
+      mobileUrl: (await publicMediaUrl("site", s.image_mobile_path)) ?? "",
+    })),
+  );
 
   if (slides.length > 0) return <HeroSlider slides={slides} />;
 

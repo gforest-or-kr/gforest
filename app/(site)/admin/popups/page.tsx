@@ -1,5 +1,18 @@
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser, many } from "@/lib/db";
 import { createPopup, updatePopup, deletePopup } from "./actions";
+
+type Popup = {
+  id: string;
+  title: string;
+  body: string;
+  link_url: string | null;
+  dismiss_days: number;
+  sort_order: number;
+  is_active: boolean;
+  starts_at: string;
+  ends_at: string;
+};
 
 // timestamptz(UTC) → datetime-local(KST 벽시계 "YYYY-MM-DDTHH:mm"). actions.localToIso의 역변환.
 function isoToLocal(iso: string): string {
@@ -8,12 +21,14 @@ function isoToLocal(iso: string): string {
 
 // SCR-110 메인 레이어 팝업 관리 — admin 전용(차단은 admin 레이아웃 + popups_admin RLS)
 export default async function AdminPopupsPage() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("popups")
-    .select("id, title, body, link_url, dismiss_days, sort_order, is_active, starts_at, ends_at")
-    .order("sort_order");
-  const popups = data ?? [];
+  const popups = await withUser(await getSessionUserId(), (c) =>
+    many<Popup>(
+      c,
+      `select id, title, body, link_url, dismiss_days, sort_order, is_active,
+              starts_at::text as starts_at, ends_at::text as ends_at
+         from popups order by sort_order`,
+    ),
+  );
 
   const input = "border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white";
 

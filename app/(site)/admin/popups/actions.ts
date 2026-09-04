@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth";
+import { withUser } from "@/lib/db";
 
 // 권한 강제는 popups_admin RLS에 위임(CLAUDE.md #3). 액션은 입력 검증만 담당한다.
 // 이미지(popups.image_path)는 현 표시 레이어가 렌더링하지 않으므로 다루지 않는다(#10 범위 제외).
@@ -35,17 +36,23 @@ export async function createPopup(formData: FormData) {
   if (!endsAt) return; // 노출 종료는 필수
   if (startsAt && endsAt < startsAt) return; // 종료가 시작보다 빠른 기간 거부
 
-  const supabase = await createClient();
-  await supabase.from("popups").insert({
-    title,
-    body: String(formData.get("body") ?? ""),
-    link_url: String(formData.get("link_url") ?? "").trim() || null,
-    dismiss_days: clampDismiss(formData.get("dismiss_days")),
-    sort_order: Number(formData.get("sort_order") ?? 0) || 0,
-    is_active: formData.get("is_active") === "on",
-    ends_at: endsAt,
-    ...(startsAt ? { starts_at: startsAt } : {}),
-  });
+  // RLS 거부(42501)는 예외로 — 기존과 같이 조용히 무시하지 않고 그대로 전파
+  await withUser(await getSessionUserId(), (c) =>
+    c.query(
+      `insert into popups (title, body, link_url, dismiss_days, sort_order, is_active, ends_at, starts_at)
+       values ($1, $2, $3, $4, $5, $6, $7::timestamptz, coalesce($8::timestamptz, now()))`,
+      [
+        title,
+        String(formData.get("body") ?? ""),
+        String(formData.get("link_url") ?? "").trim() || null,
+        clampDismiss(formData.get("dismiss_days")),
+        Number(formData.get("sort_order") ?? 0) || 0,
+        formData.get("is_active") === "on",
+        endsAt,
+        startsAt,
+      ],
+    ),
+  );
 
   revalidate();
 }
@@ -59,26 +66,31 @@ export async function updatePopup(id: string, formData: FormData) {
   if (!endsAt) return;
   if (startsAt && endsAt < startsAt) return;
 
-  const supabase = await createClient();
-  await supabase
-    .from("popups")
-    .update({
-      title,
-      body: String(formData.get("body") ?? ""),
-      link_url: String(formData.get("link_url") ?? "").trim() || null,
-      dismiss_days: clampDismiss(formData.get("dismiss_days")),
-      sort_order: Number(formData.get("sort_order") ?? 0) || 0,
-      is_active: formData.get("is_active") === "on",
-      ends_at: endsAt,
-      ...(startsAt ? { starts_at: startsAt } : {}),
-    })
-    .eq("id", id);
+  // RLS가 막으면 0행(무시 — 기존 동작과 동일)
+  await withUser(await getSessionUserId(), (c) =>
+    c.query(
+      `update popups
+          set title = $1, body = $2, link_url = $3, dismiss_days = $4, sort_order = $5, is_active = $6,
+              ends_at = $7::timestamptz, starts_at = coalesce($8::timestamptz, starts_at)
+        where id = $9`,
+      [
+        title,
+        String(formData.get("body") ?? ""),
+        String(formData.get("link_url") ?? "").trim() || null,
+        clampDismiss(formData.get("dismiss_days")),
+        Number(formData.get("sort_order") ?? 0) || 0,
+        formData.get("is_active") === "on",
+        endsAt,
+        startsAt,
+        id,
+      ],
+    ),
+  );
 
   revalidate();
 }
 
 export async function deletePopup(id: string) {
-  const supabase = await createClient();
-  await supabase.from("popups").delete().eq("id", id);
+  await withUser(await getSessionUserId(), (c) => c.query("delete from popups where id = $1", [id]));
   revalidate();
 }

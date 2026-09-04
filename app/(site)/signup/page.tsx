@@ -1,47 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useActionState } from "react";
+import { signupAction } from "@/lib/auth-actions";
 
-// SCR-401 회원가입 — 가입 후 pending, 운영진 승인(역할 부여)으로 등업게시판 워크플로 대체
+// SCR-401 회원가입 — 가입 후 pending, 운영진 승인(역할 부여)으로 등업게시판 워크플로 대체.
+// 이메일 인증 메일은 보내지 않는다(승인이 게이트) — 서버 액션(signupAction)이 계정을 만든다.
 export default function SignupPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    const form = new FormData(e.currentTarget);
-    const password = String(form.get("password"));
-    if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다.");
-      setLoading(false);
-      return;
-    }
-    const { error } = await createClient().auth.signUp({
-      email: String(form.get("email")),
-      password,
-      options: {
-        data: {
-          name: String(form.get("name")),
-          nickname: String(form.get("nickname")),
-        },
-      },
-    });
-    if (error) {
-      setError(
-        error.message.includes("already")
-          ? "이미 가입된 이메일입니다."
-          : "가입에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-      );
-      setLoading(false);
-      return;
-    }
-    setDone(true);
-  }
+  const [state, submit, loading] = useActionState(
+    async (_prev: { error: string } | { ok: true } | null, formData: FormData) => {
+      const password = String(formData.get("password"));
+      if (password.length < 8) return { error: "비밀번호는 8자 이상이어야 합니다." };
+      return signupAction(formData);
+    },
+    null,
+  );
+  const error = state && "error" in state ? state.error : null;
+  const done = state !== null && "ok" in state;
 
   if (done) {
     return (
@@ -49,10 +24,9 @@ export default function SignupPage() {
         <p className="text-4xl mb-4">🌱</p>
         <h1 className="text-xl font-bold">가입 신청이 완료되었습니다</h1>
         <p className="mt-3 text-sm text-slate-500 leading-relaxed">
-          메일함에서 <b>인증 메일</b>을 확인해 주세요.
+          푸른숲 가족(조합원) 확인 후 <b>운영진 승인(등업)</b>이 되면
           <br />
-          인증 후에도 회원 게시판은 <b>운영진 승인(등업)</b> 뒤에 이용할 수
-          있습니다.
+          회원 게시판을 이용할 수 있습니다.
         </p>
         <Link
           href="/"
@@ -71,7 +45,7 @@ export default function SignupPage() {
         푸른숲 가족(조합원) 확인 후 운영진이 회원 권한을 부여합니다.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-3">
+      <form action={submit} className="mt-6 space-y-3">
         <input
           name="email"
           type="email"

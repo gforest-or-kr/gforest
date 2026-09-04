@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createUploadUrl, deleteOwnUpload } from "@/lib/storage-actions";
 import {
   MAX_FILE_COUNT,
   validateFile,
@@ -45,11 +45,6 @@ async function maybeResize(file: File): Promise<File> {
   }
 }
 
-function extOf(name: string): string {
-  const dot = name.lastIndexOf(".");
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "bin";
-}
-
 type ExistingAttachment = {
   id: string;
   file_name: string;
@@ -57,6 +52,8 @@ type ExistingAttachment = {
   mime_type: string | null;
 };
 
+// 업로드 흐름: 서버 액션(createUploadUrl)이 권한·형식 검증 후 presigned PUT URL과 storage_path
+// ({uid}/{uuid}.{ext})를 발급 → 브라우저가 S3에 직접 PUT. 행 insert는 글 저장(createPost/updatePost) 시점.
 export default function AttachmentField({
   initial = [],
 }: {
@@ -82,15 +79,6 @@ export default function AttachmentField({
     if (inputRef.current) inputRef.current.value = ""; // 같은 파일 재선택 허용
     if (files.length === 0) return;
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setErrors(["로그인이 필요합니다"]);
-      return;
-    }
-
     const newErrors: string[] = [];
     let slots = MAX_FILE_COUNT - items.length - existing.length; // 기존+신규 합산
 
@@ -108,26 +96,41 @@ export default function AttachmentField({
         continue;
       }
 
-      const path = `${user.id}/${crypto.randomUUID()}.${extOf(file.name)}`;
+      const mime = processed.type || "application/octet-stream";
       setUploading((n) => n + 1);
-      const { error } = await supabase.storage
-        .from("attachments")
-        .upload(path, processed, { contentType: processed.type || undefined });
-      setUploading((n) => n - 1);
-
-      if (error) {
-        newErrors.push(`${file.name}: 업로드 실패 (${error.message})`);
+      let path: string | null = null;
+      try {
+        // 서버가 권한(로그인·pending 아님)·형식을 검증하고 본인 폴더 경로를 발급한다
+        const r = await createUploadUrl("attachments", file.name, processed.size, mime);
+        if ("error" in r) {
+          newErrors.push(`${file.name}: ${r.error}`);
+          continue;
+        }
+        const res = await fetch(r.url, {
+          method: "PUT",
+          body: processed,
+          headers: { "Content-Type": mime },
+        });
+        if (!res.ok) {
+          newErrors.push(`${file.name}: 업로드 실패 (${res.status})`);
+          continue;
+        }
+        path = r.storage_path;
+      } catch {
+        newErrors.push(`${file.name}: 업로드 실패`);
         continue;
+      } finally {
+        setUploading((n) => n - 1);
       }
 
       slots -= 1;
       setItems((prev) => [
         ...prev,
         {
-          storage_path: path,
+          storage_path: path!,
           file_name: file.name, // 원본 파일명 보존 (스토리지 키엔 미사용)
           byte_size: processed.size,
-          mime_type: processed.type || "application/octet-stream",
+          mime_type: mime,
         },
       ]);
     }
@@ -135,9 +138,9 @@ export default function AttachmentField({
     setErrors(newErrors);
   }
 
+  // 등록 전 첨부 취소 — 본인 폴더 객체만 지운다(서버 액션이 uid 프리픽스 검사)
   async function remove(path: string) {
-    const supabase = createClient();
-    await supabase.storage.from("attachments").remove([path]);
+    await deleteOwnUpload("attachments", path);
     setItems((prev) => prev.filter((it) => it.storage_path !== path));
   }
 

@@ -7,13 +7,18 @@ import CommentSection from "@/components/comment-section";
 import PostError from "@/components/post-error";
 import { RICH_CLASS } from "@/lib/rich";
 import { deletePost } from "@/app/(site)/boards/[slug]/actions";
+import type { Database } from "@/lib/db/types";
 
-// 글 상세 본문 — 서버(공개글 ISR)·클라(회원글) 양쪽에서 재사용하는 프레젠테이션 컴포넌트.
-// 데이터를 props로만 받고 쿠키/비동기를 쓰지 않아 어느 트리에서든 렌더된다.
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+// 글 상세 본문 — 프레젠테이션 컴포넌트. 데이터·현재 사용자(profile)를 props로만 받는다.
+// 개인화(수정/삭제 버튼·댓글 폼)는 서버 부모가 넘긴 profile로 결정하고, 최종 차단은 RLS.
 export type PostViewData = {
   slug: string;
   boardName: string;
   writeRoles: string[];
+  // 현재 로그인 사용자(서버 세션) — 비로그인 null
+  profile: { id: string; role: AppRole; nickname: string } | null;
   post: {
     id: string;
     title: string;
@@ -25,11 +30,10 @@ export type PostViewData = {
     content_html: boolean;
   };
   author: { id: string; nickname: string } | null;
-  // 서명 URL을 본문에 박지 않는다(정적 캐시 동결 방지). 다운로드는 /dl/{id} 프록시로.
+  // 다운로드는 /dl/{id} 프록시로(원본 파일명 disposition·영구 링크).
   attachments: { id: string; file_name: string; byte_size: number; mime_type: string | null }[];
-  // 인라인 이미지 소스(GFM-64) — 회원 글(클라 fetch)만 배치 서명 URL 직링크를 넘긴다.
-  // undefined(공개 ISR 경로)=/dl 프록시, "loading"=서명 대기 placeholder, 객체=id→서명 URL.
-  imageUrls?: Record<string, string> | "loading";
+  // 인라인 이미지 소스 — id→서명 URL(서버 배치 서명). undefined면 /dl 프록시로 폴백.
+  imageUrls?: Record<string, string>;
   comments: Parameters<typeof CommentSection>[0]["comments"];
   prevPost: { id: string; title: string } | null;
   nextPost: { id: string; title: string } | null;
@@ -39,6 +43,7 @@ export default function PostView({
   slug,
   boardName,
   writeRoles,
+  profile,
   post,
   author,
   attachments,
@@ -48,6 +53,8 @@ export default function PostView({
   imageUrls,
 }: PostViewData) {
   const deletePostAction = deletePost.bind(null, slug, post.id);
+  // 수정/삭제 노출 — 본인 또는 admin (UI 제어용, 최종 강제는 posts_update RLS)
+  const canModify = !!profile && (profile.role === "admin" || profile.id === author?.id);
 
   return (
     <main className="max-w-3xl mx-auto px-4 pb-24">
@@ -55,7 +62,7 @@ export default function PostView({
         <Link href={`/boards/${slug}`} className="text-slate-500 hover:text-forest-700">
           ← {boardName}
         </Link>
-        <PostActions slug={slug} postId={post.id} authorId={author?.id ?? null} deleteAction={deletePostAction} />
+        <PostActions slug={slug} postId={post.id} canModify={canModify} deleteAction={deletePostAction} />
       </div>
 
       <Suspense fallback={null}>
@@ -105,19 +112,15 @@ export default function PostView({
                       {f.file_name}
                     </a>
                     <span className="text-xs text-slate-400 ml-2">{(f.byte_size / 1024 / 1024).toFixed(2)}MB</span>
-                    {isImage &&
-                      (imageUrls === "loading" ? (
-                        // 배치 서명 URL 대기 중 — /dl로 먼저 그리면 서명 도착 후 이중 로드되므로 placeholder
-                        <div className="mt-2 h-48 max-w-full rounded-xl bg-slate-100 animate-pulse" />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imageUrls?.[f.id] ?? `/dl/${f.id}?inline=1`}
-                          alt={f.file_name}
-                          loading="lazy"
-                          className="mt-2 max-w-full h-auto rounded-xl"
-                        />
-                      ))}
+                    {isImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={imageUrls?.[f.id] ?? `/dl/${f.id}?inline=1`}
+                        alt={f.file_name}
+                        loading="lazy"
+                        className="mt-2 max-w-full h-auto rounded-xl"
+                      />
+                    )}
                   </li>
                 );
               })}
@@ -126,7 +129,7 @@ export default function PostView({
         )}
       </article>
 
-      <CommentSection slug={slug} postId={post.id} comments={comments} writeRoles={writeRoles} />
+      <CommentSection slug={slug} postId={post.id} comments={comments} writeRoles={writeRoles} me={profile} />
 
       <nav className="mt-10 border-t border-slate-100 divide-y divide-slate-50 text-sm">
         {nextPost && (

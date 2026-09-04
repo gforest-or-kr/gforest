@@ -7,13 +7,13 @@
 
 ## 30초 오리엔테이션
 
-- **무엇**: 푸른숲발도르프학교 홈페이지 재구축 (XE1 → Next.js + Supabase). 운영 주체는 전담 인력 없는 비영리 학부모조합 → **최우선 가치 = 유지보수 최소화, 월 0원**.
+- **무엇**: 푸른숲발도르프학교 홈페이지 재구축 (XE1 → Next.js + Postgres, AWS ECS Fargate·RDS·S3). 운영 주체는 전담 인력 없는 비영리 학부모조합 → **최우선 가치 = 유지보수 최소화, 인수인계 가능한 구조**.
 - **단일 진실의 경계**:
   - **repo** = 코드 · SQL 마이그레이션 · 다이어그램 원본(`docs/diagrams/*.drawio`)
   - **Jira `GFM`** = 모든 작업 추적 (gforest.atlassian.net)
   - **Confluence `푸른숲-웹-마이그레이션`** = 설계 설명 · 협업 문서 · **비밀값/운영 정보**(팀 전용 페이지)
 - **권한은 DB(RLS)가 강제한다** — 앱 코드의 권한 분기는 UI 노출용일 뿐 게이트가 아니다.
-- **배포는 GitHub Actions CI** (Vercel Git 연동 아님). main push = production, PR = preview.
+- **배포는 GitHub Actions → ECR → ECS**. main push = dev 자동, prod는 수동 실행. 인프라는 `infra/` Terraform.
 
 ## 이 폴더의 문서
 
@@ -33,9 +33,9 @@
 
 ## 절대 어기면 안 되는 것 (요약 — 상세는 각 문서)
 
-1. **layout·ISR 페이지에서 쿠키를 읽지 말 것** → 프로덕션 500. 개인화는 클라이언트로. (`rendering.md`)
-2. **스키마는 `supabase/migrations/*.sql`로만** 변경 → 대시보드 수동 변경 금지. (`code-patterns.md`)
+1. **모든 DB 접근은 `withUser()` 트랜잭션 안에서**, `unstable_cache` 콜백에서는 세션 읽기 금지. (`code-patterns.md`)
+2. **스키마는 `supabase/migrations/*.sql`로만** 변경, 적용은 `infra/db/bootstrap.sh`. 콘솔 수동 변경 금지. (`code-patterns.md`)
 3. **권한 분기를 앱 코드에 중복 구현 금지** → RLS가 단일 진실. (`code-patterns.md`)
 4. **Confluence 패널은 `contentFormat: html` + `<div data-type="panel-*">`** → storage-format 매크로는 "Error loading the extension!"로 깨진다. (`atlassian.md`)
-5. **Vercel 환경변수는 일반(encrypted) 타입** → sensitive 타입은 CI 빌드를 500으로 깬다. (`cicd-and-ops.md`)
-6. **비밀값을 repo에 커밋 금지** → `.env`(Atlassian)·`.env.local`(Supabase). 실제 값은 Confluence 인프라 페이지(팀 전용).
+5. **장기 AWS 액세스 키 금지** → 사람은 Identity Center, CI는 OIDC 롤. root는 봉인. (`cicd-and-ops.md`)
+6. **비밀값을 repo에 커밋 금지** → `.env`(Atlassian)·`.env.local`(DB 접속 문자열). 운영 비밀값은 SSM `/gforest/<env>/…`, 계정 정보는 Confluence 인프라 페이지(팀 전용).

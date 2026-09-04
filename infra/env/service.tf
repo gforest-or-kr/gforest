@@ -57,10 +57,8 @@ resource "aws_ecs_task_definition" "app" {
     }
   }])
 
-  lifecycle {
-    # 배포 워크플로가 이미지 태그를 갱신하므로 Terraform이 되돌리지 않게 한다
-    ignore_changes = [container_definitions]
-  }
+  # 역할 분담: 환경변수·시크릿·크기는 Terraform이(새 리비전 등록), 이미지 교체는 배포 워크플로가.
+  # 워크플로는 항상 "가장 최근 리비전"을 복제해 이미지만 바꾸므로 여기서 등록한 값이 다음 배포에 반영된다.
 }
 
 resource "aws_lb_target_group" "app" {

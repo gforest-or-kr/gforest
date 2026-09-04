@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { shortDate, fullDate } from "@/lib/format";
 import { createComment, updateComment, deleteComment } from "@/app/(site)/boards/[slug]/actions";
 
@@ -14,66 +14,39 @@ type CommentRow = {
   author: { id: string; nickname: string } | null;
 };
 
-// 댓글 — 목록은 서버(공개글 ISR)·클라(회원글 아일랜드)에서 prop으로 받아 시작한다.
+// 댓글 — 목록과 현재 사용자(me)는 서버 부모(글 상세 page)가 props로 내려준다. 클라는 DB·세션을 읽지 않는다.
 // 작성/수정/삭제는 낙관적 업데이트(GFM-65): 상태를 즉시 반영하고 서버 액션 실패 시 롤백한다.
-// 작성은 성공 후 재조회로 임시 id를 실제 행으로 교체한다(busy 가드가 재조회 중 중복 제출을
-// 막아 낙관 행 유실 경합이 없다). 권한 강제는 기존대로 서버 액션 + RLS, 공개글 ISR 캐시는
-// 서버 액션의 revalidateTag가 무효화한다. 답글(대댓글)은 루트 댓글에만 1단계. 등록·삭제는 confirm 확인.
+// 성공 후 router.refresh()로 서버 렌더를 다시 받아 임시 id를 실제 행으로 교체한다(busy 가드가
+// 재조회 중 중복 제출을 막아 낙관 행 유실 경합이 없다). 권한 강제는 기존대로 서버 액션 + RLS,
+// 공개글 캐시는 서버 액션의 revalidateTag가 무효화한다. 답글(대댓글)은 루트 댓글에만 1단계. 등록·삭제는 confirm 확인.
 export default function CommentSection({
   slug,
   postId,
   comments: initialComments,
   writeRoles,
+  me,
 }: {
   slug: string;
   postId: string;
   comments: CommentRow[];
   writeRoles: string[];
+  me: { id: string; role: string; nickname: string } | null;
 }) {
-  const [me, setMe] = useState<{ uid: string; role: string; nickname: string } | null>(null);
+  const router = useRouter();
   const [comments, setComments] = useState<CommentRow[]>(initialComments);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
+  // 서버 재렌더(router.refresh)로 새 목록이 오면 낙관 상태를 서버 기준으로 교체 — 렌더 중 파생(effect 아님)
+  const [syncedInitial, setSyncedInitial] = useState(initialComments);
+  if (syncedInitial !== initialComments) {
+    setSyncedInitial(initialComments);
     setComments(initialComments);
-  }, [initialComments]);
-
-  // 로그인 상태·역할 — 로그인/로그아웃을 구독해 즉시 반영
-  useEffect(() => {
-    let active = true;
-    const supabase = createClient();
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      const uid = session?.user?.id;
-      if (!uid) {
-        if (active) setMe(null);
-        return;
-      }
-      setTimeout(async () => {
-        const { data: p } = await supabase.from("profiles").select("role, nickname").eq("id", uid).single();
-        if (active) setMe(p?.role ? { uid, role: p.role, nickname: p.nickname } : null);
-      }, 0);
-    });
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  async function refetch() {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("comments")
-      .select("id, content, created_at, edited_at, parent_id, author:profiles(id, nickname)")
-      .eq("post_id", postId)
-      .is("deleted_at", null)
-      .order("created_at");
-    if (data) setComments(data as unknown as CommentRow[]);
   }
 
   // 작성/답글 등록 — confirm 후 낙관적으로 즉시 추가, 서버 액션 실패 시 롤백.
-  // 성공 시 재조회로 임시 id를 실제 행으로 교체(체감 지연 0, busy가 중복 제출 차단)
+  // 성공 시 refresh로 임시 id를 실제 행으로 교체(체감 지연 0, busy가 중복 제출 차단)
   async function onCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -90,7 +63,7 @@ export default function CommentSection({
         created_at: new Date().toISOString(),
         edited_at: null,
         parent_id: fd.get("parent_id") ? String(fd.get("parent_id")) : null,
-        author: { id: me.uid, nickname: me.nickname },
+        author: { id: me.id, nickname: me.nickname },
       },
     ]);
     form.reset();
@@ -103,7 +76,7 @@ export default function CommentSection({
         alert(res.error);
         return;
       }
-      await refetch();
+      router.refresh();
     } catch {
       setComments(prev);
       alert("댓글 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -112,7 +85,7 @@ export default function CommentSection({
     }
   }
 
-  // 수정 저장 — 낙관적으로 즉시 반영, 실패 시 롤백. 성공 시 재조회로 서버 기준 edited_at 반영
+  // 수정 저장 — 낙관적으로 즉시 반영, 실패 시 롤백. 성공 시 refresh로 서버 기준 edited_at 반영
   async function onEdit(e: React.FormEvent<HTMLFormElement>, commentId: string) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -133,7 +106,7 @@ export default function CommentSection({
         alert(res.error);
         return;
       }
-      await refetch();
+      router.refresh();
     } catch {
       setComments(prev);
       alert("댓글 수정에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -142,11 +115,11 @@ export default function CommentSection({
     }
   }
 
-  // 삭제 — 낙관적으로 즉시 제거, 실패 시 롤백(성공 시 상태가 이미 서버와 일치해 재조회 불필요)
+  // 삭제 — 낙관적으로 즉시 제거, 실패 시 롤백. 성공 시 refresh로 서버 상태와 동기화
   async function onDelete(id: string) {
     if (busy || !confirm("댓글을 삭제할까요? 되돌릴 수 없습니다.")) return;
     // 대상 행만 제거 — 서버도 대상만 soft-delete하고 답글은 남긴다(부모 없는 답글은 렌더에서
-    // 걸러짐). 재조회 결과와 동일한 상태를 유지해 낙관/서버 표현이 갈라지지 않게 한다.
+    // 걸러짐). 서버 렌더 결과와 동일한 상태를 유지해 낙관/서버 표현이 갈라지지 않게 한다.
     const prev = comments;
     setComments(comments.filter((c) => c.id !== id));
     setBusy(true);
@@ -157,6 +130,7 @@ export default function CommentSection({
         alert(res.error);
         return;
       }
+      router.refresh();
     } catch {
       setComments(prev);
       alert("댓글 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -167,12 +141,13 @@ export default function CommentSection({
 
   const canComment = !!me && (me.role === "admin" || writeRoles.includes(me.role));
   const canModify = (authorId: string | null | undefined) =>
-    !!me && (me.role === "admin" || me.uid === authorId);
+    !!me && (me.role === "admin" || me.id === authorId);
 
   const roots = comments.filter((c) => !c.parent_id);
   const childrenOf = (id: string) => comments.filter((c) => c.parent_id === id);
 
-  const Item = ({ c, isRoot }: { c: CommentRow; isRoot: boolean }) => (
+  // 렌더 함수(컴포넌트 아님) — 렌더마다 새 컴포넌트 타입이 만들어져 입력 중 remount되는 것을 막는다
+  const renderItem = (c: CommentRow, isRoot: boolean) => (
     <div className="rounded-2xl bg-slate-50/70 p-3.5">
       <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs mb-1.5">
         <span className="font-semibold text-slate-700">{c.author?.nickname ?? "알 수 없음"}</span>
@@ -234,7 +209,7 @@ export default function CommentSection({
     </div>
   );
 
-  const CommentForm = ({ parentId, autoFocus }: { parentId?: string; autoFocus?: boolean }) => (
+  const renderForm = (parentId?: string, autoFocus?: boolean) => (
     <form onSubmit={onCreate} className="flex gap-2">
       {parentId && <input type="hidden" name="parent_id" value={parentId} />}
       <textarea
@@ -260,15 +235,15 @@ export default function CommentSection({
       <ul className="space-y-4">
         {roots.map((c) => (
           <li key={c.id}>
-            <Item c={c} isRoot />
+            {renderItem(c, true)}
             {childrenOf(c.id).map((rc) => (
               <div key={rc.id} className="ml-8 mt-3">
-                <Item c={rc} isRoot={false} />
+                {renderItem(rc, false)}
               </div>
             ))}
             {replyTo === c.id && canComment && (
               <div className="ml-8 mt-3">
-                <CommentForm parentId={c.id} autoFocus />
+                {renderForm(c.id, true)}
               </div>
             )}
           </li>
@@ -277,7 +252,7 @@ export default function CommentSection({
 
       {canComment ? (
         <div className="mt-6">
-          <CommentForm />
+          {renderForm()}
         </div>
       ) : (
         <p className="mt-6 text-sm text-slate-400">

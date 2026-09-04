@@ -1,44 +1,16 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
-// 개인화(글쓰기 권한) UI — 클라이언트에서 세션 role을 확인해 표시한다.
-// 이걸 클라로 분리해야 게시판 page가 쿠키를 읽지 않아 정적/ISR + prefetch가 가능해진다.
+// 글쓰기 버튼 — 노출 여부(canWrite)는 서버 부모(게시판 page)가 세션 role과 write_roles로 계산해 넘긴다.
+// UI 제어용이며 최종 차단은 posts_insert RLS(can_write_board).
 export default function WriteButton({
   slug,
-  writeRoles,
+  canWrite,
   variant,
 }: {
   slug: string;
-  writeRoles: string[];
+  canWrite: boolean;
   variant: "header" | "fab";
 }) {
-  const [canWrite, setCanWrite] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const supabase = createClient();
-      const { data } = await supabase.auth.getClaims();
-      const uid = data?.claims?.sub;
-      if (!uid) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", uid)
-        .single();
-      const role = profile?.role;
-      if (active && role && (role === "admin" || writeRoles.includes(role))) {
-        setCanWrite(true);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [writeRoles]);
-
   if (!canWrite) return null;
 
   if (variant === "header") {

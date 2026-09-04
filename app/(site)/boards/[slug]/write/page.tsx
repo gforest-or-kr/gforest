@@ -1,10 +1,13 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { withUser, one } from "@/lib/db";
 import { getSessionProfile } from "@/lib/auth";
+import type { Database } from "@/lib/db/types";
 import { createPost } from "../actions";
 import PostForm from "@/components/post-form";
 
 export const dynamic = "force-dynamic";
+
+type BoardRow = Database["public"]["Tables"]["boards"]["Row"];
 
 // SCR-320 글쓰기 — 텍스트 작성 + 파일 첨부 (WYSIWYG 에디터는 후속)
 export default async function WritePage({
@@ -17,13 +20,13 @@ export default async function WritePage({
   const { slug } = await params;
   const { error } = await searchParams;
 
-  const supabase = await createClient();
-  const [profile, { data: board }] = await Promise.all([
-    getSessionProfile(),
-    supabase.from("boards").select("*").eq("slug", slug).single(),
-  ]);
-  if (!board) notFound();
+  const profile = await getSessionProfile();
   if (!profile) redirect(`/login?returnTo=${encodeURIComponent(`/boards/${slug}/write`)}`);
+
+  const board = await withUser(profile.id, (c) =>
+    one<BoardRow>(c, "select * from boards where slug = $1 and is_active", [slug]),
+  );
+  if (!board) notFound();
 
   const canWrite =
     profile.role === "admin" || board.write_roles.includes(profile.role);

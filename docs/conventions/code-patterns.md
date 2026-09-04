@@ -14,24 +14,27 @@
 
 ## 2. DB 변경 — 마이그레이션으로만
 
-- `supabase/migrations/*.sql`이 단일 진실. **대시보드 수동 변경 금지.** 새 변경은 새 번호 마이그레이션 파일.
-- 변경 후 `supabase gen types typescript`로 `lib/supabase/types.ts` 재생성.
-  (이 환경 함정: 신 CLI는 `--db-url` 모드여도 `SUPABASE_ACCESS_TOKEN`이 없으면 거부 → placeholder
-  토큰으로 우회. 직접 호스트는 IPv6 전용이라 실패 → **세션 풀러** 사용.)
+- `supabase/migrations/*.sql`이 단일 진실(폴더명은 역사적). **콘솔 수동 변경 금지.** 새 변경은 새 번호 마이그레이션 파일.
+- 적용은 `infra/db/bootstrap.sh <env>`(미적용분만 순차 적용, `public.schema_migrations` 추적). 변경 후 `lib/db/types.ts`의 Row 타입을 손으로 맞춘다.
+- Supabase 전용 객체(`storage.*`, `auth.jwt()`)는 새 마이그레이션에 쓰지 않는다. RLS는 `auth.uid()`만 참조 — RDS에서는 `set_config('app.user_id')`를 읽는 셔임이다.
 - 게시판 추가/변경은 **코드가 아니라 `supabase/seed.sql`의 데이터**로 해결한다(템플릿 5종 공유).
 - **`legacy_*` 컬럼(unique)은 XE ETL 멱등성의 키 — 삭제·변경 금지.**
 
-## 3. 렌더링 — 정적 셸 + 클라 개인화 (★ 가장 자주 깨지는 곳)
+## 3. 데이터 접근 — `withUser()` 트랜잭션 + RLS
 
-**layout과 ISR(●) 페이지에서 쿠키를 읽지 말 것.** 어기면 프로덕션에서 `DYNAMIC_SERVER_USAGE` 500
-(dev·`next build`는 통과 → 특히 위험). 전체 배경·재현·CI 게이트는 **`docs/design/rendering.md` 필독**.
+```ts
+import { withUser, one, many, pgCode } from "@/lib/db";
+const userId = await getSessionUserId();           // null이면 anon
+const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_id = $1", [boardId]));
+```
 
-- 공개 데이터(메뉴·게시판 메타·목록) → `lib/boards.ts` / `lib/menu-data.ts`: `publicClient()`(anon) +
-  `unstable_cache`. **쿠키를 안 읽어 캐시·ISR 안전.**
-- 세션/개인화(로그인 상태·역할) → `lib/auth.ts`의 `getSessionProfile()`(쿠키 기반). **동적 페이지에서만**
-  호출. layout·ISR 페이지에서는 금지 → 클라이언트(`createClient().auth.getClaims()` + `useEffect`)로.
-  예: `Header`(서버, 공개 메뉴만) → `HeaderNav`(클라, 세션 개인화).
-- 공개 게시판은 `generateStaticParams()`로 프리렌더(prefetch 작동). 권한 게시판은 동적.
+- **모든 쿼리는 `withUser(userId | null, fn)` 안에서** 실행한다. 트랜잭션마다 `app.user_id`가 설정되어 DB의 `auth.uid()`·RLS가 Supabase 때와 동일하게 동작한다. 밖에서 `pool.query`를 직접 쓰는 곳은 인증(`lib/auth*.ts`)뿐.
+- RLS 거부는 **0행 또는 42501**로 온다. update/delete는 `rowCount`를 확인하고, 소프트삭제처럼 결과 행이 select에서 사라지는 경우는 재조회로 확인한다(`app/(site)/boards/[slug]/actions.ts` 패턴). unique 충돌은 `pgCode(e) === "23505"`.
+- 파라미터 쿼리(`$1…`)만. 문자열 조립 금지. ilike 검색어는 `%`·`_`를 이스케이프.
+- 세션: `getSessionUserId()` / `getSessionProfile()`(`lib/auth.ts`, 요청 단위 메모이즈). 서버 컴포넌트·layout·서버 액션 어디서나 호출 가능.
+- **`unstable_cache` 콜백 안에서는 세션을 읽지 말 것** — 공개 데이터는 `withUser(null, …)`(anon)로만.
+- 클라이언트 컴포넌트는 DB·인증에 접근하지 않는다. 데이터는 props로 받고 변경은 서버 액션 호출 → `router.refresh()`.
+- 미디어: `lib/storage.ts`(서버 전용) — 첨부는 비공개(`presignGet`/`presignGetMany`, 1h), 아바타·슬라이드는 `publicMediaUrl()`. 업로드는 `createUploadUrl()` → 클라이언트가 presigned PUT.
 
 ## 4. 데이터 패칭 · 캐시 · 무효화
 
@@ -53,14 +56,12 @@
 - 권한은 RLS가 강제 → 액션은 insert/update 결과만 처리(권한 분기 재구현 X). 실패 시 작성 내용 보존.
 - 변경 후 관련 `revalidateTag(..., "max")` 호출.
 
-## 6. Supabase 클라이언트 4종 — 용도 구분
+## 6. 렌더링 — 서버 렌더가 기본
 
-| 파일 | 용도 |
-|---|---|
-| `lib/supabase/public.ts` `publicClient()` | anon, 쿠키 무관 → **`unstable_cache` 안에서 안전**(공개 데이터) |
-| `lib/supabase/server.ts` `createClient()` | 쿠키 읽음 → **동적 페이지/서버 액션 전용** |
-| `lib/supabase/client.ts` | `"use client"` 브라우저용 (`getClaims()`로 로그인 상태) |
-| `lib/supabase/middleware.ts` | 미들웨어에서 토큰 리프레시 (`getClaims` 로컬 검증 — Auth 서버 왕복 회피) |
+- 상시 서버(Fargate)라 세션을 서버에서 읽어도 페이지가 동적이 되는 비용뿐이다. 회원 게시판 글은 사용자 RLS 컨텍스트로 **서버 렌더**(옛 `member-post-loader` 클라 로더는 제거됨).
+- 공개 데이터(`lib/boards.ts`·`lib/menu-data.ts`)는 `unstable_cache` + 태그 무효화 유지(§4). `Header`는 서버에서 `getSessionProfile()`로 개인화해 `HeaderNav`에 props로 넘긴다.
+- **빌드 시점 DB 접근 금지**(`generateStaticParams` 등) — CI 빌드는 DB 없이 돈다.
+- 배경·이력(Vercel ISR 시절의 함정)은 `docs/design/rendering.md`.
 
 ## 7. UI · 스타일
 

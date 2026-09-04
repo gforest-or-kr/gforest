@@ -15,13 +15,17 @@ export default function PopupLayer({ popups }: { popups: Popup[] }) {
   const [queue, setQueue] = useState<Popup[]>([]);
 
   useEffect(() => {
-    const now = Date.now();
-    setQueue(
-      popups.filter((p) => {
-        const until = localStorage.getItem(`popup_dismiss_${p.id}`);
-        return !until || Number(until) < now;
-      }),
-    );
+    // localStorage는 클라이언트에서만 읽을 수 있어 마운트 후 결정한다(동기 setState 경고 회피를 위해 다음 틱)
+    const t = setTimeout(() => {
+      const now = Date.now();
+      setQueue(
+        popups.filter((p) => {
+          const until = localStorage.getItem(`popup_dismiss_${p.id}`);
+          return !until || Number(until) < now;
+        }),
+      );
+    }, 0);
+    return () => clearTimeout(t);
   }, [popups]);
 
   const popup = queue[0];

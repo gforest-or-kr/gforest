@@ -1,66 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { logoutAction } from "@/lib/auth-actions";
 import { buildMenu, ROLE_LABEL } from "@/lib/menu";
-import { avatarUrl } from "@/lib/avatar";
 import type { getMenuData } from "@/lib/menu-data";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/db/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
-type Props = Awaited<ReturnType<typeof getMenuData>>;
+type Props = Awaited<ReturnType<typeof getMenuData>> & {
+  // 세션 프로필은 서버 부모(Header)가 읽어 넘긴다 — 클라에서 DB/Auth를 직접 호출하지 않는다.
+  profile: { nickname: string; role: AppRole; avatarUrl: string | null } | null;
+};
 
-export default function HeaderNav({ boards, staticPages }: Props) {
+export default function HeaderNav({ boards, staticPages, profile }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null); // 데스크탑 드롭다운 (클릭 토글 — 호버 의존 금지)
-  const [profile, setProfile] = useState<{
-    nickname: string;
-    role: AppRole;
-    avatar_path: string | null;
-  } | null>(null);
   const pathname = usePathname();
-  const router = useRouter();
 
-  // 개인화(세션 role)는 클라에서 — layout이 쿠키를 안 읽어 페이지 ISR이 가능해진다.
-  // 헤더는 layout에 상주해 클라 네비게이션에도 remount되지 않으므로, 1회 검사가 아니라
-  // onAuthStateChange를 '구독'해야 로그인/로그아웃이 즉시 반영된다(최초 1회는 INITIAL_SESSION으로 처리).
-  useEffect(() => {
-    let active = true;
-    const supabase = createClient();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      const uid = session?.user?.id;
-      if (!uid) {
-        if (active) setProfile(null);
-        return;
-      }
-      // 콜백 안에서 supabase를 직접 await하면 인증 락과 엉킬 수 있어 다음 틱으로 미룬다
-      setTimeout(async () => {
-        const { data: p } = await supabase
-          .from("profiles")
-          .select("nickname, role, avatar_path")
-          .eq("id", uid)
-          .single();
-        if (active)
-          setProfile(p ? { nickname: p.nickname, role: p.role, avatar_path: p.avatar_path } : null);
-      }, 0);
-    });
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  // role 기반 메뉴 필터(권한 게시판 등)도 클라에서 — 비로그인 메뉴로 시작해 hydration 후 확장
+  // role 기반 메뉴 필터(권한 게시판 등)도 서버가 준 role로 — 첫 페인트부터 로그인 메뉴가 나온다
   const menu = buildMenu(boards, staticPages, profile?.role ?? null);
-
-  async function logout() {
-    await createClient().auth.signOut();
-    setDrawerOpen(false);
-    router.push("/");
-    router.refresh();
-  }
 
   return (
     <>
@@ -127,10 +87,10 @@ export default function HeaderNav({ boards, staticPages }: Props) {
                 href="/me"
                 className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 text-sm font-medium"
               >
-                {avatarUrl(profile.avatar_path) ? (
+                {profile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={avatarUrl(profile.avatar_path)!}
+                    src={profile.avatarUrl}
                     alt=""
                     className="w-7 h-7 rounded-full object-cover"
                   />
@@ -172,10 +132,10 @@ export default function HeaderNav({ boards, staticPages }: Props) {
         <div className="p-4 space-y-1 text-[15px]">
           {profile ? (
             <div className="flex items-center gap-3 p-3 mb-2 rounded-2xl bg-forest-50">
-              {avatarUrl(profile.avatar_path) ? (
+              {profile.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={avatarUrl(profile.avatar_path)!}
+                  src={profile.avatarUrl}
                   alt=""
                   className="w-10 h-10 rounded-full object-cover"
                 />
@@ -233,9 +193,10 @@ export default function HeaderNav({ boards, staticPages }: Props) {
                   관리자
                 </Link>
               )}
-              <button className="p-3 text-slate-500 w-full text-left" onClick={logout}>
-                로그아웃
-              </button>
+              {/* 로그아웃은 서버 액션(logoutAction) — 세션 쿠키 제거 후 /로 리다이렉트 */}
+              <form action={logoutAction}>
+                <button className="p-3 text-slate-500 w-full text-left">로그아웃</button>
+              </form>
             </div>
           )}
         </div>

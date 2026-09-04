@@ -178,3 +178,19 @@ PPR의 영역, 7에서 보류). 무인운영·단순함 원칙상 미들웨어 �
 > 유지보수 메모: `unstable_cache`(6·10에서 사용)는 Next.js가 `"use cache"` 지시어로 대체를
 > 진행 중인 과도기 API다. 사용처가 `lib/boards.ts` 한 곳에 모여 있어 이전은 국소적이지만,
 > **Next 메이저 업그레이드 시 가장 먼저 깨질 지점**이므로 업그레이드 체크리스트 1순위로 볼 것.
+
+## 12. AWS(ECS) 이후 — 서버 세션 허용, 회원 글도 서버 렌더
+
+Supabase/Vercel → RDS(pg)+Auth.js+S3/ECS(상시 구동 서버, ISR 없음)로 옮기며 1~11의 "쿠키 금지"
+제약이 사라졌다. 새 정책:
+
+- **서버 컴포넌트·페이지가 세션을 읽어도 된다** (`getSessionProfile()`/`getSessionUserId()`).
+  세션을 읽는 페이지는 동적 렌더가 되며, 그래도 괜찮다(엣지 캐시·`DYNAMIC_SERVER_USAGE` 500 없음).
+- **회원 글은 서버에서 사용자 RLS 컨텍스트로 렌더**: `withUser(userId, …)`가 트랜잭션마다
+  `app.user_id`를 주입해 기존 RLS가 그대로 강제된다. `MemberPostLoader`(클라 세션 fetch)·세션
+  메모리 캐시(GFM-68)는 제거. 인라인 이미지는 서버 배치 서명(`presignGetMany`) 직링크, 다운로드
+  `<a>`는 `/dl/{id}` 프록시 유지.
+- **공개 글·목록은 여전히 태그 캐시**(`lib/boards.ts`의 `unstable_cache` + `revalidateTag`) — 캐시
+  페처는 `withUser(null)`(anon)로만 조회하고 세션을 읽지 않는다(2번 규칙은 캐시 페처에 한해 유지).
+- **클라 컴포넌트는 DB·세션을 직접 읽지 않는다**: 서버 부모가 `profile`을 props로 내리고, 데이터
+  변경 후엔 `router.refresh()` 또는 서버 액션의 `revalidatePath/Tag`로 갱신한다.

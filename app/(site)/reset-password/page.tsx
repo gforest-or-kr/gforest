@@ -1,23 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useActionState } from "react";
+import { requestPasswordResetAction } from "@/lib/auth-actions";
 
-// SCR-402 비밀번호 재설정 (1단계: 메일 발송) — 이관 직후 대량 사용 화면
+// SCR-402 비밀번호 재설정 (1단계: 메일 발송) — 이관 직후 대량 사용 화면.
+// 서버 액션이 1회용 토큰을 만들어 /reset-password/update?token=… 링크를 메일로 보낸다.
 export default function ResetPasswordPage() {
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    const email = String(new FormData(e.currentTarget).get("email"));
-    await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${location.origin}/reset-password/update`,
-    });
+  const [sent, submit, loading] = useActionState(async (_prev: boolean, formData: FormData) => {
+    await requestPasswordResetAction(formData);
     // 계정 존재 여부와 무관하게 동일 안내 (이메일 열거 방지)
-    setSent(true);
-  }
+    return true;
+  }, false);
 
   if (sent) {
     return (
@@ -41,7 +34,7 @@ export default function ResetPasswordPage() {
         <br />
         재설정 링크를 보내드립니다.
       </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-3">
+      <form action={submit} className="mt-6 space-y-3">
         <input
           name="email"
           type="email"
