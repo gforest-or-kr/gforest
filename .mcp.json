@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "atlassian-gforest": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "set -a; [ -f .env ] && . ./.env; set +a; export JIRA_USERNAME=\"$ATLASSIAN_EMAIL\" CONFLUENCE_USERNAME=\"$ATLASSIAN_EMAIL\" JIRA_API_TOKEN=\"$ATLASSIAN_API_TOKEN\" CONFLUENCE_API_TOKEN=\"$ATLASSIAN_API_TOKEN\"; exec uvx mcp-atlassian"
+      ],
+      "env": {
+        "JIRA_URL": "https://gforest.atlassian.net",
+        "CONFLUENCE_URL": "https://gforest.atlassian.net/wiki"
+      }
+    }
+  }
+}

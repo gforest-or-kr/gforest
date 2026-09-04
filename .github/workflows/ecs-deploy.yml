@@ -1,12 +1,14 @@
-# 컨테이너 이미지 빌드 → ECR push → ECS Fargate 배포.
+# 컨테이너 이미지 빌드 → ECR push → ECS Fargate 배포. 규칙: docs/conventions/branching-and-release.md
 #  - main push: dev 자동 배포
-#  - 수동 실행(workflow_dispatch): env=prod 선택 시 prod 배포 (GitHub environment "prod" 승인 규칙 적용 가능)
+#  - vX.Y.Z 태그 push: prod 배포 (태그는 Owner만 생성 — 룰셋 protect-release-tags)
+#  - 수동 실행(workflow_dispatch): 롤백·재배포 (ref에 이전 태그 선택, environment 지정)
 # AWS 자격증명은 OIDC 롤(vars.AWS_DEPLOY_ROLE_ARN)만 사용한다. 장기 키 없음.
 name: ecs-deploy
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
     paths-ignore: ["docs/**", "infra/**", "mockups/**", "*.md"]
   workflow_dispatch:
     inputs:
@@ -21,17 +23,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: ecs-deploy-${{ inputs.environment || 'dev' }}
+  group: ecs-deploy-${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-24.04-arm # Fargate ARM64와 동일 아키텍처 → QEMU 없이 네이티브 빌드
     timeout-minutes: 25
-    environment: ${{ inputs.environment || 'dev' }}
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
     env:
-      ENV_NAME: ${{ inputs.environment || 'dev' }}
-      SITE_URL: ${{ (inputs.environment || 'dev') == 'prod' && 'https://gforest.or.kr' || 'https://dev.gforest.or.kr' }}
+      ENV_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
+      SITE_URL: ${{ (startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev')) == 'prod' && 'https://gforest.or.kr' || 'https://dev.gforest.or.kr' }}
     steps:
       - uses: actions/checkout@v4
         with:

@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev)",
+      "Bash(npm ci)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh run view *)",
+      "Bash(gh run list *)",
+      "Bash(terraform fmt *)",
+      "Bash(terraform validate)",
+      "Bash(terraform plan *)",
+      "Bash(aws sts get-caller-identity)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(rm -rf *)",
+      "Bash(terraform destroy *)"
+    ]
+  }
+}

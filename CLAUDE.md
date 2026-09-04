@@ -3,7 +3,7 @@
 푸른숲발도르프학교(gforest.or.kr) 홈페이지 재구축 — XE1 → Next.js + Postgres(AWS).
 **최우선 가치: 유지보수에 손이 덜 가는 구조.** 운영 주체는 전담 인력이 없는 비영리 학부모조합이다. 2026-09 Vercel/Supabase 프로토타입에서 **AWS(ECS Fargate + RDS + S3)** 로 이전했다(예산·근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토").
 
-> **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것** — 여러 세션(maestro 등)·팀원이 repo 접근만으로 맥락을 이어받는 협업 실무(how-to) 허브다. 이 CLAUDE.md는 *원칙*, `docs/conventions/`는 *작성법*: Jira 전환·Confluence 작성([atlassian.md](docs/conventions/atlassian.md)) / CI·CD 구조([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)).
+> **이 문서는 헌법이다** — 원칙과 절대 규칙만 담고, 절차는 `docs/conventions/`, 이유는 `docs/design`·`docs/research`에 둔다. **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것.** 브랜치·릴리스([branching-and-release.md](docs/conventions/branching-and-release.md)) / CI·CD·계정([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)) / Jira·Confluence([atlassian.md](docs/conventions/atlassian.md)) / Claude Code 협업([claude-code.md](docs/conventions/claude-code.md)).
 
 ## 스택
 
@@ -26,8 +26,9 @@
 
 ## 개발 워크플로
 
-- **Jira 동기화**: 작업 시작 시 해당 GFM 이슈를 `진행 중`으로, 완료 시 `완료`(리뷰 필요 시 `검토 중`)로 전환. 없는 작업은 이슈를 먼저 만든다. Confluence 계획서의 진행 현황은 Jira 매크로로 자동 연동되므로 위키를 수동 갱신하지 않는다
-- **커밋**: 관련 이슈 키를 메시지에 포함 (예: `feat: ... (GFM-2)`)
+- **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `main` 하나. 작업은 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합** → **dev 자동 배포**. **prod 배포는 `vX.Y.Z` 태그**(Owner만 생성, main 커밋에만). `develop` 등 두 번째 장기 브랜치·태그 삭제·main 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
+- **Jira 동기화**: 작업 시작 시 해당 GFM 이슈를 `진행 중`으로, 완료 시 `완료`(리뷰 필요 시 `검토 중`)로 전환. 없는 작업은 이슈를 먼저 만든다. **세션·머신 간 인수인계는 Jira 코멘트 + PR 본문으로**(개인 메모리는 머신을 넘지 않는다). Confluence 계획서의 진행 현황은 Jira 매크로로 자동 연동되므로 위키를 수동 갱신하지 않는다
+- **커밋**: 관련 이슈 키를 메시지에 포함 (예: `feat: ... (GFM-2)`). PR 제목 = squash 커밋 제목
 - **문서 역할 분담**: 코드·SQL·다이어그램 원본(`docs/diagrams/*.drawio`)은 repo가 단일 진실, Confluence는 설계 설명·협업용. 설계 변경 시 둘 다 갱신
 - **Confluence 다이어그램**: PNG를 본문 기본 표시 + draw.io 매크로는 접기 블록 안 (모바일 앱이 서드파티 매크로를 렌더링하지 못함). 다이어그램 수정 시 PNG도 함께 갱신
 - **비밀값**: `.env`(Atlassian 토큰)·`.env.local`(DB 접속 문자열 등)은 커밋 금지. 운영 비밀값은 SSM Parameter Store `/gforest/<env>/…`(Terraform `secret_parameters`로 태스크에 주입). 공유용 예시는 `.env.local.example`
