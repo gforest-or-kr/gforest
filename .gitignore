@@ -52,3 +52,7 @@ infra/**/*.auto.tfvars
 infra/**/secret*.tfvars
 !infra/**/*.auto.tfvars.example
 infra/**/crash.log
+
+# Claude Code (개인 설정·메모는 커밋하지 않는다)
+.claude/settings.local.json
+CLAUDE.local.md

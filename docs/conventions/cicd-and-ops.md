@@ -27,7 +27,7 @@
 
 ## 배포 = GitHub Actions → ECR → ECS (`.github/workflows/ecs-deploy.yml`)
 
-- **main push → dev 자동 배포**, **prod는 수동 실행**(workflow_dispatch, environment=prod). 이미지 태그 `sha-<commit>` + `<env>-latest`.
+- **main push → dev 자동 배포**, **`vX.Y.Z` 태그 push → prod 배포**, 수동 실행(workflow_dispatch)은 롤백·재배포용. 규칙은 [branching-and-release.md](./branching-and-release.md). 이미지 태그 `sha-<commit>` + `<env>-latest`.
 - ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
 - 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.
 - PR 게이트는 `ci.yml`(tsc·eslint·`next build`). **빌드는 DB 없이 통과해야 한다** — 빌드 시점 DB 접근 금지.
