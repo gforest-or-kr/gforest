@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Pool, types, type PoolClient, type QueryResultRow } from "pg";
 
-// 값 형태를 Supabase(PostgREST) 시절과 맞춘다: timestamptz/timestamp/date → 문자열(ISO), int8 → number.
+// 값 형태를 lib/db/types.ts 의 Row 타입과 맞춘다: timestamptz/timestamp/date → 문자열(ISO), int8 → number.
 // (enum[] 은 OID가 동적이라 파서 등록이 안 됨 — 쿼리에서 ::text[] 로 캐스트할 것)
 types.setTypeParser(types.builtins.TIMESTAMPTZ, (v) => new Date(v).toISOString());
 types.setTypeParser(types.builtins.TIMESTAMP, (v) => new Date(v + "Z").toISOString());
@@ -12,7 +12,7 @@ types.setTypeParser(types.builtins.INT8, (v) => Number(v));
 
 // RDS Postgres 접속 계층. 앱은 RLS가 강제되는 gforest_app 롤로 접속하며(테이블 소유자 아님),
 // 모든 쿼리는 트랜잭션 안에서 `app.user_id` 세션 변수를 설정한 뒤 실행한다 — DB의 auth.uid()가
-// 이 값을 읽어 기존 RLS 정책(can_read_board 등)이 Supabase 때와 동일하게 동작한다 (CLAUDE.md 원칙 3).
+// 이 값을 읽어 RLS 정책(can_read_board 등)이 사용자별로 동작한다 (CLAUDE.md 원칙 3).
 //
 //   withUser(userId, (c) => c.query(...))   로그인 사용자 컨텍스트
 //   withUser(null,   (c) => c.query(...))   비로그인(anon) 컨텍스트 — 공개 데이터 페처·unstable_cache 안에서 안전

@@ -1,3 +1,6 @@
+// 손으로 유지하는 Row 타입 (db/migrations 기준). 마이그레이션을 추가하면 여기도 함께 고친다.
+// 아래 Tables/Enums 헬퍼 제네릭은 `Database["public"]["Tables"][name]["Row"]` 접근을 짧게 쓰기 위한 것.
+
 export type Json =
   | string
   | number
@@ -496,7 +499,7 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Database
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 

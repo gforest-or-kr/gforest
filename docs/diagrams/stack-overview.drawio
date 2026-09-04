@@ -51,7 +51,7 @@
         <mxCell id="rBack" value="Next.js 서버 컴포넌트 · 서버 액션 (프론트와 같은 Node 프로세스)&#10;&#10;Auth.js (세션·로그인, AUTH_SECRET) · S3 SDK (presigned URL) · pg (직접 SQL)&#10;REST 계층 없음 — 서버 액션 호출이 곧 API&#10;빌드 시점 DB 접근 금지 (CI는 DB 없이 next build)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="620" y="450" width="540" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="rDb" value="RDS Postgres 17 + RLS (권한을 DB가 강제)&#10;&#10;withUser 트랜잭션: set_config('app.user_id') → auth.uid() 셔임 → RLS 정책 판정&#10;앱은 gforest_app 롤(테이블 소유자 아님 → RLS 우회 불가)&#10;스키마는 supabase/migrations/*.sql 코드로만 변경 · 게시판 권한은 boards 데이터" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="rDb" value="RDS Postgres 17 + RLS (권한을 DB가 강제)&#10;&#10;withUser 트랜잭션: set_config('app.user_id') → auth.uid() 셔임 → RLS 정책 판정&#10;앱은 gforest_app 롤(테이블 소유자 아님 → RLS 우회 불가)&#10;스키마는 db/migrations/*.sql 코드로만 변경 · 게시판 권한은 boards 데이터" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="620" y="620" width="540" height="130" as="geometry" />
         </mxCell>
 

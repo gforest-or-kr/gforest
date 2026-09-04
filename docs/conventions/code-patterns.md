@@ -14,10 +14,10 @@
 
 ## 2. DB 변경 — 마이그레이션으로만
 
-- `supabase/migrations/*.sql`이 단일 진실(폴더명은 역사적). **콘솔 수동 변경 금지.** 새 변경은 새 번호 마이그레이션 파일.
-- 적용은 `infra/db/bootstrap.sh <env>`(미적용분만 순차 적용, `public.schema_migrations` 추적). 변경 후 `lib/db/types.ts`의 Row 타입을 손으로 맞춘다.
-- Supabase 전용 객체(`storage.*`, `auth.jwt()`)는 새 마이그레이션에 쓰지 않는다. RLS는 `auth.uid()`만 참조 — RDS에서는 `set_config('app.user_id')`를 읽는 셔임이다.
-- 게시판 추가/변경은 **코드가 아니라 `supabase/seed.sql`의 데이터**로 해결한다(템플릿 5종 공유).
+- `db/migrations/*.sql`이 단일 진실. **콘솔 수동 변경 금지.** 새 변경은 새 번호 마이그레이션 파일(이름 규칙·적용 절차는 `db/README.md`).
+- 적용은 `db/bootstrap.sh <env>`(미적용분만 순차 적용, `public.schema_migrations` 추적). 변경 후 `lib/db/types.ts`의 Row 타입을 손으로 맞춘다.
+- 표준 Postgres 밖의 객체(매니지드 서비스 전용 `storage.*`, `auth.jwt()` 등)는 마이그레이션에 쓰지 않는다. RLS는 `auth.uid()`만 참조 — RDS에서는 `set_config('app.user_id')`를 읽는 셔임(`db/bootstrap_rds.sql`)이다.
+- 게시판 추가/변경은 **코드가 아니라 `db/seed.sql`의 데이터**로 해결한다(템플릿 5종 공유).
 - **`legacy_*` 컬럼(unique)은 XE ETL 멱등성의 키 — 삭제·변경 금지.**
 
 ## 3. 데이터 접근 — `withUser()` 트랜잭션 + RLS
@@ -28,7 +28,7 @@ const userId = await getSessionUserId();           // null이면 anon
 const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_id = $1", [boardId]));
 ```
 
-- **모든 쿼리는 `withUser(userId | null, fn)` 안에서** 실행한다. 트랜잭션마다 `app.user_id`가 설정되어 DB의 `auth.uid()`·RLS가 Supabase 때와 동일하게 동작한다. 밖에서 `pool.query`를 직접 쓰는 곳은 인증(`lib/auth*.ts`)뿐.
+- **모든 쿼리는 `withUser(userId | null, fn)` 안에서** 실행한다. 트랜잭션마다 `app.user_id`가 설정되어 DB의 `auth.uid()`·RLS가 그 사용자 기준으로 동작한다. 밖에서 `pool.query`를 직접 쓰는 곳은 인증(`lib/auth*.ts`)뿐.
 - RLS 거부는 **0행 또는 42501**로 온다. update/delete는 `rowCount`를 확인하고, 소프트삭제처럼 결과 행이 select에서 사라지는 경우는 재조회로 확인한다(`app/(site)/boards/[slug]/actions.ts` 패턴). unique 충돌은 `pgCode(e) === "23505"`.
 - 파라미터 쿼리(`$1…`)만. 문자열 조립 금지. ilike 검색어는 `%`·`_`를 이스케이프.
 - 세션: `getSessionUserId()` / `getSessionProfile()`(`lib/auth.ts`, 요청 단위 메모이즈). 서버 컴포넌트·layout·서버 액션 어디서나 호출 가능.
@@ -61,7 +61,7 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
 - 상시 서버(Fargate)라 세션을 서버에서 읽어도 페이지가 동적이 되는 비용뿐이다. 회원 게시판 글은 사용자 RLS 컨텍스트로 **서버 렌더**(옛 `member-post-loader` 클라 로더는 제거됨).
 - 공개 데이터(`lib/boards.ts`·`lib/menu-data.ts`)는 `unstable_cache` + 태그 무효화 유지(§4). `Header`는 서버에서 `getSessionProfile()`로 개인화해 `HeaderNav`에 props로 넘긴다.
 - **빌드 시점 DB 접근 금지**(`generateStaticParams` 등) — CI 빌드는 DB 없이 돈다.
-- 배경·이력(Vercel ISR 시절의 함정)은 `docs/design/rendering.md`.
+- 캐시 태그 표·무효화 지점·이력은 `docs/design/rendering.md`.
 
 ## 7. UI · 스타일
 
@@ -69,7 +69,7 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
   탭 토글). **다크모드 미지원(확정).**
 - 디자인 토큰은 `app/globals.css`의 forest 팔레트. 폰트는 시스템 한글 폰트 스택(웹폰트 전송 0 —
   모바일 저속망 병목 제거).
-- 이미지 업로드는 **클라이언트 리사이즈(장변 1600px) 후** — Storage 1GB·egress 5GB/월이 첫 천장.
+- 이미지 업로드는 **클라이언트 리사이즈(장변 1600px) 후** — S3 저장·전송 비용과 모바일 체감 속도 모두를 위해.
 - 페이지 전환 즉시 피드백을 위해 `loading.tsx`(스켈레톤)를 실제 레이아웃과 위치·높이 맞춰 둔다.
 
 ## 8. 커밋 · 검증

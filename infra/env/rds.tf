@@ -1,7 +1,7 @@
 # 환경별 RDS Postgres. 단일 AZ, gp3 20GB, 자동 백업 7일.
 # 관리자 접속 문자열은 SSM /gforest/<env>/DATABASE_ADMIN_URL (Terraform 관리).
 # 앱 접속 문자열 /gforest/<env>/DATABASE_URL 은 RLS가 적용되는 앱 전용 롤로,
-# infra/db/bootstrap.sh 가 생성·기록한다 (테이블 소유자=admin은 RLS를 우회하므로 앱에 쓰지 않는다).
+# db/bootstrap.sh 가 생성·기록한다 (테이블 소유자=admin은 RLS를 우회하므로 앱에 쓰지 않는다).
 
 resource "random_password" "db" {
   length  = 32

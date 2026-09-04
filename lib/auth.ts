@@ -9,7 +9,7 @@ import type { Database } from "@/lib/db/types";
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 // Auth.js(NextAuth v5) — 이메일+비밀번호(Credentials). 세션은 서명된 JWT 쿠키(DB 세션 테이블 없음).
-// 사용자 테이블은 RDS의 auth.users (Supabase Auth에서 bcrypt 해시 그대로 이관, infra/db/bootstrap_rds.sql).
+// 사용자 테이블은 RDS의 auth.users (db/bootstrap_rds.sql). 비밀번호 해시는 이전 시스템(2026-09 이관)에서 bcrypt 그대로 옮겨 왔다.
 // 역할(role)은 토큰에 넣지 않고 매 요청 profiles에서 읽는다 — admin의 역할 변경이 즉시 반영되도록.
 
 const config: NextAuthConfig = {

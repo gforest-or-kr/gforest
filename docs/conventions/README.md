@@ -29,15 +29,16 @@
 ## 함께 읽어야 할 기존 문서
 
 - **`CLAUDE.md`** (루트) — 기술 원칙 9개·개발 워크플로·운영 원칙. **Claude 세션은 자동 로드됨.**
-- **`docs/design/rendering.md`** — 렌더링 전략·ISR 쿠키 함정·CI 게이트. **렌더링/데이터패칭 변경 전 필독.**
+- **`docs/design/rendering.md`** — 렌더링 전략·캐시 태그·무효화 규칙. **렌더링/데이터패칭 변경 전 필독.**
 - **`docs/design/db_schema.md`** — 스키마·RLS·역할 모델·XE 매핑.
 - **`docs/design/screen_design.md`** — 화면설계서 v1.1 (21개 화면).
-- **Confluence 02 리서치 "AWS 이전 예산·리소스 검토(2026-08)"** — 현행 인프라 결정과 예산 근거. (`docs/research/*`는 2026-06 결정의 역사 기록)
+- **`db/README.md`** — 마이그레이션 파일 규칙·적용 절차.
+- **Confluence 02 리서치 "AWS 이전 예산·리소스 검토(2026-08)"** — 현행 인프라 결정과 예산 근거, 그리고 이전 프로토타입(2026-06~08)의 검토 기록. repo 에는 사본을 두지 않는다.
 
 ## 절대 어기면 안 되는 것 (요약 — 상세는 각 문서)
 
 1. **모든 DB 접근은 `withUser()` 트랜잭션 안에서**, `unstable_cache` 콜백에서는 세션 읽기 금지. (`code-patterns.md`)
-2. **스키마는 `supabase/migrations/*.sql`로만** 변경, 적용은 `infra/db/bootstrap.sh`. 콘솔 수동 변경 금지. (`code-patterns.md`)
+2. **스키마는 `db/migrations/*.sql`로만** 변경, 적용은 `db/bootstrap.sh`. 콘솔 수동 변경 금지. (`code-patterns.md`, `db/README.md`)
 3. **권한 분기를 앱 코드에 중복 구현 금지** → RLS가 단일 진실. (`code-patterns.md`)
 4. **Confluence 패널은 `contentFormat: html` + `<div data-type="panel-*">`** → storage-format 매크로는 "Error loading the extension!"로 깨진다. (`atlassian.md`)
 5. **장기 AWS 액세스 키 금지** → 사람은 Identity Center, CI는 OIDC 롤. root는 봉인. (`cicd-and-ops.md`)

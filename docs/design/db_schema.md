@@ -1,13 +1,13 @@
 # DB 스키마 설계 v1 (2026-06-11)
 
 > 근거: 게시판 권한 매트릭스(4단계+ 역할), 화면설계서 v1.1, 마이그레이션 계획서 운영 원칙.
-> SQL 원본: `supabase/migrations/00000000000001_initial_schema.sql` + `supabase/seed.sql` (게시판 33개 시드). 적용은 `infra/db/bootstrap.sh <env>`(2026-09 RDS 이후, 폴더명은 역사적).
+> SQL 원본: `db/migrations/00000000000001_initial_schema.sql`(+ 이후 번호) + `db/seed.sql` (게시판 33개 시드). 적용은 `db/bootstrap.sh <env>` (`db/README.md`).
 > 원칙: 표준 Postgres 중심(`pg_dump` 탈출 가능), 게시판·권한은 **데이터로 관리** — 게시판 추가/권한 변경에 코드 수정 불필요.
 
 ## 1. ERD 개요
 
 ```
-auth.users (RDS 부트스트랩 테이블, Auth.js 사용 — infra/db/bootstrap_rds.sql)
+auth.users (RDS 부트스트랩 테이블, Auth.js 사용 — db/bootstrap_rds.sql)
    │ 1:1 (가입 트리거 자동 생성)
 profiles ─── role: pending|member|operator|teacher|student|admin
    │ 1:N                              role_audit (역할 변경 감사)

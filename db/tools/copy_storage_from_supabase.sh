@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Supabase Storage → S3 미디어 버킷 복사. 객체 키는 "<supabase bucket>/<object name>" 으로 유지한다.
-# 1회성 이관 도구(2026-09-04 dev 완료). .env.local의 NEXT_PUBLIC_SUPABASE_URL·SUPABASE_SECRET_KEY 필요(현재 example에는 없음).
-# 사용: AWS_PROFILE=gforest infra/db/copy_storage.sh dev
-# 전제: .env.local 의 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY / 소스 DB 접속 문자열 SB_URL(환경변수)
+# [1회성 컷오버 도구] 이전 시스템(Supabase Storage) → S3 미디어 버킷 복사. 객체 키는 "<bucket>/<object name>" 으로 유지한다.
+# 최종 컷오버 때 prod 로 미디어를 옮기는 용도로만 남겨 둔다(dev 는 2026-09-04 완료). 평소 개발·운영에서는 쓰지 않으며,
+# 이전 시스템 폐기 후 삭제한다. 멱등(이미 있는 키는 건너뜀).
+# 사용: AWS_PROFILE=gforest db/tools/copy_storage_from_supabase.sh dev|prod
+# 전제: .env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY (평소 .env.local.example 에는 없음 — 실행 때만 추가)
+#       소스 DB 접속 문자열 SB_URL(환경변수)
 set -euo pipefail
 env_name="${1:?dev|prod}"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
-repo="$(cd "$(dirname "$0")/../.." && pwd)"
+repo="$(cd "$(dirname "$0")/../.." && pwd)"  # db/tools → repo 루트
 sb_url=$(grep -oE '^NEXT_PUBLIC_SUPABASE_URL=.*' "$repo/.env.local" | cut -d= -f2-)
 sb_key=$(grep -oE '^SUPABASE_SECRET_KEY=.*' "$repo/.env.local" | cut -d= -f2-)
 bucket="gforest-media-${env_name}-$(aws sts get-caller-identity --query Account --output text)"

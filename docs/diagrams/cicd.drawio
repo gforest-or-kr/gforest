@@ -86,7 +86,7 @@
         <mxCell id="tfApply" value="🧱 terraform apply (plan 눈으로 확인 후)&#10;infra/shared · infra/env workspace dev|prod&#10;-var-file=&lt;env&gt;.tfvars" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="310" y="600" width="280" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="bootstrap" value="🗂️ infra/db/bootstrap.sh &lt;env&gt;&#10;bootstrap_rds.sql (auth 셔임 · gforest_app 롤)&#10;→ 미적용 supabase/migrations/*.sql 순차 적용&#10;→ SSM DATABASE_URL 기록" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="bootstrap" value="🗂️ db/bootstrap.sh &lt;env&gt;&#10;bootstrap_rds.sql (auth 셔임 · gforest_app 롤)&#10;→ 미적용 db/migrations/*.sql 순차 적용&#10;→ SSM DATABASE_URL 기록" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="310" y="700" width="280" height="80" as="geometry" />
         </mxCell>
         <mxCell id="awsInfra" value="☁️ AWS 인프라 (VPC · ALB · ECS · RDS · S3 · SSM)&#10;tfstate: s3://gforest-tfstate-… (네이티브 락)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">

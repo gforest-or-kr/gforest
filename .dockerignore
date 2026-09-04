@@ -7,9 +7,6 @@ node_modules
 docs
 mockups
 infra
-supabase
-scripts
-tasks
+db
 *.md
-.vercel
 tsconfig.tsbuildinfo

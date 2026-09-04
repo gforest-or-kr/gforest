@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# RDS 최초 부트스트랩 + supabase/migrations 적용 + 앱 접속 문자열을 SSM 에 기록.
-# 사용: AWS_PROFILE=gforest infra/db/bootstrap.sh dev
+# RDS 최초 부트스트랩 + db/migrations 적용 + 앱 접속 문자열을 SSM 에 기록. 재실행해도 안전(멱등).
+# 사용: AWS_PROFILE=gforest db/bootstrap.sh dev
 # 전제: RDS 가 이 머신에서 접근 가능(dev: db_publicly_accessible), psql 설치(brew install libpq)
+#
+# 적용 이력은 public.schema_migrations(version) 로 추적한다. 파일명(확장자 제외)이 version.
+# 참고: dev DB 에는 2026-09 이관 때 기록된 4개 version(…02_storage_attachments, …03_storage_upload_policy,
+#       …04_storage_slides, …07_avatars_bucket)이 남아 있다 — 이전 시스템의 스토리지 정책 파일로 repo 에서는
+#       삭제됐다. 기록만 남은 것이라 무해하며 지우지 않아도 된다.
 set -euo pipefail
 env_name="${1:?dev|prod}"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 here="$(cd "$(dirname "$0")" && pwd)"
-repo="$(cd "$here/../.." && pwd)"
+repo="$(cd "$here/.." && pwd)"
 
 admin_url=$(aws ssm get-parameter --with-decryption --name "/gforest/${env_name}/DATABASE_ADMIN_URL" --query Parameter.Value --output text)
 
@@ -21,17 +26,11 @@ echo "== bootstrap (auth schema, uid(), gforest_app)"
 psql "$admin_url" -v ON_ERROR_STOP=1 -v app_password="$app_password" -q -f "$here/bootstrap_rds.sql"
 
 echo "== migrations"
-# Supabase Storage 전용(storage.buckets/objects 정책) 마이그레이션은 RDS에 적용 대상이 아님 — 적용됨으로만 기록
-SKIP_STORAGE_ONLY="00000000000002_storage_attachments 00000000000003_storage_upload_policy 00000000000004_storage_slides 00000000000007_avatars_bucket"
 psql "$admin_url" -v ON_ERROR_STOP=1 -q -c "create table if not exists public.schema_migrations (version text primary key, applied_at timestamptz not null default now())"
-for f in "$repo"/supabase/migrations/*.sql; do
+for f in "$repo"/db/migrations/*.sql; do
   v=$(basename "$f" .sql)
   if psql "$admin_url" -tAc "select 1 from public.schema_migrations where version='$v'" | grep -q 1; then
     echo "   skip $v"; continue
-  fi
-  if [[ " $SKIP_STORAGE_ONLY " == *" $v "* ]]; then
-    echo "   skip(storage-only) $v"
-    psql "$admin_url" -q -c "insert into public.schema_migrations(version) values ('$v')"; continue
   fi
   echo "   apply $v"
   psql "$admin_url" -v ON_ERROR_STOP=1 -q -1 -f "$f" -c "insert into public.schema_migrations(version) values ('$v')"

@@ -1,9 +1,8 @@
--- RDS 인스턴스 최초 1회 부트스트랩. supabase/migrations 를 적용하기 *전에* 관리자로 실행한다.
--- Supabase 전용 객체를 최소한으로 대체해 기존 스키마·RLS 정책을 그대로 쓸 수 있게 한다.
---   * auth.users        : Supabase Auth 의 사용자 테이블 대체 (Auth.js Credentials 가 사용)
+-- RDS 인스턴스 최초 1회 부트스트랩. db/migrations 를 적용하기 *전에* 관리자로 실행한다 (db/bootstrap.sh 가 호출).
+-- 마이그레이션·RLS 정책이 전제하는 auth 스키마 객체를 만든다.
+--   * auth.users        : 사용자 테이블 (Auth.js Credentials 가 사용)
 --   * auth.uid()        : RLS 정책이 참조하는 현재 사용자 — 앱이 트랜잭션마다 set local app.user_id 로 주입
 --   * gforest_app 롤    : 테이블 소유자가 아니므로 RLS 가 강제되는 앱 전용 접속 롤
--- 이 파일은 Supabase 에서는 실행하지 않는다 (auth.uid 를 덮어쓰게 됨).
 
 create extension if not exists pgcrypto;
 create extension if not exists "uuid-ossp";
@@ -14,7 +13,7 @@ create schema if not exists auth;
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text not null unique,
-  encrypted_password text,                        -- bcrypt ($2a$/$2b$), Supabase 에서 그대로 이관
+  encrypted_password text,                        -- bcrypt ($2a$/$2b$), 이전 시스템(2026-09 이관)에서 그대로 옮김
   email_confirmed_at timestamptz,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),

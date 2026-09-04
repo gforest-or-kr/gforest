@@ -1,7 +1,7 @@
 # gforest-web
 
 푸른숲발도르프학교(gforest.or.kr) 홈페이지 재구축 — XE1 → Next.js + Postgres(AWS).
-**최우선 가치: 유지보수에 손이 덜 가는 구조.** 운영 주체는 전담 인력이 없는 비영리 학부모조합이다. 2026-09 Vercel/Supabase 프로토타입에서 **AWS(ECS Fargate + RDS + S3)** 로 이전했다(예산·근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토").
+**최우선 가치: 유지보수에 손이 덜 가는 구조.** 운영 주체는 전담 인력이 없는 비영리 학부모조합이다. 2026-09 초기 프로토타입에서 **AWS(ECS Fargate + RDS + S3)** 로 이전했다(예산·근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토" — 프로토타입 이력은 repo 가 아니라 Confluence 에만 남긴다).
 
 > **이 문서는 헌법이다** — 원칙과 절대 규칙만 담고, 절차는 `docs/conventions/`, 이유는 `docs/design`·`docs/research`에 둔다. **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것.** 브랜치·릴리스([branching-and-release.md](docs/conventions/branching-and-release.md)) / CI·CD·계정([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)) / Jira·Confluence([atlassian.md](docs/conventions/atlassian.md)) / Claude Code 협업([claude-code.md](docs/conventions/claude-code.md)).
 
@@ -15,7 +15,7 @@
 ## 기술 원칙
 
 1. **이식성 우선**: 표준 Postgres/SQL 중심(`pg` 드라이버, 파라미터 쿼리). ORM·클라우드 전용 기능 의존 최소화. `pg_dump` 하나로 탈출 가능해야 한다
-2. **스키마는 코드로만 변경**: `supabase/migrations/*.sql`이 단일 진실(폴더명은 역사적 이유로 유지). 적용은 `infra/db/bootstrap.sh <env>`(순차 적용 + `schema_migrations` 추적). 콘솔 수동 변경 금지. `lib/db/types.ts`의 Row 타입을 함께 갱신
+2. **스키마는 코드로만 변경**: `db/migrations/*.sql`이 단일 진실. 적용은 `db/bootstrap.sh <env>`(순차 적용 + `schema_migrations` 추적, 규칙은 `db/README.md`). 콘솔 수동 변경 금지. `lib/db/types.ts`의 Row 타입을 함께 갱신
 3. **권한은 DB가 강제한다**: 게시판 33개의 읽기/쓰기 권한은 `boards.read_roles[]/write_roles[]` 데이터 + RLS(`can_read_board`/`can_write_board`)로 처리. 앱은 RLS가 적용되는 `gforest_app` 롤로 접속하고 **모든 쿼리를 `withUser(userId, …)` 트랜잭션 안에서** 실행한다(`set_config('app.user_id')` → DB의 `auth.uid()`). **앱 코드에 권한 분기를 중복 구현하지 말 것** — UI 노출 제어용으로만 사용
 4. **역할 모델**: `pending → member / operator / teacher / student / admin` (선형 계층 아님). 역할 변경은 admin 전용이며 트리거가 차단·감사한다
 5. **단순함 유지**: 학부모조합 게시판이다. 과한 추상화·라이브러리 추가 지양. 게시판 추가/변경은 코드가 아니라 `boards` 데이터로 해결되어야 한다
@@ -43,7 +43,7 @@
 ## 주의사항
 
 - XE 레거시 데이터의 `legacy_*` 컬럼(unique)은 ETL 멱등성의 키 — 삭제·변경 금지
-- 운영위/교사/학생 게시판 권한 경계는 XE 관리자 확인(GFM-9) 전까지 추정값 (`supabase/seed.sql` 주석 참조)
+- 운영위/교사/학생 게시판 권한 경계는 XE 관리자 확인(GFM-9) 전까지 추정값 (`db/seed.sql` 주석 참조)
 - 협업 실무(Jira·Confluence 작성·CI/CD·코드 패턴)는 `docs/conventions/` 참조 — 다른 세션·팀원 온보딩 허브
-- 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마), `design/rendering.md`(렌더링 전략·ISR 함정·CI 게이트)
+- 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마), `design/rendering.md`(렌더링 전략·캐시 태그)
 - 렌더·데이터 변경 후엔 dev 배포(main push 자동) 뒤 `https://dev.gforest.or.kr`에서 공개 글·회원 글·로그인을 눈으로 확인할 것. 빌드는 DB 없이 통과해야 한다(빌드 시점 DB 접근 금지 — CI `ci` 잡이 게이트)

@@ -6,7 +6,7 @@ import { presignUpload, deleteMedia, type MediaKind } from "@/lib/storage";
 import { validateFile } from "@/lib/attachments";
 
 // 클라이언트 업로드 준비: 권한·형식 검증 후 presigned PUT URL과 storage_path를 돌려준다.
-// 경로는 항상 "{uid}/..." — 본인 폴더 외 업로드·삭제 불가(Supabase storage 정책과 동일 규칙).
+// 경로는 항상 "{uid}/..." — 본인 폴더 외 업로드·삭제 불가.
 export async function createUploadUrl(
   kind: "attachments" | "avatars",
   fileName: string,

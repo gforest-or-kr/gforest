@@ -11,7 +11,7 @@ import type { Database } from "@/lib/db/types";
 // (withUser(userId))에서 캐시 없이 실행한다 — 권한 판정은 여전히 DB(RLS)가 한다.
 //
 // pg 드라이버 주의: bigint/count는 문자열, enum[]은 '{a,b}' 원문, timestamptz/date는 Date 객체로
-// 오므로 SQL에서 ::int / ::text[] / ISO 문자열로 캐스팅해 Supabase 시절과 동일한 JS 값을 유지한다.
+// 오므로 SQL에서 ::int / ::text[] / ISO 문자열로 캐스팅해 lib/db/types.ts 의 Row 타입과 같은 JS 값을 만든다.
 
 type Tables = Database["public"]["Tables"];
 export type BoardRow = Tables["boards"]["Row"];
