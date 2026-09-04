@@ -6,13 +6,13 @@
         <mxCell id="1" parent="0" />
 
         <!-- 서버 영역 -->
-        <mxCell id="serverZone" value="서버 (Vercel 함수)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=6;dashed=1;" vertex="1" parent="1">
+        <mxCell id="serverZone" value="서버 (Fargate 컨테이너(Node))" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=6;dashed=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="60" width="360" height="430" as="geometry" />
         </mxCell>
         <mxCell id="sc" value="서버 컴포넌트&#10;(기본)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="120" y="110" width="200" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="db" value="🟩 Supabase DB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="db" value="🗄️ RDS Postgres" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="120" y="220" width="200" height="56" as="geometry" />
         </mxCell>
         <mxCell id="html" value="HTML 생성&#10;(데이터가 이미 박힌 화면)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">

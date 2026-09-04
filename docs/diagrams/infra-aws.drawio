@@ -1,0 +1,154 @@
+<mxfile host="app.diagrams.net" modified="2026-09-04T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="infra-aws" id="infra-aws-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="820" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== 왼쪽: 인터넷 · DNS · NAT 메모 ===== -->
+        <mxCell id="inet" value="🌐 인터넷&#10;(사용자 브라우저)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="dns" value="DNS: cafe24(현재)&#10;→ Route 53 (NS 전환 예정)&#10;ACM 인증서 DNS 검증" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="natNote" value="NAT Gateway 없음 (월 $45 절약)&#10;태스크는 퍼블릭 IP로 ECR·SSM·S3에 직접 나가고, 인바운드는 보안그룹이 ALB 외 전부 차단" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fffaf0;strokeColor=#94733b;fontSize=10;align=left;spacingLeft=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="330" width="170" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== VPC ===== -->
+        <mxCell id="vpc" value="VPC 10.0.0.0/16 — 퍼블릭 서브넷 2AZ (IGW 직결)  ·  ap-northeast-2a: 10.0.0.0/24  ·  ap-northeast-2c: 10.0.1.0/24" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;verticalAlign=top;fontSize=12;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="260" y="40" width="640" height="560" as="geometry" />
+        </mxCell>
+
+        <!-- ALB SG -->
+        <mxCell id="sgAlb" value="🔒 SG gforest-alb — 인바운드 0.0.0.0/0 : 80, 443" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;verticalAlign=top;fontSize=11;fontStyle=1;spacingTop=4;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="80" width="580" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="alb" value="⚖️ ALB (2AZ) — 80→443 리다이렉트 · HTTPS 리스너 (ACM, TLS1.3)&#10;호스트 규칙: gforest.or.kr / www → prod, dev.gforest.or.kr → dev&#10;타깃 그룹 :3000 · 헬스체크 /api/health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="110" width="540" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- App SG -->
+        <mxCell id="sgApp" value="🔒 SG gforest-app — 인바운드 ALB SG에서만 : 3000 (퍼블릭 IP 있음, 아웃바운드 전체)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;verticalAlign=top;fontSize=11;fontStyle=1;spacingTop=4;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="240" width="580" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="task1" value="🐳 Fargate 태스크 (ARM64 / Graviton)&#10;컨테이너 web : 3000&#10;Node standalone (next start 산출물)&#10;컨테이너 헬스체크: wget /api/health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="285" width="260" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="task2" value="🐳 Fargate 태스크 (다른 AZ)&#10;prod desired_count = 2 (FARGATE)&#10;dev = 1 (FARGATE_SPOT)&#10;롤링 배포 100–200% · 서킷 브레이커" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="590" y="285" width="260" height="105" as="geometry" />
+        </mxCell>
+
+        <!-- DB SG -->
+        <mxCell id="sgDb" value="🔒 SG gforest-db — 인바운드 app SG에서만 : 5432 (이관 시 임시 공개 SG + 내 IP/32 추가 후 닫음)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;verticalAlign=top;fontSize=11;fontStyle=1;spacingTop=4;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="460" width="580" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rds" value="🗄️ RDS Postgres 17 — dev / prod 각 1대 (별도 env 스택)&#10;db.t4g.micro · gp3 20GB(자동 확장 50GB) · 단일 AZ · 저장 암호화&#10;앱은 gforest_app 롤(소유자 아님 → RLS 강제) · admin 롤은 마이그레이션 전용" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="495" width="540" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 오른쪽: 리전 서비스 (VPC 밖) ===== -->
+        <mxCell id="ecr" value="📦 ECR gforest/web&#10;태그 sha-… / dev-latest / prod-latest&#10;untagged 1일 · 최근 20개만 보관" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="90" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm" value="🔐 SSM Parameter Store&#10;/gforest/&amp;lt;env&amp;gt;/DATABASE_URL · AUTH_SECRET&#10;· DATABASE_ADMIN_URL (SecureString)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="190" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="logs" value="📋 CloudWatch Logs&#10;/ecs/gforest-&lt;env&gt; · 14일" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="290" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" value="🪣 S3 미디어 (dev / prod)&#10;퍼블릭 차단 · CORS · 태스크 롤로만 접근&#10;presigned URL 발급" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="380" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 접근 주체 ===== -->
+        <mxCell id="idc" value="👤 사람: IAM Identity Center (SSO)&#10;gforest.awsapps.com/start · 그룹 admins (8h)&#10;root는 봉인 (MFA, 액세스 키 없음)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="940" y="480" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oidc" value="🤖 CI: GitHub OIDC 롤 gforest-github-deploy&#10;sub = repo:org@id/repo@id : main | pull_request | environment:*&#10;권한: ECR push · ECS 태스크 정의/서비스 갱신만&#10;장기 액세스 키 없음" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="940" y="580" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 하단: Terraform ===== -->
+        <mxCell id="tfShared" value="🧱 Terraform 스택 infra/shared&#10;OIDC 롤 · ECR · Route 53 존 · ACM · VPC/SG · ALB · ECS 클러스터 · 태스크 실행 롤&#10;state: s3://gforest-tfstate-…/shared/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="690" width="290" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="tfEnv" value="🧱 Terraform 스택 infra/env (workspace dev / prod)&#10;Fargate 서비스·태스크 정의 · 타깃 그룹/리스너 규칙 · RDS · S3 · SSM · 로그&#10;state: …/env/&lt;workspace&gt;/ · shared는 terraform_remote_state로 참조" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="690" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="tfState" value="🪣 S3 gforest-tfstate-…&#10;암호화 · use_lockfile 네이티브 락&#10;(DynamoDB 없음, TF ≥ 1.10)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="750" y="690" width="150" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 화살표 ===== -->
+        <mxCell id="e_inet_alb" value="80 / 443" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=11;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="inet" target="alb">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_alb_t1" value=":3000 (타깃 그룹)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="alb" target="task1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="50" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_alb_t2" value=":3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="alb" target="task2">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="20" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_t1_rds" value=":5432 (SSL)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="task1" target="rds">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="36" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_t2_rds" value=":5432" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="task2" target="rds">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="20" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_ecr" value="이미지 pull" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="task2" target="ecr">
+          <mxGeometry x="0.7" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="910" y="306" /><mxPoint x="910" y="125" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ssm" value="시크릿 주입" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="task2" target="ssm">
+          <mxGeometry x="0.75" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="922" y="332" /><mxPoint x="922" y="225" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_logs" value="awslogs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;" edge="1" parent="1" source="task2" target="logs">
+          <mxGeometry x="0.4" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="930" y="359" /><mxPoint x="930" y="338" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_s3" value="S3 SDK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=1;exitY=0.9;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="task2" target="s3">
+          <mxGeometry x="0.3" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="916" y="380" /><mxPoint x="916" y="415" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_env_shared" value="remote_state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tfEnv" target="tfShared">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-24" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_env_state" value="state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tfEnv" target="tfState">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_shared_state" value="state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="tfShared" target="tfState">
+          <mxGeometry x="-0.8" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="185" y="800" /><mxPoint x="825" y="800" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_idc_tf" value="terraform apply (로컬, SSO 세션 — CI는 하지 않음)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="idc" target="tfEnv">
+          <mxGeometry x="0.3" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="920" y="520" /><mxPoint x="920" y="650" /><mxPoint x="540" y="650" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_idc_vpc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.93;entryDx=0;entryDy=0;" edge="1" parent="1" source="idc" target="vpc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_oidc_ecr" value="ECR push · ECS 배포" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;dashed=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="oidc" target="ecr">
+          <mxGeometry x="0.88" relative="1" as="geometry">
+            <mxPoint x="-62" y="0" as="offset" />
+            <Array as="points"><mxPoint x="1180" y="625" /><mxPoint x="1180" y="125" /></Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

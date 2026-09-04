@@ -1,7 +1,0 @@
-flowchart LR
-  push["GitHub main push"] --> build["Actions: next build"]
-  build -->|정적 부분| cdn["정적 자산 → CDN·엣지"]
-  build -->|동적 부분| fn["서버 코드 → 서버리스 함수"]
-  cdn -->|즉시 전송| user["사용자"]
-  fn -->|요청 시 실행| user
-  fn -->|DB 조회| supa["Supabase"]

@@ -1,58 +1,83 @@
-<mxfile host="app.diagrams.net" modified="2026-06-15T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
-  <diagram name="stack-overview" id="stack-1">
-    <mxGraphModel dx="1000" dy="760" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="700" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-09-04T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="stack-overview" id="stack-aws-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="820" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <mxCell id="browser" value="👤 사용자 브라우저" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=14;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="330" y="40" width="240" height="56" as="geometry" />
+        <!-- ===== 헤더 ===== -->
+        <mxCell id="hdrLeft" value="전통적 구성 (비교용)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="180" y="40" width="400" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="hdrRight" value="푸른숲 홈페이지 구성 (2026-09 · AWS 서울)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="40" width="540" height="45" as="geometry" />
         </mxCell>
 
-        <!-- Vercel -->
-        <mxCell id="vercel" value="▲ Vercel — 서울(icn1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#111111;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
-          <mxGeometry x="280" y="170" width="340" height="180" as="geometry" />
+        <!-- ===== 행 라벨 ===== -->
+        <mxCell id="lblInfra" value="🏗️ 인프라" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="120" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="static" value="정적 자산&#10;→ CDN·엣지&#10;(즉시 전송)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="300" y="215" width="150" height="115" as="geometry" />
+        <mxCell id="lblFront" value="🖥️ 프론트" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="120" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="func" value="서버 코드&#10;→ 서버리스 함수&#10;(요청 시 실행)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="460" y="215" width="150" height="115" as="geometry" />
+        <mxCell id="lblBack" value="⚙️ 백엔드" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="450" width="120" height="130" as="geometry" />
         </mxCell>
-
-        <!-- Supabase -->
-        <mxCell id="supa" value="🟩 Supabase — 서울" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
-          <mxGeometry x="280" y="430" width="340" height="180" as="geometry" />
-        </mxCell>
-        <mxCell id="pg" value="PostgreSQL + RLS&#10;(권한을 DB가 강제)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1d6845;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="475" width="160" height="115" as="geometry" />
-        </mxCell>
-        <mxCell id="auth" value="Auth&#10;(로그인·세션)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="475" y="475" width="135" height="52" as="geometry" />
-        </mxCell>
-        <mxCell id="storage" value="Storage&#10;(파일)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="475" y="538" width="135" height="52" as="geometry" />
+        <mxCell id="lblDb" value="🗄️ DB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="620" width="120" height="130" as="geometry" />
         </mxCell>
 
-        <!-- GitHub -->
-        <mxCell id="github" value="💻 GitHub&#10;(코드·CI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#24292f;fontSize=13;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="40" y="250" width="150" height="70" as="geometry" />
+        <!-- ===== 왼쪽 열: 전통 구성 ===== -->
+        <mxCell id="lInfra" value="EC2 (VM) + Tomcat WAS&#10;&#10;OS 패치·용량·배포를 직접 관리&#10;서버에 접속해 WAR 교체" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="180" y="110" width="400" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="lFront" value="React SPA (CRA / Vite)&#10;&#10;빈 HTML + JS 번들 → 브라우저에서 API 호출 후 렌더&#10;첫 화면 느림 · 검색 노출 약함" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="180" y="280" width="400" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="lBack" value="Spring (Boot/MVC) REST API 서버&#10;&#10;별도 프로세스·별도 배포 · API 계약(JSON) 유지&#10;인증은 서버 세션 또는 JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="180" y="450" width="400" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="lDb" value="RDB (MySQL / Oracle) + JPA·ORM&#10;&#10;권한 검사는 앱 코드(서비스 계층)에서&#10;DB는 앱이 시키는 대로 읽고 쓴다" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f8fa;strokeColor=#57606a;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="180" y="620" width="400" height="130" as="geometry" />
         </mxCell>
 
-        <!-- arrows -->
-        <mxCell id="a1" value="HTTPS 요청" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=12;" edge="1" parent="1" source="browser" target="vercel">
-          <mxGeometry relative="1" as="geometry" />
+        <!-- ===== 오른쪽 열: gforest 구성 ===== -->
+        <mxCell id="rInfra" value="ECS Fargate (ARM64 컨테이너, 상시 실행) + ALB (HTTPS, ACM)&#10;&#10;Terraform으로 코드 관리 (infra/shared · infra/env dev/prod)&#10;GitHub Actions → ECR → ECS 롤아웃 (실패 시 서킷 브레이커 롤백)&#10;서버 OS 없음 · 콜드 스타트 없음" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="110" width="540" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="a2" value="supabase-js 쿼리" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="func" target="pg">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="rFront" value="Next.js App Router (React · TypeScript · Tailwind v4)&#10;&#10;서버 컴포넌트가 데이터가 박힌 HTML을 만들어 전송 → 첫 화면 빠름·검색 노출&#10;클라이언트 컴포넌트는 hydration 후 클릭·입력·개인화만 담당&#10;모바일 퍼스트 단일 반응형 (탭 44px+, 호버 의존 금지)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="280" width="540" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="a3" value="Actions: 빌드·배포" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#24292f;fontSize=12;" edge="1" parent="1" source="github" target="vercel">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="rBack" value="Next.js 서버 컴포넌트 · 서버 액션 (프론트와 같은 Node 프로세스)&#10;&#10;Auth.js (세션·로그인, AUTH_SECRET) · S3 SDK (presigned URL) · pg (직접 SQL)&#10;REST 계층 없음 — 서버 액션 호출이 곧 API&#10;빌드 시점 DB 접근 금지 (CI는 DB 없이 next build)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef1fe;strokeColor=#5865f2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="450" width="540" height="130" as="geometry" />
         </mxCell>
-        <mxCell id="a4" value="일일 백업(pg_dump)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;dashed=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="github" target="supa">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points"><mxPoint x="115" y="520" /></Array>
-          </mxGeometry>
+        <mxCell id="rDb" value="RDS Postgres 17 + RLS (권한을 DB가 강제)&#10;&#10;withUser 트랜잭션: set_config('app.user_id') → auth.uid() 셔임 → RLS 정책 판정&#10;앱은 gforest_app 롤(테이블 소유자 아님 → RLS 우회 불가)&#10;스키마는 supabase/migrations/*.sql 코드로만 변경 · 게시판 권한은 boards 데이터" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="620" y="620" width="540" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 열 내부 흐름 화살표 ===== -->
+        <mxCell id="la1" value="REST / JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="lFront" target="lBack">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="48" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="la2" value="JPA / JDBC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="lBack" target="lDb">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="44" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="la0" value="배포 대상" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="lInfra" target="lFront">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="40" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="ra0" value="컨테이너 web :3000" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="rInfra" target="rFront">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="66" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="ra1" value="같은 프로세스 (함수 호출)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=10;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="rFront" target="rBack">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="82" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="ra2" value="pg · withUser(userId) · SG 5432" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#1d6845;fontSize=10;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="rBack" target="rDb">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="94" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== 푸터 ===== -->
+        <mxCell id="footer" value="핵심 차이 — 서버 관리 → 컨테이너·코드(Terraform) 관리  ·  SPA → 서버 렌더  ·  별도 API 서버 → 같은 프로세스  ·  앱 권한 검사 → DB(RLS)가 강제" style="text;html=1;fontSize=11;fontStyle=2;fontColor=#57606a;align=center;" vertex="1" parent="1">
+          <mxGeometry x="180" y="770" width="980" height="24" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

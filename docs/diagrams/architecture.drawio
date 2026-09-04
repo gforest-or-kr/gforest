@@ -1,87 +1,143 @@
-<mxfile host="app.diagrams.net" modified="2026-06-10T00:00:00.000Z" agent="claude-code" version="24.0.0">
-  <diagram id="gforest-arch" name="TO-BE Architecture">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="780" math="0" shadow="0">
+<mxfile host="app.diagrams.net" modified="2026-09-04T00:00:00.000Z" agent="claude" version="24.0.0" type="device">
+  <diagram name="architecture" id="arch-aws-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="820" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- 사용자 -->
-        <mxCell id="user" value="사용자 브라우저&#10;(학부모·회원·방문자)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1" vertex="1" parent="1">
-          <mxGeometry x="40" y="200" width="170" height="70" as="geometry" />
+        <!-- ===== 왼쪽: 사용자 · DNS · CI · 계정 체계 ===== -->
+        <mxCell id="user" value="👤 사용자 브라우저&#10;(학부모·회원·방문자)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#effaf3;strokeColor=#2f9e6e;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cafe24" value="🌐 cafe24 DNS (현재 권한 DNS)&#10;gforest.or.kr / dev.gforest.or.kr" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="r53" value="🌐 Route 53 존 (AWS, 글로벌)&#10;NS 전환 예정 — 전환 전까지 트래픽 무관&#10;ACM 검증 레코드 보관" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8c5;strokeColor=#9a6700;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="gha" value="⚙️ GitHub Actions (ecs-deploy.yml)&#10;OIDC 롤 인수 → 이미지 빌드·push → ECS 배포&#10;(상세: cicd.drawio)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ddf4ff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="440" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="acct" value="🔑 계정 체계&#10;• AWS 계정 1개, root 봉인(MFA·액세스 키 없음)&#10;• 사람: IAM Identity Center(SSO, admins 8h)&#10;• CI: GitHub OIDC 롤 gforest-github-deploy&#10;• 장기 액세스 키는 어디에도 없음&#10;• 앵커 메일·시드는 Bitwarden 조직 금고" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fffaf0;strokeColor=#94733b;fontSize=10;align=left;spacingLeft=6;spacingTop=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="200" height="130" as="geometry" />
         </mxCell>
 
-        <!-- DNS -->
-        <mxCell id="dns" value="gforest.or.kr&#10;(DNS → Vercel, HTTPS 자동)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;dashed=1" vertex="1" parent="1">
-          <mxGeometry x="255" y="120" width="180" height="50" as="geometry" />
+        <!-- ===== AWS 리전 박스 ===== -->
+        <mxCell id="region" value="☁️ AWS — 리전 ap-northeast-2 서울 (Terraform 관리: infra/shared · infra/env dev/prod)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff4e5;strokeColor=#c45500;verticalAlign=top;fontSize=13;fontStyle=1;spacingTop=6;align=left;spacingLeft=14;" vertex="1" parent="1">
+          <mxGeometry x="300" y="40" width="860" height="650" as="geometry" />
         </mxCell>
 
-        <!-- Vercel 컨테이너 -->
-        <mxCell id="vercel" value="Vercel (Hobby, 월 0원)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;spacingTop=6" vertex="1" parent="1">
-          <mxGeometry x="280" y="190" width="220" height="180" as="geometry" />
+        <!-- ALB -->
+        <mxCell id="alb" value="⚖️ ALB (HTTPS 443, ACM 인증서)&#10;80 → 443 리다이렉트&#10;호스트 기반 라우팅 (dev / prod 1대 공유)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="290" width="200" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="nextjs" value="Next.js (App Router, TS)&#10;정적/ISR 페이지" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11" vertex="1" parent="vercel">
-          <mxGeometry x="20" y="40" width="180" height="55" as="geometry" />
+        <!-- ECR -->
+        <mxCell id="ecr" value="📦 ECR gforest/web&#10;이미지 태그 sha-… / dev-latest / prod-latest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="460" width="200" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="actions-sv" value="Server Actions&#10;(글·댓글 쓰기 등 서버 로직)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11" vertex="1" parent="vercel">
-          <mxGeometry x="20" y="110" width="180" height="55" as="geometry" />
-        </mxCell>
-
-        <!-- Supabase 컨테이너 -->
-        <mxCell id="supabase" value="Supabase Free — Seoul(ap-northeast-2)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;spacingTop=6" vertex="1" parent="1">
-          <mxGeometry x="610" y="150" width="250" height="280" as="geometry" />
-        </mxCell>
-        <mxCell id="pg" value="Postgres + RLS&#10;(posts / comments / profiles)&#10;권한: 공개 읽기 + 회원 쓰기" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
-          <mxGeometry x="20" y="40" width="210" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="auth" value="Auth&#10;(이메일/비밀번호, 카카오는 추후)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
-          <mxGeometry x="20" y="120" width="210" height="55" as="geometry" />
-        </mxCell>
-        <mxCell id="storage" value="Storage&#10;(첨부파일, 1GB 초과 시 R2 검토)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11" vertex="1" parent="supabase">
-          <mxGeometry x="20" y="190" width="210" height="55" as="geometry" />
+        <!-- CloudFront (예정) -->
+        <mxCell id="cf" value="🌐 CloudFront (예정)&#10;S3 미디어 공개 서빙 (OAC)&#10;인증서는 us-east-1 ACM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#57606a;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="580" width="200" height="70" as="geometry" />
         </mxCell>
 
-        <!-- GitHub -->
-        <mxCell id="github" value="GitHub (dongyoub-sinn/gforest)&#10;코드 + supabase/migrations/*.sql" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1" vertex="1" parent="1">
-          <mxGeometry x="280" y="480" width="220" height="60" as="geometry" />
+        <!-- ECS 클러스터 -->
+        <mxCell id="cluster" value="🐳 ECS 클러스터 gforest (Fargate, ARM64/Graviton)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#0969da;verticalAlign=top;fontSize=12;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="580" y="90" width="270" height="330" as="geometry" />
         </mxCell>
-        <mxCell id="gha" value="GitHub Actions&#10;① pg_dump 일 1회 백업&#10;② keep-alive ping 주 1회" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11" vertex="1" parent="1">
-          <mxGeometry x="610" y="480" width="200" height="70" as="geometry" />
+        <mxCell id="svcDev" value="dev 서비스 — dev.gforest.or.kr&#10;0.25 vCPU / 0.5 GB × 1 (FARGATE_SPOT)&#10;컨테이너 web :3000 · Node standalone" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0969da;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="135" width="230" height="110" as="geometry" />
         </mxCell>
-
-        <!-- 마이그레이션 (일회성) -->
-        <mxCell id="xe" value="기존 XE1 (MySQL 덤프)&#10;회원·게시글·댓글·첨부파일" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1" vertex="1" parent="1">
-          <mxGeometry x="610" y="40" width="200" height="55" as="geometry" />
-        </mxCell>
-        <mxCell id="etl" value="ETL 스크립트 (멱등, *_srl 매핑 보존)" style="text;html=1;align=center;fontSize=10;fontColor=#b85450" vertex="1" parent="1">
-          <mxGeometry x="840" y="70" width="220" height="20" as="geometry" />
+        <mxCell id="svcProd" value="prod 서비스 — gforest.or.kr / www&#10;0.5 vCPU / 1 GB × 2 (FARGATE)&#10;서킷 브레이커 → 실패 시 자동 롤백" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d7f0e2;strokeColor=#1d6845;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="280" width="230" height="110" as="geometry" />
         </mxCell>
 
-        <!-- 엣지 -->
-        <mxCell id="e1" value="HTTPS" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="user" target="vercel">
-          <mxGeometry relative="1" as="geometry" />
+        <!-- RDS -->
+        <mxCell id="rdsGroup" value="🗄️ RDS Postgres 17 (환경별 1대, 단일 AZ, 비공개)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ee;strokeColor=#2f9e6e;verticalAlign=top;fontSize=12;fontStyle=1;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="890" y="90" width="250" height="330" as="geometry" />
         </mxCell>
-        <mxCell id="e2" value="supabase-js / @supabase/ssr&#10;(anon key + RLS)" style="endArrow=classic;startArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="vercel" target="supabase">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="rdsDev" value="dev DB&#10;db.t4g.micro · gp3 20GB · 백업 1일&#10;RLS 강제 (앱 롤 gforest_app)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f9e6e;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="910" y="135" width="210" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="e3" value="push → 자동 배포" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="github" target="vercel">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" value="cron" style="endArrow=classic;html=1;fontSize=10;exitX=0;exitY=0.5" edge="1" parent="1" source="gha" target="github">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e5" value="pg_dump / ping" style="endArrow=classic;html=1;fontSize=10" edge="1" parent="1" source="gha" target="supabase">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e6" value="일회성 마이그레이션" style="endArrow=classic;html=1;dashed=1;fontSize=10;strokeColor=#b85450;fontColor=#b85450" edge="1" parent="1" source="xe" target="supabase">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e7" value="DNS" style="endArrow=classic;html=1;dashed=1;fontSize=10" edge="1" parent="1" source="dns" target="vercel">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="rdsProd" value="prod DB&#10;자동 백업 7일 · 삭제 보호 · 최종 스냅샷&#10;RLS 강제 (앱 롤 gforest_app)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#1d6845;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="910" y="280" width="210" height="110" as="geometry" />
         </mxCell>
 
-        <!-- 비밀번호 재설정 메모 -->
-        <mxCell id="note1" value="비밀번호는 이전 불가(MD5) →&#10;전 회원 재설정 메일 발송" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10" vertex="1" parent="1">
-          <mxGeometry x="890" y="180" width="160" height="60" as="geometry" />
+        <!-- S3 / SSM / CloudWatch -->
+        <mxCell id="s3" value="🪣 S3 미디어 버킷 (dev / prod 각각)&#10;퍼블릭 차단 · presigned URL로 업로드·조회&#10;클라이언트 리사이즈(장변 1600px) 후 PUT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="470" width="270" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ssm" value="🔐 SSM Parameter Store (SecureString)&#10;/gforest/&amp;lt;env&amp;gt;/DATABASE_URL · AUTH_SECRET" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="470" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="logs" value="📋 CloudWatch Logs&#10;/ecs/gforest-&lt;env&gt; · 14일 보존" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c45500;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="560" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tfNote" value="tfstate: s3://gforest-tfstate-… (shared/ · env/&lt;ws&gt;/) — apply는 사람이 로컬(SSO)에서" style="text;html=1;fontSize=10;fontColor=#57606a;align=left;" vertex="1" parent="1">
+          <mxGeometry x="580" y="640" width="560" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 화살표 ===== -->
+        <mxCell id="e_user_dns" value="DNS 조회" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;fontSize=11;" edge="1" parent="1" source="user" target="cafe24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_dns_r53" value="NS 전환 예정" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;dashed=1;fontSize=11;" edge="1" parent="1" source="cafe24" target="r53">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_user_alb" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=11;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="user" target="alb">
+          <mxGeometry x="-0.6" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="270" y="115" /><mxPoint x="270" y="320" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_r53_alb" value="A/ALIAS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#9a6700;dashed=1;fontSize=11;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="r53" target="alb">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_gha_ecr" value="docker push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gha" target="ecr">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_alb_dev" value="Host: dev.gforest.or.kr" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=10;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="alb" target="svcDev">
+          <mxGeometry x="-0.75" relative="1" as="geometry">
+            <mxPoint x="0" y="-12" as="offset" />
+            <Array as="points"><mxPoint x="555" y="315" /><mxPoint x="555" y="190" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_alb_prod" value="Host: gforest.or.kr · www" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#1d6845;fontSize=10;fontStyle=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="alb" target="svcProd">
+          <mxGeometry x="-0.7" relative="1" as="geometry">
+            <mxPoint x="0" y="14" as="offset" />
+            <Array as="points"><mxPoint x="565" y="365" /><mxPoint x="565" y="335" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_dev_rds" value="5432 (SG 체인)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#2f9e6e;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="svcDev" target="rdsDev">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_prod_rds" value="5432 (SG 체인)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#1d6845;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="svcProd" target="rdsProd">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-10" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_cluster_s3" value="S3 SDK (태스크 롤)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="cluster" target="s3">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="60" y="0" as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e_ecr_cluster" value="이미지 pull (태스크 실행 롤)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#0969da;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.15;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="ecr" target="cluster">
+          <mxGeometry x="0.1" relative="1" as="geometry">
+            <mxPoint x="0" y="-10" as="offset" />
+            <Array as="points"><mxPoint x="430" y="440" /><mxPoint x="620" y="440" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ssm_cluster" value="시크릿 주입" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.95;entryDx=0;entryDy=0;" edge="1" parent="1" source="ssm" target="cluster">
+          <mxGeometry x="-0.6" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="875" y="500" /><mxPoint x="875" y="404" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_cluster_logs" value="awslogs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#c45500;dashed=1;fontSize=10;exitX=0.95;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="cluster" target="logs">
+          <mxGeometry x="0.7" relative="1" as="geometry">
+            <mxPoint x="0" y="10" as="offset" />
+            <Array as="points"><mxPoint x="836" y="445" /><mxPoint x="862" y="445" /><mxPoint x="862" y="590" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_cf_s3" value="OAC (예정)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#57606a;dashed=1;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="cf" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="555" y="615" /><mxPoint x="555" y="540" /></Array>
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
