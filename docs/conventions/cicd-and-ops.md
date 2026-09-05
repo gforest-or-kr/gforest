@@ -28,7 +28,7 @@
 
 ## 배포 = GitHub Actions → ECR → ECS (`.github/workflows/ecs-deploy.yml`)
 
-- **main push → dev 자동 배포**, **`vX.Y.Z` 태그 push → prod 배포**, 수동 실행(workflow_dispatch)은 롤백·재배포용. 규칙은 [branching-and-release.md](./branching-and-release.md). 이미지 태그 `sha-<commit>` + `<env>-latest`.
+- **develop push → dev 자동 배포**, **main push → prod 배포**(environment `prod` 승인 후) + 태그 `vYYYY.MM.DD` 자동. 수동 실행(workflow_dispatch)은 롤백·재배포용. 규칙은 [branching-and-release.md](./branching-and-release.md). 이미지 태그 `sha-<commit>` + `<env>-latest`.
 - ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → **DB 마이그레이션**(같은 이미지로 `gforest-<env>-migrate` 태스크를 VPC 안에서 `run-task`, `node db/migrate.mjs`, 종료 코드 0 필수) → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
 - 마이그레이션이 실패하면 서비스는 이전 버전 그대로 남는다. 관리자 접속 문자열(`DATABASE_ADMIN_URL`)은 migrate 태스크에만 주입되고 web 태스크에는 없다(RLS 우회 방지).
 - 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.

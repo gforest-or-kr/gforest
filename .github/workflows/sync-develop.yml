@@ -1,0 +1,36 @@
+# main 에 hotfix 가 들어가 develop 보다 앞서면 main → develop 역병합 PR 을 자동으로 연다.
+# (릴리스 PR 을 merge commit 으로 합치면 main 은 develop 의 자손이라 이 워크플로는 아무것도 하지 않는다)
+# 역병합 PR 은 사람이 확인하고 **merge commit** 으로 합친다(squash 금지 — 이력이 갈라진다).
+name: sync-develop
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  backmerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor origin/main origin/develop; then
+            echo "develop 이 main 을 이미 포함 — 역병합 불필요"; exit 0
+          fi
+          if [ -n "$(gh pr list --base develop --head main --state open --json number --jq '.[0].number')" ]; then
+            echo "역병합 PR 이 이미 열려 있음"; exit 0
+          fi
+          gh pr create --base develop --head main \
+            --title "chore: main → develop 역병합 (hotfix 반영)" \
+            --body "$(printf '%s\n' \
+              "main 에 develop 에 없는 커밋이 있습니다(hotfix). **merge commit** 으로 합쳐 주세요 — squash 하면 이력이 갈라집니다." \
+              "" \
+              "규칙: docs/conventions/branching-and-release.md §5")"
