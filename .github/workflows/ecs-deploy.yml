@@ -1,14 +1,15 @@
 # 컨테이너 이미지 빌드 → ECR push → ECS Fargate 배포. 규칙: docs/conventions/branching-and-release.md
-#  - main push: dev 자동 배포
-#  - vX.Y.Z 태그 push: prod 배포 (태그는 Owner만 생성 — 룰셋 protect-release-tags)
-#  - 수동 실행(workflow_dispatch): 롤백·재배포 (ref에 이전 태그 선택, environment 지정)
+#  - develop push: dev 자동 배포
+#  - main push: prod 배포 + 릴리스 태그 vYYYY.MM.DD(.N) 자동 생성 (GitHub Release)
+#    · prod 인프라가 없는 동안은 repo 변수 PROD_ENABLED != 'true' 로 건너뛴다
+#    · GitHub environment `prod` 의 required reviewers(Owner)가 승인해야 실제 배포가 시작된다
+#  - 수동 실행(workflow_dispatch): 롤백·재배포 (ref 에 이전 태그 선택, environment 지정)
 # AWS 자격증명은 OIDC 롤(vars.AWS_DEPLOY_ROLE_ARN)만 사용한다. 장기 키 없음.
 name: ecs-deploy
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [develop, main]
     paths-ignore: ["docs/**", "infra/**", "mockups/**", "*.md"]
   workflow_dispatch:
     inputs:
@@ -20,20 +21,22 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write # 릴리스 태그 생성(prod)
 
 concurrency:
-  group: ecs-deploy-${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
+  group: ecs-deploy-${{ github.ref == 'refs/heads/main' && 'prod' || (github.ref == 'refs/heads/develop' && 'dev') || inputs.environment || 'dev' }}
   cancel-in-progress: false
 
 jobs:
   deploy:
+    # prod 인프라가 아직 없으면(PROD_ENABLED != true) main push 는 조용히 건너뛴다
+    if: ${{ !(github.ref == 'refs/heads/main' && vars.PROD_ENABLED != 'true') }}
     runs-on: ubuntu-24.04-arm # Fargate ARM64와 동일 아키텍처 → QEMU 없이 네이티브 빌드
     timeout-minutes: 25
-    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || (github.ref == 'refs/heads/develop' && 'dev') || inputs.environment || 'dev' }}
     env:
-      ENV_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev') }}
-      SITE_URL: ${{ (startsWith(github.ref, 'refs/tags/v') && 'prod' || (inputs.environment || 'dev')) == 'prod' && 'https://gforest.or.kr' || 'https://dev.gforest.or.kr' }}
+      ENV_NAME: ${{ github.ref == 'refs/heads/main' && 'prod' || (github.ref == 'refs/heads/develop' && 'dev') || inputs.environment || 'dev' }}
+      SITE_URL: ${{ (github.ref == 'refs/heads/main' || inputs.environment == 'prod') && vars.PROD_SITE_URL || 'https://dev.gforest.or.kr' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,9 +45,17 @@ jobs:
       - name: 버전 문자열 계산
         id: ver
         run: |
-          # 태그가 있으면 v1.2.0 또는 v1.2.0-3-gabc1234, 없으면 0.0.0-gabc1234
-          v=$(git describe --tags --always --match 'v*' 2>/dev/null || true)
-          case "$v" in v*) ;; *) v="0.0.0-g${v}";; esac
+          if [ "$ENV_NAME" = prod ] && [ "${"{ github.event_name }"}" = push ]; then
+            # 릴리스 = main push. 버전은 날짜(KST) 기반 vYYYY.MM.DD, 같은 날 두 번째부터 .2 .3 …
+            d=$(TZ=Asia/Seoul date +%Y.%m.%d)
+            n=$(git tag -l "v${d}" "v${d}.*" | wc -l | tr -d ' ')
+            if [ "$n" = 0 ]; then v="v$d"; else v="v$d.$((n+1))"; fi
+            echo "new_tag=$v" >> "$GITHUB_OUTPUT"
+          else
+            # dev: 마지막 릴리스 이후 거리 v2026.09.05-3-gabc1234 (태그 없으면 0.0.0-gabc1234). 롤백(dispatch)은 그 태그 이름
+            v=$(git describe --tags --always --match 'v*' 2>/dev/null || true)
+            case "$v" in v*) ;; *) v="0.0.0-g${v}";; esac
+          fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
@@ -129,6 +140,14 @@ jobs:
             sleep 6
           done
           echo "::error::$host /api/health 응답 없음"; exit 1
+
+      # prod 릴리스: 배포·스모크가 끝난 커밋에만 태그를 찍는다(실패한 배포는 태그가 남지 않는다). 릴리스 노트는 자동(포함 PR 목록).
+      - name: 릴리스 태그·노트 생성 (prod)
+        if: env.ENV_NAME == 'prod' && github.event_name == 'push' && steps.ver.outputs.new_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.new_tag }}
+        run: gh release create "$TAG" --target "${{ github.sha }}" --title "$TAG" --generate-notes
 
       # 배포 결과 Discord 알림 — 성공/실패/취소 모두(if: always). 시크릿 DISCORD_WEBHOOK_URL 없으면 건너뜀.
       - name: Discord 알림

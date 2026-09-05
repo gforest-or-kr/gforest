@@ -13,14 +13,14 @@
   - **Jira `GFM`** = 모든 작업 추적 (gforest.atlassian.net)
   - **Confluence `푸른숲-웹-마이그레이션`** = 설계 설명 · 협업 문서 · **비밀값/운영 정보**(팀 전용 페이지)
 - **권한은 DB(RLS)가 강제한다** — 앱 코드의 권한 분기는 UI 노출용일 뿐 게이트가 아니다.
-- **배포는 GitHub Actions → ECR → ECS**. main 병합 = dev 자동, **`vX.Y.Z` 태그 = prod**. 인프라는 `infra/` Terraform.
+- **배포는 GitHub Actions → ECR → ECS**. `develop` 병합 = dev 자동, **`develop → main` 릴리스 PR = prod**(날짜 태그 자동). 인프라는 `infra/` Terraform.
 - **문서 체계**: `CLAUDE.md` = 헌법(원칙), 이 폴더 = 규약(절차), `docs/design`·`docs/research` = 근거. 같은 내용을 두 곳에 쓰지 말고 링크.
 
 ## 이 폴더의 문서
 
 | 문서 | 언제 읽나 |
 |---|---|
-| [branching-and-release.md](./branching-and-release.md) | **브랜치를 따거나 PR·릴리스(태그)·핫픽스·롤백을 할 때 (필수 규칙)** |
+| [branching-and-release.md](./branching-and-release.md) | **브랜치를 따거나 PR·릴리스(develop→main)·핫픽스·롤백을 할 때 (필수 규칙)** |
 | [claude-code.md](./claude-code.md) | Claude Code로 작업할 때, 새 머신을 세팅할 때, 세션 간 인수인계 |
 | [atlassian.md](./atlassian.md) | Jira 이슈 전환·Confluence 페이지 작성·다이어그램 게시를 할 때 (작성법·페이지 ID·함정) |
 | [cicd-and-ops.md](./cicd-and-ops.md) | 배포·백업·모니터링 구조를 이해하거나 워크플로를 만질 때 |
@@ -42,5 +42,5 @@
 3. **권한 분기를 앱 코드에 중복 구현 금지** → RLS가 단일 진실. (`code-patterns.md`)
 4. **Confluence 패널은 `contentFormat: html` + `<div data-type="panel-*">`** → storage-format 매크로는 "Error loading the extension!"로 깨진다. (`atlassian.md`)
 5. **장기 AWS 액세스 키 금지** → 사람은 Identity Center, CI는 OIDC 롤. root는 봉인. (`cicd-and-ops.md`)
-6. **장기 브랜치는 `main` 하나, prod는 태그로만** → `develop` 금지, 태그 삭제 금지, main 직접 push 금지. (`branching-and-release.md`)
+6. **`develop`(dev) / `main`(prod) 두 장기 브랜치** → 작업 브랜치는 develop 으로 squash, main 은 develop 에서 merge commit 으로만. 직접 push·태그 삭제 금지. (`branching-and-release.md`)
 7. **비밀값을 repo에 커밋 금지** → `.env`(Atlassian)·`.env.local`(DB 접속 문자열). 운영 비밀값은 SSM `/gforest/<env>/…`, 계정 정보는 Confluence 인프라 페이지(팀 전용).

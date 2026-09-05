@@ -16,7 +16,7 @@
 
 ## 2. 세션을 열었을 때 (사람도 Claude도 동일)
 
-1. `git pull` — main 최신화. 작업은 `<type>/<GFM-키>-<slug>` 브랜치에서 ([branching-and-release.md](./branching-and-release.md)).
+1. `git pull` — `develop` 최신화. 작업은 거기서 딴 `<type>/<GFM-키>-<slug>` 브랜치에서 ([branching-and-release.md](./branching-and-release.md)).
 2. Jira 이슈를 `진행 중`으로. 없으면 만든다. **세션 간 맥락 인수인계의 단일 진실은 Jira 이슈 코멘트 + PR 본문**이다 — 개인 메모리·채팅 기록은 머신을 넘어가지 않는다.
 3. 로컬 인프라: `npm run db:up`(Docker Compose Postgres·MinIO). `gh auth status`. AWS 는 인프라 담당만(`aws sso login --profile gforest --use-device-code`).
 4. PR 전에 `npm run check`(tsc·eslint·build) 통과. Claude 에게도 "check 통과 후 PR" 을 시킨다 — CI 는 필요조건이지 로컬 검증의 대체가 아니다.
@@ -41,7 +41,7 @@
 - **비밀값은 채팅에 붙여넣지 않는다.** 붙여넣어야 했다면 그 키는 오염된 것으로 보고 로테이션한다. 값은 SSM/Bitwarden/`.env`에서 도구가 읽게 한다.
 - **커밋 트레일러**: Claude가 만든 커밋·PR에는 `Co-Authored-By`와 세션 링크가 붙는다. 지우지 않는다 — 나중에 "왜 이렇게 했지"를 세션에서 추적한다.
 - **한 이슈 = 한 브랜치 = 한 세션 흐름.** 다른 이슈로 넘어가면 브랜치를 바꾼다. 병렬 작업은 `git worktree`(`EnterWorktree`)로 폴더를 분리한다.
-- **AI가 만든 변경도 사람이 dev에서 눈으로 확인**하고 나서 릴리스 태그를 찍는다. `ci` 초록은 필요조건이지 충분조건이 아니다.
+- **AI가 만든 변경도 사람이 dev에서 눈으로 확인**하고 나서 릴리스 PR(develop → main)을 연다. `ci` 초록은 필요조건이지 충분조건이 아니다.
 - **인프라 apply는 사람이 로컬에서.** Claude에게 `terraform apply`를 시킬 수 있지만 plan을 먼저 보고 승인한다. 콘솔 클릭으로 만든 리소스는 존재하지 않는 것으로 취급한다(Terraform 밖).
 
 ## 5. 세션 간 인수인계 템플릿 (Jira 코멘트)

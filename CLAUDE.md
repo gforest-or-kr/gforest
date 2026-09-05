@@ -9,7 +9,7 @@
 
 - Next.js (App Router, TypeScript, Tailwind v4) — Docker(standalone) 이미지로 **ECS Fargate(ARM64)** 에서 상시 실행
 - **RDS Postgres 17** (RLS 그대로 사용) / **Auth.js(Credentials, JWT 쿠키)** / **S3** 미디어(presigned URL) — 모두 **Seoul(ap-northeast-2)**
-- 인프라는 `infra/` Terraform(shared + env dev/prod), 배포는 `.github/workflows/ecs-deploy.yml`(main push → dev, 수동 → prod). 계정·접근 체계는 `docs/conventions/cicd-and-ops.md`
+- 인프라는 `infra/` Terraform(shared + env dev/prod), 배포는 `.github/workflows/ecs-deploy.yml`(develop push → dev, main push → prod). 계정·접근 체계는 `docs/conventions/cicd-and-ops.md`
 - 상세 설계: Confluence `gforest.atlassian.net` > 푸른숲-웹-마이그레이션 스페이스 / 이슈: Jira `GFM` 프로젝트
 
 ## 기술 원칙
@@ -27,7 +27,7 @@
 ## 개발 워크플로
 
 - **로컬 우선**: 개발자는 AWS 계정 없이 로컬(Docker Compose Postgres·MinIO, `npm run db:up`)에서 개발·검증한다. dev RDS 에 직접 붙지 않는다. **PR 전에 `npm run check`**(tsc·eslint·build) 통과가 필수 — CI 초록은 필요조건일 뿐이다
-- **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `main` 하나. 작업은 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합** → **dev 자동 배포**. **prod 배포는 `vX.Y.Z` 태그**(Owner만 생성, main 커밋에만). `develop` 등 두 번째 장기 브랜치·태그 삭제·main 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
+- **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `develop`(= dev 환경)과 `main`(= prod 환경) 둘. 작업은 `develop` 에서 딴 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합** → **dev 자동 배포**. **prod 배포 = `develop → main` 릴리스 PR 을 merge commit 으로**(Owner 승인) → 자동 배포 + 날짜 태그 `vYYYY.MM.DD`. 작업 브랜치에서 main 으로 직접 PR·태그 삭제·main/develop 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
 - **Jira 동기화**: 작업 시작 시 해당 GFM 이슈를 `진행 중`으로, 완료 시 `완료`(리뷰 필요 시 `검토 중`)로 전환. 없는 작업은 이슈를 먼저 만든다. **세션·머신 간 인수인계는 Jira 코멘트 + PR 본문으로**(개인 메모리는 머신을 넘지 않는다). Confluence 계획서의 진행 현황은 Jira 매크로로 자동 연동되므로 위키를 수동 갱신하지 않는다
 - **커밋**: 관련 이슈 키를 메시지에 포함 (예: `feat: ... (GFM-2)`). PR 제목 = squash 커밋 제목
 - **문서 역할 분담**: 코드·SQL·다이어그램 원본(`docs/diagrams/*.drawio`)은 repo가 단일 진실, Confluence는 설계 설명·협업용. 설계 변경 시 둘 다 갱신
@@ -47,4 +47,4 @@
 - 운영위/교사/학생 게시판 권한 경계는 XE 관리자 확인(GFM-9) 전까지 추정값 (`db/seed.sql` 주석 참조)
 - 협업 실무(Jira·Confluence 작성·CI/CD·코드 패턴)는 `docs/conventions/` 참조 — 다른 세션·팀원 온보딩 허브
 - 마이그레이션 배경·기존 사이트 분석은 `docs/` 참조: `plans/migration_plan.md`(계획), `research/site_structure.md`(구조·권한), `design/screen_design.md`(화면), `design/db_schema.md`(스키마), `design/rendering.md`(렌더링 전략·캐시 태그)
-- 렌더·데이터 변경 후엔 dev 배포(main push 자동) 뒤 `https://dev.gforest.or.kr`에서 공개 글·회원 글·로그인을 눈으로 확인할 것. 빌드는 DB 없이 통과해야 한다(빌드 시점 DB 접근 금지 — CI `ci` 잡이 게이트)
+- 렌더·데이터 변경 후엔 dev 배포(develop push 자동) 뒤 `https://dev.gforest.or.kr`에서 공개 글·회원 글·로그인을 눈으로 확인할 것. 빌드는 DB 없이 통과해야 한다(빌드 시점 DB 접근 금지 — CI `ci` 잡이 게이트)

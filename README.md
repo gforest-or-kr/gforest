@@ -53,8 +53,8 @@ docs/                   plans/ research/ design/ conventions/ diagrams/
 ## 배포 흐름
 
 1. PR → `ci.yml` (tsc · eslint · `next build`, DB 없이 통과해야 함)
-2. squash merge → `main` push → `ecs-deploy.yml`이 **dev 자동 배포** (ALB `/api/health` 스모크 포함)
-3. **prod는 `vX.Y.Z` 태그**(Owner가 main 커밋에 생성) → `ecs-deploy.yml`이 prod 배포. 롤백·재배포는 workflow_dispatch ([docs/conventions/branching-and-release.md](./docs/conventions/branching-and-release.md))
+2. squash merge → `develop` push → `ecs-deploy.yml`이 **dev 자동 배포** (DB 마이그레이션 → 서비스 갱신 → ALB `/api/health` 스모크)
+3. **prod는 `develop → main` 릴리스 PR**(merge commit, Owner 승인) → `ecs-deploy.yml`이 prod 배포 + 날짜 태그 `vYYYY.MM.DD`. 롤백은 workflow_dispatch 에 이전 태그 ([docs/conventions/branching-and-release.md](./docs/conventions/branching-and-release.md))
 4. 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백
 
 ## 문서
