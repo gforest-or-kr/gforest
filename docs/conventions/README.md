@@ -20,6 +20,7 @@
 
 | 문서 | 언제 읽나 |
 |---|---|
+| [playbooks.md](./playbooks.md) | **"이런 상황엔 이렇게" — DB 변경·게시판·기능·핫픽스·릴리스·환경변수·인프라·데이터 재투입·로컬 복구·인수인계. 작업 전에 해당 사례부터 찾는다** |
 | [branching-and-release.md](./branching-and-release.md) | **브랜치를 따거나 PR·릴리스(develop→main)·핫픽스·롤백을 할 때 (필수 규칙)** |
 | [claude-code.md](./claude-code.md) | Claude Code로 작업할 때, 새 머신을 세팅할 때, 세션 간 인수인계 |
 | [atlassian.md](./atlassian.md) | Jira 이슈 전환·Confluence 페이지 작성·다이어그램 게시를 할 때 (작성법·페이지 ID·함정) |
