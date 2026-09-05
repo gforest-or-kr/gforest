@@ -27,7 +27,17 @@ npm run xe:files -- --since 2024                # 첨부 복사: XE(HTTP) → S3
 | `MEDIA_BUCKET`, `S3_ENDPOINT`, `AWS_*` | `.env.local` | 첨부 복사 대상 |
 
 옵션: `--only members,pages,posts,comments,files` (단계 선택), `--limit N` (문서·댓글·첨부 N건만 — 시험용).
-dev/prod RDS 에 넣을 때는 비상 절차로 RDS 를 잠깐 열고(`docs/conventions/cicd-and-ops.md`) `DATABASE_ADMIN_URL` 을 SSM 값으로.
+dev 에 넣을 때(비상 절차로 RDS 를 잠깐 연 뒤, `docs/conventions/cicd-and-ops.md`):
+
+```sh
+export AWS_PROFILE=gforest
+db/tools/xe/reset-env.sh dev                     # 기존 데이터 전부 삭제 → 시드·테스트 계정만 (prod 거부)
+url=$(aws ssm get-parameter --with-decryption --name /gforest/dev/DATABASE_ADMIN_URL --query Parameter.Value --output text)
+DATABASE_ADMIN_URL="$url" npm run xe:etl -- --anonymize
+DATABASE_ADMIN_URL="$url" MEDIA_BUCKET=gforest-media-dev-106360388338 S3_ENDPOINT= AWS_ACCESS_KEY_ID= AWS_SECRET_ACCESS_KEY= \
+  npm run xe:files -- --since 2025              # .env.local 의 MinIO 값을 비워 SSO 자격증명으로 실제 S3 에
+```
+끝나면 RDS 를 즉시 닫는다. 2026-09-05 dev 투입 완료(ETL 3.5분, 첨부 2,228개 5분).
 
 ## 3. 무엇이 어떻게 옮겨지나
 
