@@ -8,8 +8,9 @@ use_spot      = true
 environment = {
   NEXT_PUBLIC_SITE_URL = "https://dev.gforest.or.kr"
   SITE_INDEXABLE       = "false" # dev 는 검색엔진 차단
-  MEDIA_BUCKET         = "gforest-media-dev-106360388338"
-  AWS_REGION           = "ap-northeast-2"
+  # MAIL_FROM = "noreply@gforest.or.kr"  # SES 도메인 검증(DKIM) 완료 후 주석 해제. 없으면 메일은 로그로만(dry-run)
+  MEDIA_BUCKET = "gforest-media-dev-106360388338"
+  AWS_REGION   = "ap-northeast-2"
 }
 
 secret_parameters = {
