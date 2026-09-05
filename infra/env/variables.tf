@@ -6,6 +6,12 @@ variable "host" {
   type        = string
 }
 
+variable "alias_hosts" {
+  description = "같은 서비스로 보낼 추가 호스트명 (컷오버 후 prod 의 www.gforest.or.kr 등)"
+  type        = list(string)
+  default     = []
+}
+
 variable "cpu" {
   description = "Fargate vCPU 단위 (256 = 0.25 vCPU)"
   type        = number

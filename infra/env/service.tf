@@ -146,7 +146,7 @@ resource "aws_lb_listener_rule" "app" {
 
   condition {
     host_header {
-      values = local.env == "prod" ? [var.host, "www.${var.host}"] : [var.host]
+      values = concat([var.host], var.alias_hosts)
     }
   }
 }

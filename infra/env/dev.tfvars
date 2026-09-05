@@ -7,6 +7,7 @@ use_spot      = true
 
 environment = {
   NEXT_PUBLIC_SITE_URL = "https://dev.gforest.or.kr"
+  SITE_INDEXABLE       = "false" # dev 는 검색엔진 차단
   MEDIA_BUCKET         = "gforest-media-dev-106360388338"
   AWS_REGION           = "ap-northeast-2"
 }
