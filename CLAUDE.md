@@ -3,7 +3,7 @@
 푸른숲발도르프학교(gforest.or.kr) 홈페이지 재구축 — XE1 → Next.js + Postgres(AWS).
 **최우선 가치: 유지보수에 손이 덜 가는 구조.** 운영 주체는 전담 인력이 없는 비영리 학부모조합이다. 2026-09 초기 프로토타입에서 **AWS(ECS Fargate + RDS + S3)** 로 이전했다(예산·근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토" — 프로토타입 이력은 repo 가 아니라 Confluence 에만 남긴다).
 
-> **이 문서는 헌법이다** — 원칙과 절대 규칙만 담고, 절차는 `docs/conventions/`, 이유는 `docs/design`·`docs/research`에 둔다. **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것.** 브랜치·릴리스([branching-and-release.md](docs/conventions/branching-and-release.md)) / CI·CD·계정([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)) / Jira·Confluence([atlassian.md](docs/conventions/atlassian.md)) / Claude Code 협업([claude-code.md](docs/conventions/claude-code.md)).
+> **이 문서는 헌법이다** — 원칙과 절대 규칙만 담고, 절차는 `docs/conventions/`, 이유는 `docs/design`·`docs/research`에 둔다. **새 세션·팀원은 [`docs/conventions/README.md`](docs/conventions/README.md)부터 읽을 것.** 구체적 작업(스키마 변경·게시판 추가·핫픽스·릴리스·환경변수 등)을 시작할 때는 **[playbooks.md](docs/conventions/playbooks.md)에서 해당 사례를 먼저 찾아 그 순서를 따른다.** 브랜치·릴리스([branching-and-release.md](docs/conventions/branching-and-release.md)) / CI·CD·계정([cicd-and-ops.md](docs/conventions/cicd-and-ops.md)) / 코드 패턴([code-patterns.md](docs/conventions/code-patterns.md)) / Jira·Confluence([atlassian.md](docs/conventions/atlassian.md)) / Claude Code 협업([claude-code.md](docs/conventions/claude-code.md)).
 
 ## 스택
 

@@ -7,7 +7,7 @@
 | 층 | 파일 | 성격 | 누가 바꾸나 |
 |---|---|---|---|
 | **헌법** | `CLAUDE.md` (루트) | 원칙과 절대 규칙. Claude 세션에 **자동 로드**. 짧게, 바뀌지 않게 | 팀 합의로만 (PR 리뷰 필수) |
-| **규약(how-to)** | `docs/conventions/*.md` | 브랜치·릴리스, CI/CD·운영, 코드 패턴, Jira·Confluence 작성, 이 문서 | 담당자가 PR로. README 목차 갱신 |
+| **규약(how-to)** | `docs/conventions/*.md` | **사례별 절차(playbooks)**, 브랜치·릴리스, CI/CD·운영, 코드 패턴, Jira·Confluence 작성, 이 문서 | 담당자가 PR로. README 목차 갱신 |
 | **설계·근거** | `docs/design/*`, `docs/research/*`, `docs/plans/*` | 왜 이렇게 결정했나. 낡으면 "역사적 문서" 배너 | 결정이 바뀔 때 |
 | **코드 곁 문서** | `infra/*/README.md`, 파일 상단 주석 | 그 폴더를 열었을 때 바로 필요한 실행법 | 코드와 함께 |
 | **팀 전용** | Confluence 05 운영 | 계정·접근 정보, 사람이 읽는 설명서. repo 문서의 미러 | Confluence에서 |
