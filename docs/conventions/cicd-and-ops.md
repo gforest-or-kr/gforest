@@ -52,6 +52,13 @@
 - 로그: CloudWatch `/ecs/gforest-<env>` 14일. 느린 쿼리(>500ms)는 RDS 로그.
 - 알림: Budgets 메일(+billing, 담당자). **배포 결과는 Discord**(`ecs-deploy.yml` 마지막 단계, 성공/실패 모두, 시크릿 `DISCORD_WEBHOOK_URL`).
 
+## 메일 (SES)
+
+- 발신 도메인 `gforest.or.kr` 은 `infra/shared/ses.tf` 의 SES identity. **DKIM CNAME 3개 + DMARC TXT** 는 Route 53 존에 있고(NS 전환 뒤 유효), 컷오버 전에는 **cafe24 DNS 에 같은 값을 사람이 넣어야** 검증된다 — 값은 `cd infra/shared && terraform output ses_dns_records`.
+- 앱은 `MAIL_FROM`(tfvars `environment`)이 있을 때만 실제 발송, 없으면 로그(dry-run). dev 는 검증 완료 후 `MAIL_FROM` 주석 해제.
+- 새 계정의 SES 는 **샌드박스**: SES 콘솔에서 검증한 수신 주소로만 보낼 수 있다(테스트용으로 본인 주소를 검증). 회원 전체 발송(컷오버 시 비밀번호 재설정 안내)은 **프로덕션 액세스 신청**(콘솔 → SES → Account dashboard → Request production access, 용도: 학교 학부모조합 회원 대상 트랜잭션 메일, 예상 일 100통 이하) — 승인 1일 내외, 컷오버 한 달 전에는 신청한다.
+- 반송·불만(bounce/complaint)은 SES 콘솔 지표로 확인. 회원 주소는 XE 에서 이관되므로 죽은 주소가 섞여 있다 — 첫 대량 발송 전에 목록을 한 번 점검한다.
+
 ## ⚠️ 실제로 겪은 함정 — 어기면 깨진다
 
 | 함정 | 내용 | 위반 시 |

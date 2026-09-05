@@ -24,6 +24,20 @@ data "aws_iam_policy_document" "task_deploy_info" {
   }
 }
 
+# 트랜잭션 메일(lib/mail.ts) — 검증된 도메인 identity 로만 발신
+data "aws_iam_policy_document" "task_mail" {
+  statement {
+    actions   = ["ses:SendEmail", "ses:SendRawEmail"]
+    resources = [local.shared.ses_identity_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "task_mail" {
+  name   = "ses-send"
+  role   = aws_iam_role.task.id
+  policy = data.aws_iam_policy_document.task_mail.json
+}
+
 resource "aws_iam_role_policy" "task_deploy_info" {
   name   = "deploy-info-read"
   role   = aws_iam_role.task.id

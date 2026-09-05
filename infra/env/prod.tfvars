@@ -11,7 +11,8 @@ use_spot      = false
 
 environment = {
   NEXT_PUBLIC_SITE_URL = "https://prod.gforest.or.kr"
-  SITE_INDEXABLE       = "false" # 정식 도메인이 아닌 동안 검색엔진 차단 (proxy.ts X-Robots-Tag + robots.txt)
+  SITE_INDEXABLE       = "false"                 # 정식 도메인이 아닌 동안 검색엔진 차단 (proxy.ts X-Robots-Tag + robots.txt)
+  MAIL_FROM            = "noreply@gforest.or.kr" # SES 도메인 검증 + 프로덕션 액세스 승인이 전제
   MEDIA_BUCKET         = "gforest-media-prod-106360388338"
   AWS_REGION           = "ap-northeast-2"
 }
