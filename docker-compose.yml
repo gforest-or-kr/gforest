@@ -51,6 +51,27 @@ services:
         mc mb --ignore-existing local/gforest-media-local
       "
 
+  # XE(cafe24) 원본 DB 복제본 — ETL(db/tools/xe) 전용. `docker compose --profile xe up -d xe`
+  # db/tools/xe/dump/*.sql.gz 를 최초 기동 때 자동 임포트한다(phpMyAdmin 내보내기 결과, 개인정보 포함 → gitignore).
+  xe:
+    image: mariadb:10.6
+    profiles: ["xe"]
+    environment:
+      MARIADB_ROOT_PASSWORD: xe
+      MARIADB_DATABASE: purunsup7
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_allowed_packet=256M
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - xe-data:/var/lib/mysql
+      - ./db/tools/xe/dump:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
 volumes:
   db-data:
   minio-data:
+  xe-data:

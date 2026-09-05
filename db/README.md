@@ -9,7 +9,7 @@ RDS Postgres 스키마·시드·부트스트랩. **콘솔 수동 변경 금지**
 | `bootstrap_rds.sql` | RDS 최초 1회: `auth.users`·`auth.uid()` 셔임·RLS 적용 앱 롤 `gforest_app` |
 | `bootstrap.sh` | 위 두 가지 + (boards 가 비어 있으면) seed 를 순서대로 적용. `local` 이면 샘플 데이터까지 |
 | `local/` | 로컬 전용: `sample.sql`(테스트 계정·글), `reset.sh`(`npm run db:reset`) |
-| `tools/` | 1회성 컷오버 도구. 평소에는 쓰지 않는다 |
+| `tools/xe/` | XE1(cafe24) → 신규 이관 도구(ETL·첨부 복사·매핑). 컷오버까지 반복 사용. `tools/xe/README.md` |
 
 ## 적용
 

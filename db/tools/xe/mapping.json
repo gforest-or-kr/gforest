@@ -1,0 +1,61 @@
+{
+  "_comment": "XE → 신규 매핑 설정. 게시판은 boards.legacy_mid(시드)로 자동 매핑되고, 여기 없는 게시판은 archive 로 간다. 바꾸고 다시 돌리면 legacy_* 키로 덮어쓴다.",
+
+  "archiveBoard": {
+    "slug": "archive",
+    "name": "옛 게시판 보관",
+    "menu_group": "커뮤니티",
+    "sort_order": 999,
+    "read_roles": ["admin"],
+    "write_roles": ["admin"]
+  },
+
+  "roleByGroup": {
+    "_comment": "XE 그룹명 → 역할. 여러 그룹이면 우선순위(admin > operator > teacher > student > member)가 높은 쪽.",
+    "admin": "admin",
+    "운영위원": "operator",
+    "행정실": "operator",
+    "교사": "teacher",
+    "강사": "teacher",
+    "방과후교사/유치원": "teacher",
+    "학생": "student",
+    "학부모": "member",
+    "학부모회": "member",
+    "프로젝트팀": "member",
+    "기본": "member",
+    "OB": "member"
+  },
+  "inactiveToPendingAfterDays": 730,
+
+  "staticPages": {
+    "_comment": "static_pages.slug ← XE page 모듈 mid 목록(여러 개면 가장 최근 문서). 본문은 그 모듈의 문서 1건.",
+    "about": ["page_QziY51"],
+    "curriculum": ["page_XUIF39"],
+    "waldorf": ["page_GDgR99"],
+    "inclusive": ["page_AKQA33"],
+    "class-lower": ["page_Dxqj69"],
+    "class-upper": ["page_jGvM81"],
+    "timetable": ["page_HQWP50", "page_LItK60"],
+    "after-school": ["page_gkHt66", "after_school"],
+    "faq": ["page_vxdb95"],
+    "organization": ["page_sLEF80"],
+    "history": ["page_wVHN38", "prs_history"],
+    "admission": ["page_GUId37"],
+    "location": ["page_wqQs37"]
+  },
+
+  "extraVarLabels": {
+    "_comment": "문서 확장변수(eid) → 본문 끝 표에 붙일 라벨. 없는 eid 는 eid 그대로. ext_plan_* 은 일정 필드로 흡수되어 표에 넣지 않는다.",
+    "insert_date": "작성일",
+    "settl_name": "청구자",
+    "settl_money": "금액",
+    "settl_date": "지급 희망일",
+    "bank_name": "은행",
+    "bank_num": "계좌번호",
+    "bank_username": "예금주",
+    "Stu_name": "학생 이름",
+    "P_name_01": "보호자",
+    "grade_2019": "학년"
+  },
+  "sensitiveExtraVars": ["bank_num", "bank_username", "settl_name", "Stu_name", "P_name_01"]
+}

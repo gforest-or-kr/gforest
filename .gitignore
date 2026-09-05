@@ -53,3 +53,5 @@ infra/**/crash.log
 # Claude Code (개인 설정·메모는 커밋하지 않는다)
 .claude/settings.local.json
 CLAUDE.local.md
+# XE 원본 덤프(개인정보 포함) — 절대 커밋 금지
+db/tools/xe/dump/
