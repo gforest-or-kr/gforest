@@ -6,8 +6,8 @@
 ## 접근 방법
 
 - **cloudId / 사이트**: `gforest.atlassian.net`
-- **Claude 세션**: Atlassian MCP 서버(`atlassian`)가 연결돼 있으면 `mcp__atlassian__*` 도구로 직접 작업.
-  연결돼 있지 않으면 `claude mcp add --transport http atlassian https://mcp.atlassian.com/v1/mcp` 후 OAuth.
+- **Claude 세션**: repo 의 `.mcp.json` 이 정의하는 `atlassian-gforest` 서버(`mcp__atlassian-gforest__*` 도구)만 쓴다.
+  `.env` 의 `ATLASSIAN_EMAIL`/`ATLASSIAN_API_TOKEN` 을 읽어 뜨며 `uv` 가 필요하다. **다른 Atlassian MCP(회사 계정 등)는 이 프로젝트에서 쓰지 않는다.**
 - **스크립트/REST**: `.env`의 `ATLASSIAN_EMAIL` + `ATLASSIAN_API_TOKEN`으로 Basic 인증
   (`Authorization: Basic base64(email:token)`). `.env`는 gitignore — 커밋 금지.
 - 토큰 분실/재발급: id.atlassian.com → Security → API tokens.
