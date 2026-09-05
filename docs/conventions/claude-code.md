@@ -16,11 +16,22 @@
 
 ## 2. 세션을 열었을 때 (사람도 Claude도 동일)
 
-1. `git pull` — `develop` 최신화. 작업은 거기서 딴 `<type>/<GFM-키>-<slug>` 브랜치에서 ([branching-and-release.md](./branching-and-release.md)).
-2. Jira 이슈를 `진행 중`으로. 없으면 만든다. **세션 간 맥락 인수인계의 단일 진실은 Jira 이슈 코멘트 + PR 본문**이다 — 개인 메모리·채팅 기록은 머신을 넘어가지 않는다.
+1. **`/task GFM-n`** — develop 최신화 + 브랜치 + 이슈 `진행 중` + 맥락 로드를 한 번에(§2-1). 수동으로 하면: `git pull` 후 `<type>/<GFM-키>-<slug>` 브랜치 ([branching-and-release.md](./branching-and-release.md)).
+2. Jira 이슈가 없으면 먼저 만든다. **세션 간 맥락 인수인계의 단일 진실은 Jira 이슈 코멘트 + PR 본문**이다 — 개인 메모리·채팅 기록은 머신을 넘어가지 않는다.
 3. 로컬 인프라: `npm run db:up`(Docker Compose Postgres·MinIO). `gh auth status`. AWS 는 인프라 담당만(`aws sso login --profile gforest --use-device-code`).
-4. PR 전에 `npm run check`(tsc·eslint·build) 통과. Claude 에게도 "check 통과 후 PR" 을 시킨다 — CI 는 필요조건이지 로컬 검증의 대체가 아니다.
-5. 끝낼 때: PR 올리고 Jira에 "어디까지 했고 다음은 무엇" 한 줄. 미완성 브랜치는 push해 둔다(로컬에만 두지 않는다).
+4. **`/pr`** — `npm run check` 통과 → 커밋 → push → PR → Jira 인수인계까지. CI 는 필요조건이지 로컬 검증의 대체가 아니다.
+5. 끝낼 때 PR 을 못 올렸으면 **`/handover`** — push + Jira 에 "어디까지 했고 다음은 무엇". 미완성 브랜치는 push해 둔다(로컬에만 두지 않는다).
+
+### 2-1. 공용 명령 (`.claude/commands/`, repo 에 포함 — 모든 머신에서 동일)
+
+| 명령 | 하는 일 | 하지 않는 일 |
+|---|---|---|
+| `/task GFM-n` | 이슈 `진행 중` 전환 → develop 최신화 → `<type>/GFM-n-<slug>` 브랜치 → 이슈·인수인계 코멘트 요약 → 로컬 환경 확인 | 코드 수정 시작, stash |
+| `/pr` | `npm run check` → 커밋(트레일러) → push → **develop 대상 PR**(제목 규약) → Jira 인수인계 코멘트 + `검토 중` | 병합, check 실패 시 자동 수정 |
+| `/handover [GFM-n]` | 세션 끝: push 확인 + Jira 인수인계 코멘트(§5 템플릿) | 이슈 상태 변경 |
+| `/release` | (Owner) `develop → main` 릴리스 PR, 포함 PR 목록·마이그레이션 여부 본문 | 병합, prod 승인 |
+
+명령은 절차를 고정할 뿐 판단을 대신하지 않는다 — 멈추고 묻는 지점(미커밋 변경, check 실패, 이슈 없음)이 의도된 것이다. 절차를 바꾸려면 명령 파일을 PR 로 고친다(규약 문서와 함께).
 
 ## 3. 머신마다 맞춰야 하는 것 (1회)
 
@@ -32,7 +43,7 @@
 | AWS (**인프라 담당만**) | `aws` CLI v2, Terraform ≥1.10, `~/.aws/config`에 `gforest` SSO 프로필 (`infra/shared/README.md`) | Identity Center 사용자는 Owner가 만들어 준다. 일반 개발자는 AWS 계정이 없다 |
 | `.env` | `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`(본인 계정 토큰) | Jira/Confluence MCP·스크립트 공용 |
 | Claude Code MCP | repo의 `.mcp.json`이 `atlassian-gforest` 서버를 정의(`.env`를 읽음). `uv` 설치 필요 | 회사 Atlassian 등 **다른 MCP는 이 프로젝트에서 쓰지 않는다** |
-| Claude Code 권한 | repo의 `.claude/settings.json`(공유 허용 목록). 개인 추가는 `.claude/settings.local.json`(gitignore) | 위험 명령(rm -rf, terraform apply, git push --force)은 허용 목록에 넣지 않는다 |
+| Claude Code 권한 | repo의 `.claude/settings.json`(공유 허용 목록 — 공용 명령이 쓰는 git/gh/npm 포함). 개인 추가는 `.claude/settings.local.json`(gitignore) | 위험 명령(rm -rf, terraform apply/destroy, git push --force, gh pr merge)은 허용 목록에 넣지 않는다 — 매번 확인창이 뜨는 것이 의도 |
 
 ## 4. Claude Code를 쓸 때의 규칙
 
