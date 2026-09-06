@@ -38,8 +38,8 @@ node -v        # v22.x
 brew install --cask docker
 open -a Docker  # 첫 실행 — 메뉴바 고래 아이콘이 멈출 때까지 기다린다
 
-# 4) 에디터 (선택: VS Code)
-brew install --cask visual-studio-code
+# 4) 에디터 (선택: VS Code) · DB 클라이언트 (DBeaver Community — 무료, 제한 없음)
+brew install --cask visual-studio-code dbeaver-community
 
 # 5) Claude Code (선택)
 curl -fsSL https://claude.ai/install.sh | bash
@@ -58,9 +58,10 @@ claude --version
 wsl --install -d Ubuntu
 # 재부팅 후 Ubuntu 창이 뜨면 리눅스 사용자명·비밀번호 설정
 
-# 2) Docker Desktop, VS Code (winget — Windows 10/11 기본 포함)
+# 2) Docker Desktop, VS Code, DBeaver (winget — Windows 10/11 기본 포함)
 winget install -e --id Docker.DockerDesktop
 winget install -e --id Microsoft.VisualStudioCode
+winget install -e --id dbeaver.dbeaver
 ```
 
 Docker Desktop 실행 → Settings → **General: "Use the WSL 2 based engine"** 켬 → **Resources → WSL integration: Ubuntu 켬** → Apply.
@@ -137,6 +138,17 @@ npm run dev        # http://localhost:3000
 | 다른 계정 | `admin.test@`(관리자), `operator.test@`(운영위원), `pending.test@`(승인 대기) — 비밀번호 동일 |
 | http://localhost:9001 | MinIO 콘솔 (minioadmin / minioadmin), 버킷 `gforest-media-local` |
 
+### 6-1. DB 를 GUI 로 보기 — DBeaver
+
+스키마·데이터는 로컬 DB 에서 본다(dev/prod RDS 는 개발자가 직접 붙지 않는다). DBeaver Community 는 Apache 라이선스라 조건 없이 무료다. Windows 는 WSL 이 아니라 **Windows 쪽에 설치**하고 `localhost` 로 붙으면 된다(Docker Desktop 이 포트를 Windows 에 노출한다).
+
+1. DBeaver 실행 → `Database` → `New Database Connection` → **PostgreSQL** → Next. (처음이면 드라이버 다운로드 확인창이 뜬다 → Download)
+2. 접속 정보 — Host `localhost`, Port `5432`, Database `gforest`, Username `gforest_admin`, Password `gforest`. "Save password" 체크 → `Test Connection` → Finish.
+3. 왼쪽 트리에서 `gforest` → `Schemas` → `public` → `Tables` 로 테이블·컬럼·인덱스, `auth` 스키마에 사용자 테이블. 테이블 우클릭 → `View Data` 로 내용, `SQL Editor`(⌘])로 쿼리.
+4. 팁: `Schemas` 우클릭 → `View Diagram` 이 ER 다이어그램을 그려 준다. 트리에 `information_schema`·`pg_catalog` 만 보이면 연결 설정 → `PostgreSQL` 탭 → "Show all databases" 를 켠다.
+
+`gforest_admin` 은 RLS 를 우회하는 관리자 롤이다. 앱과 같은 권한으로(RLS 걸린 채) 보고 싶으면 사용자 `gforest_app` / 비밀번호 `gforest_app` 으로 연결을 하나 더 만든다 — 이때는 세션에 `select set_config('app.user_id', '<프로필 uuid>', false);` 를 먼저 실행해야 회원 게시판이 보인다.
+
 - 실제 사이트 모양의 데이터(글 4만 건, 가명화)가 필요하면 담당자에게 **가명화 덤프**를 요청한다. 받은 파일은 `npm run db:reset` 후 `gunzip -c gforest-anon.sql.gz | docker compose exec -T db psql -U gforest_admin -d gforest` 로 넣는다. 원본 XE 덤프(개인정보)는 배포하지 않는다.
 - 끝낼 때 `npm run db:down`(컨테이너 정지, 데이터 유지). 꼬이면 `npm run db:reset`(전부 초기화, 20초).
 - 사용 포트: 3000(앱), 5432(Postgres), 9000/9001(MinIO). 로컬에 다른 Postgres 가 5432 를 쓰고 있으면 그것을 멈추거나 `docker-compose.yml` 의 포트를 바꾼다(커밋하지 말 것).
@@ -194,6 +206,7 @@ develop→main ─── 같은 파이프라인이 prod 로 (Owner 승인 후) +
 - [ ] `node -v` 22, `docker compose version` 정상
 - [ ] `npm run db:up` → 컨테이너 2개 healthy, `npm run dev` → localhost:3000 로그인 성공
 - [ ] `npm run check` 통과
+- [ ] DBeaver 로 `localhost:5432/gforest` 접속, `public.boards` 38행 확인
 - [ ] `.env`·`.env.local` 이 `git status` 에 안 나옴
 - [ ] (Claude) `claude` 로그인, `/task` 가 목록에 보임, Jira 이슈를 읽어 옴
 - [ ] Discord `#deploy` 알림 수신
