@@ -149,7 +149,7 @@
 
 ## 13. 운영 DB 조회 (dbshell)
 
-**언제**: dev/prod RDS 의 실제 데이터를 봐야 할 때(배포 후 이상 확인, 회원 상태 점검). 스키마·데이터 모양만 보려면 로컬 DB(§10)로 충분하다. **누가**: 인프라 담당(Identity Center). RDS 는 계속 비공개다 — 공개로 열지 않는다.
+**언제**: dev/prod RDS 의 실제 데이터를 봐야 할 때(배포 후 이상 확인, 회원 상태 점검). 스키마·데이터 모양만 보려면 로컬 DB(DBeaver, [onboarding.md](./onboarding.md) §6-1)로 충분하다. **누가**: 인프라 담당(Identity Center). RDS 는 계속 비공개다 — 공개로 열지 않는다.
 
 ```sh
 aws sso login --profile gforest --use-device-code
