@@ -1,0 +1,8 @@
+# 줄바꿈 정규화 — Windows(WSL) 에서도 쉘 스크립트가 LF 로 체크아웃되게
+* text=auto
+*.sh text eol=lf
+*.mjs text eol=lf
+*.sql text eol=lf
+*.png binary
+*.jpg binary
+*.drawio text
