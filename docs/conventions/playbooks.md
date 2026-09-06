@@ -18,6 +18,7 @@
 | 로컬이 꼬였다 | [§10](#10-로컬-환경-복구) |
 | 세션을 끝낸다 / 이어받는다 | [§11](#11-세션-인수인계) |
 | 문서·다이어그램을 고친다 | [§12](#12-문서다이어그램-갱신) |
+| dev/prod DB 를 직접 봐야 한다 | [§13](#13-운영-db-조회-dbshell) |
 
 ---
 
@@ -145,3 +146,19 @@
 - 규칙이 바뀌면 **repo 문서가 먼저**(`CLAUDE.md` = 원칙, `docs/conventions/` = 절차, `docs/design` = 근거). Confluence 의 규약 페이지는 미러 — 같은 PR 에서 갱신하거나 PR 본문에 "Confluence 갱신 필요" 를 남긴다.
 - 다이어그램은 `docs/diagrams/*.drawio` 가 원본. 고치면 PNG 도 다시 만들어 Confluence 에 올린다(모바일 앱은 draw.io 매크로를 못 그린다). 작성법·페이지 ID 는 [atlassian.md](./atlassian.md).
 - 결정·함정을 새로 겪었으면 [cicd-and-ops.md](./cicd-and-ops.md) 의 함정 표 또는 이 문서에 한 줄 추가한다.
+
+## 13. 운영 DB 조회 (dbshell)
+
+**언제**: dev/prod RDS 의 실제 데이터를 봐야 할 때(배포 후 이상 확인, 회원 상태 점검). 스키마·데이터 모양만 보려면 로컬 DB(§10)로 충분하다. **누가**: 인프라 담당(Identity Center). RDS 는 계속 비공개다 — 공개로 열지 않는다.
+
+```sh
+aws sso login --profile gforest --use-device-code
+AWS_PROFILE=gforest db/tools/dbshell.sh dev --readonly   # 조회만 (기본으로 이걸 쓴다)
+AWS_PROFILE=gforest db/tools/dbshell.sh dev              # 관리자, 쓰기 가능 — 데이터 수정은 마이그레이션이 원칙, 정말 필요할 때만
+AWS_PROFILE=gforest db/tools/dbshell.sh dev --app        # 앱 롤(gforest_app) — RLS 가 걸린 채로 (권한 문제 재현용)
+```
+
+- VPC 안에 postgres 컨테이너를 띄우고(10~20초) ECS Exec 으로 psql 이 열린다. `\q` 로 나가면 컨테이너는 자동 정리된다. 세션 기록은 CloudWatch `/ecs/gforest-exec`(90일).
+- 필요한 것: aws CLI v2 + `session-manager-plugin`(`brew install --cask session-manager-plugin`, 관리자 권한 없으면 AWS 배포 zip 의 `bin/session-manager-plugin` 을 `~/.local/bin` 에).
+- prod 에서는 `--readonly` 만 쓴다. 쓰기가 필요한 상황이면 마이그레이션 파일(§1)로 만들어 릴리스한다.
+- 옛 방식(RDS 비상 개방)은 dbshell 이 안 될 때의 최후 수단이다.

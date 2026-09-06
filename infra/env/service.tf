@@ -130,6 +130,67 @@ resource "aws_ecs_task_definition" "migrate" {
   }])
 }
 
+# dbshell — VPC 안에서 psql 을 여는 일회성 태스크 (db/tools/dbshell.sh). RDS 를 공개로 열지 않고 운영 DB 를 본다.
+# 앱 롤이 아닌 별도 롤(ssmmessages 만). 시작 후 아무것도 하지 않고 대기(sleep) → 사람이 ECS Exec 으로 들어가 psql 실행.
+resource "aws_iam_role" "dbshell" {
+  name = "${local.name}-dbshell"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
+  })
+}
+
+data "aws_iam_policy_document" "dbshell_exec" {
+  statement {
+    actions   = ["ssmmessages:CreateControlChannel", "ssmmessages:CreateDataChannel", "ssmmessages:OpenControlChannel", "ssmmessages:OpenDataChannel"]
+    resources = ["*"]
+  }
+  statement {
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"]
+    resources = ["arn:aws:logs:ap-northeast-2:${local.shared.account_id}:log-group:/ecs/gforest-exec:*"]
+  }
+}
+
+resource "aws_iam_role_policy" "dbshell_exec" {
+  name   = "ecs-exec"
+  role   = aws_iam_role.dbshell.id
+  policy = data.aws_iam_policy_document.dbshell_exec.json
+}
+
+resource "aws_ecs_task_definition" "dbshell" {
+  family                   = "${local.name}-dbshell"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = local.shared.task_execution_role_arn
+  task_role_arn            = aws_iam_role.dbshell.arn
+
+  runtime_platform {
+    operating_system_family = "LINUX"
+    cpu_architecture        = "ARM64"
+  }
+
+  container_definitions = jsonencode([{
+    name      = "psql"
+    image     = "public.ecr.aws/docker/library/postgres:17-alpine"
+    essential = true
+    command   = ["sleep", "7200"] # 최대 2시간. dbshell.sh 가 끝나면 stop-task 한다
+    secrets = [
+      { name = "PGURL_ADMIN", valueFrom = "arn:aws:ssm:ap-northeast-2:${local.shared.account_id}:parameter/gforest/${local.env}/DATABASE_ADMIN_URL" },
+      { name = "PGURL_APP", valueFrom = "arn:aws:ssm:ap-northeast-2:${local.shared.account_id}:parameter/gforest/${local.env}/DATABASE_URL" },
+    ]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.app.name
+        awslogs-region        = "ap-northeast-2"
+        awslogs-stream-prefix = "dbshell"
+      }
+    }
+  }])
+}
+
 resource "aws_lb_target_group" "app" {
   name        = local.name
   port        = 3000

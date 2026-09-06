@@ -17,6 +17,7 @@ RDS Postgres 스키마·시드·부트스트랩. **콘솔 수동 변경 금지**
 |---|---|
 | **local** | `npm run db:up` (= `docker compose up` + `db/bootstrap.sh local`). 컨테이너 안 psql 을 쓰므로 libpq 불필요 |
 | **dev / prod** | 배포 파이프라인(`ecs-deploy.yml`)이 새 이미지로 서비스를 갱신하기 전에 VPC 안에서 미적용 마이그레이션을 적용한다. 사람이 손으로 돌리지 않는다 |
+| 운영 DB 조회 | `AWS_PROFILE=gforest db/tools/dbshell.sh dev --readonly` — VPC 안에서 psql (playbooks §13) |
 | 비상(수동) | `AWS_PROFILE=gforest db/bootstrap.sh dev` — RDS 를 잠깐 열어야 한다(`docs/conventions/cicd-and-ops.md` 비상 절차). 끝나면 즉시 닫는다 |
 
 - 재실행해도 안전하다 — 이미 기록된 version 은 건너뛴다. 시드는 `boards` 가 비어 있을 때만 들어간다.

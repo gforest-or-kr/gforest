@@ -5,6 +5,21 @@ resource "aws_ecs_cluster" "main" {
     name  = "containerInsights"
     value = "disabled" # 비용 절감. 필요 시 enhanced로
   }
+
+  # ECS Exec(dbshell 등 컨테이너 안 셸) 세션 로그 — 누가 언제 무엇을 실행했는지 남긴다
+  configuration {
+    execute_command_configuration {
+      logging = "OVERRIDE"
+      log_configuration {
+        cloud_watch_log_group_name = aws_cloudwatch_log_group.exec.name
+      }
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "exec" {
+  name              = "/ecs/${var.app_name}-exec"
+  retention_in_days = 90
 }
 
 resource "aws_ecs_cluster_capacity_providers" "main" {
