@@ -18,6 +18,8 @@
 
 ## 로컬 개발 (AWS 계정 불필요)
 
+처음이면 **[온보딩 가이드](./docs/conventions/onboarding.md)**(계정·설치·Windows/WSL·문제 해결)부터.
+
 개발은 각자 로컬에서 한다 — Docker Compose 의 Postgres 17 + MinIO(S3 호환)가 DB·미디어 저장소를 대신한다. **AWS 접근은 필요 없다.**
 
 ```bash
