@@ -52,9 +52,9 @@ jobs:
             if [ "$n" = 0 ]; then v="v$d"; else v="v$d.$((n+1))"; fi
             echo "new_tag=$v" >> "$GITHUB_OUTPUT"
           else
-            # dev: 마지막 릴리스 이후 거리 v2026.09.05-3-gabc1234 (태그 없으면 0.0.0-gabc1234). 롤백(dispatch)은 그 태그 이름
+            # dev: 마지막 릴리스 이후 거리 v2026.09.05-3-gabc1234. 릴리스 태그가 아직 없으면 dev-<누적 커밋수>-gabc1234. 롤백(dispatch)은 그 태그 이름
             v=$(git describe --tags --always --match 'v*' 2>/dev/null || true)
-            case "$v" in v*) ;; *) v="0.0.0-g${v}";; esac
+            case "$v" in v*) ;; *) v="dev-$(git rev-list --count HEAD)-g${v}";; esac
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
@@ -167,8 +167,9 @@ jobs:
             *)       icon="⚠️" ;;
           esac
           subject=$(printf '%s\n' "$COMMIT_MSG" | head -1 | cut -c1-160)
-          # 일반 메시지(content) 3줄 — embed 카드는 채널에서 너무 크다. 링크는 <…> 로 감싸 미리보기 카드를 막는다.
-          msg=$(printf '%s [%s] 배포 %s — %s · %s\n> %s\n확인 <%s/version> · 로그 <%s>' \
+          # 일반 메시지(content) 3줄 — embed 카드는 채널에서 너무 크다.
+          # 링크는 마스크 링크 [글자](<url>) 로 짧게 — 웹훅 메시지는 마스크 링크를 렌더한다. flags 4 = SUPPRESS_EMBEDS(미리보기 카드 차단)
+          msg=$(printf '%s [%s] 배포 %s — %s · %s\n> %s\n[확인](<%s/version>) · [로그](<%s>)' \
             "$icon" "$ENV_NAME" "$STATUS" "$VERSION" "$ACTOR" "$subject" "$SITE_URL" "$RUN_URL")
-          jq -n --arg m "$msg" '{ content: $m, allowed_mentions: { parse: [] } }' \
+          jq -n --arg m "$msg" '{ content: $m, flags: 4, allowed_mentions: { parse: [] } }' \
             | curl -sS -o /dev/null -w "discord %{http_code}\n" -H "Content-Type: application/json" -d @- "$WEBHOOK"
