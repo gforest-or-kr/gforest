@@ -3,65 +3,44 @@
 > "이런 상황이면 이렇게 한다"를 사례별로 적은 문서. 사람도 Claude 세션도 **해당 사례를 찾아 그대로 따른다.**
 > 원칙은 `CLAUDE.md`, 규칙의 이유는 각 규약 문서([README](./README.md))에 있다. 여기는 순서만 있다.
 > 모든 사례의 공통 뼈대: **`/task GFM-n` → 로컬에서 만들고 검증 → `/pr` → develop 병합 → dev 에서 눈으로 확인.**
+>
+> **절차의 원본은 두 곳으로 나뉜다.** 판단이 필요한 사례(§1·2·5·7·8·9·13)는 `.claude/skills/<이름>/SKILL.md` 가 원본이다 — Claude 세션이 `/이름` 으로 호출하면 그 순서가 로드되고, `/compact`(요약) 뒤에도 다시 호출하면 복구된다. 사람은 같은 파일을 읽으면 된다. 나머지 사례는 이 문서가 원본이다.
 
-| 사례 | 바로가기 |
-|---|---|
-| DB 스키마를 바꾼다 | [§1](#1-db-스키마-변경) |
-| 게시판을 추가·수정·권한 변경한다 | [§2](#2-게시판-추가수정권한-변경) |
-| 화면·기능을 추가한다 | [§3](#3-화면기능-추가) |
-| 버그를 고친다 | [§4](#4-버그-수정) |
-| prod 가 급하다 (핫픽스) | [§5](#5-핫픽스) |
-| prod 에 내보낸다 (릴리스) | [§6](#6-릴리스) |
-| 환경변수·비밀값을 추가한다 | [§7](#7-환경변수비밀값-추가) |
-| 인프라(Terraform)를 바꾼다 | [§8](#8-인프라-변경) |
-| dev 데이터를 다시 넣는다 | [§9](#9-dev-데이터-재투입) |
-| 로컬이 꼬였다 | [§10](#10-로컬-환경-복구) |
-| 세션을 끝낸다 / 이어받는다 | [§11](#11-세션-인수인계) |
-| 문서·다이어그램을 고친다 | [§12](#12-문서다이어그램-갱신) |
-| dev/prod DB 를 직접 봐야 한다 | [§13](#13-운영-db-조회-dbshell) |
+| 사례 | 원본 | 바로가기 |
+|---|---|---|
+| DB 스키마를 바꾼다 | skill `db-migration` | [§1](#1-db-스키마-변경) |
+| 게시판을 추가·수정·권한 변경한다 | skill `add-board` | [§2](#2-게시판-추가수정권한-변경) |
+| 화면·기능을 추가한다 | 이 문서 | [§3](#3-화면기능-추가) |
+| 버그를 고친다 | 이 문서 | [§4](#4-버그-수정) |
+| prod 가 급하다 (핫픽스) | skill `hotfix` | [§5](#5-핫픽스) |
+| prod 에 내보낸다 (릴리스) | 이 문서 + `/release` | [§6](#6-릴리스) |
+| 환경변수·비밀값을 추가한다 | skill `env-var` | [§7](#7-환경변수비밀값-추가) |
+| 인프라(Terraform)를 바꾼다 | skill `infra-change` | [§8](#8-인프라-변경) |
+| dev 데이터를 다시 넣는다 | skill `dev-reseed` | [§9](#9-dev-데이터-재투입) |
+| 로컬이 꼬였다 | 이 문서 | [§10](#10-로컬-환경-복구) |
+| 세션을 끝낸다 / 이어받는다 | 이 문서 + `/handover` `/task` | [§11](#11-세션-인수인계) |
+| 문서·다이어그램을 고친다 | 이 문서 | [§12](#12-문서다이어그램-갱신) |
+| dev/prod DB 를 직접 봐야 한다 | skill `dbshell` | [§13](#13-운영-db-조회-dbshell) |
 
 ---
 
 ## 1. DB 스키마 변경
 
-**언제**: 테이블·컬럼·인덱스·RLS 정책·함수·트리거를 바꿀 때. (게시판 추가는 §2 — 스키마가 아니라 데이터다.)
+**원본**: [`.claude/skills/db-migration/SKILL.md`](../../.claude/skills/db-migration/SKILL.md) · 규칙: [`.claude/rules/db.md`](../../.claude/rules/db.md), [`db/README.md`](../../db/README.md)
 
-**순서**
-1. `db/migrations/<14자리>_<snake_name>.sql` 새 파일. 숫자는 기존 파일보다 크게(`date +%Y%m%d%H%M%S`). 한 파일 = 한 가지 변경 = 한 트랜잭션.
-2. `npm run db:up` — 미적용 파일만 로컬 Postgres 에 순서대로 적용된다. 처음부터 다시 보려면 `npm run db:reset`.
-3. `lib/db/types.ts` 의 Row 타입을 새 컬럼에 맞춘다. 쿼리·화면을 고친다.
-4. 새 테이블이면 같은 파일 안에 `alter table … enable row level security` + `create policy …` 를 기존 `posts` 정책을 본떠 쓴다. `gforest_app` 권한은 기본 권한 설정으로 자동으로 붙는다.
-5. `npm run dev` 로 화면 확인 → `npm run check` → `/pr`.
-6. develop 병합 → 배포 파이프라인이 **서비스 갱신 전에** `gforest-dev-migrate` 태스크로 이 파일을 dev RDS 에 적용한다. Actions 로그에서 `apply <파일명>` / `migrations: 1 applied` 확인. 실패하면 앱은 이전 버전 그대로다.
-7. prod 에는 릴리스(§6) 때 같은 단계가 실행된다.
-
-**하지 말 것**
-- 이미 적용된 파일 수정(고치려면 새 파일). RDS 콘솔·psql 로 dev/prod 직접 변경.
-- 하위 호환 깨기: 컬럼 삭제·이름 변경은 코드가 더는 쓰지 않는 **다음 릴리스**에서. 추가 컬럼은 nullable 또는 default.
-- 트랜잭션 안에서 못 도는 문장(`create index concurrently` 등).
-- BaaS 전용 객체(`storage.*`, `auth.jwt()`) — 표준 Postgres 만.
-
-**확인**: 로컬 `docker compose exec -T db psql -U gforest_admin -d gforest -c "select * from schema_migrations order by 1"`, dev 는 배포 로그.
+요지: `db/migrations/<14자리>_<snake>.sql` 새 파일 → `npm run db:up` → `lib/db/types.ts` Row 타입 → `npm run check` → `/pr` → 병합 시 파이프라인이 서비스 갱신 전에 dev RDS 에 적용. 적용된 파일 수정 금지, 하위 호환(추가는 nullable, 삭제는 다음 릴리스), 표준 Postgres 만, `legacy_*` 불변.
 
 ## 2. 게시판 추가·수정·권한 변경
 
-**언제**: 게시판을 새로 만들거나, 이름·메뉴 위치·읽기/쓰기 역할·유형(list/gallery/calendar/reservation)을 바꿀 때.
+**원본**: [`.claude/skills/add-board/SKILL.md`](../../.claude/skills/add-board/SKILL.md)
 
-**순서**
-1. **코드가 아니라 데이터다.** 관리자 화면(`/admin/boards`, admin 계정)에서 추가·수정한다. 저장 시 `menu` 태그가 무효화돼 헤더·목록에 즉시 반영된다.
-2. 권한 판단은 `boards.read_roles / write_roles` + RLS 가 한다. 화면 코드에 `if (role === …)` 를 새로 넣지 않는다(있다면 UI 노출용일 뿐).
-3. **모든 환경에 같은 초기값이 필요한 게시판**(새로 만드는 환경에서도 있어야 하는 것)은 `db/seed.sql` 에도 넣는다. 시드는 `boards` 가 비어 있을 때만 들어가므로 기존 환경에는 관리자 화면으로 같은 내용을 넣어야 한다.
-4. 통폐합(옛 게시판 글을 다른 게시판으로 옮기기)은 **ETL 매핑**(`db/tools/xe/mapping.json`, `boards.legacy_mid`)으로 한다 — 컷오버 전까지는 dev 에 다시 투입(§9)하면 반영된다. 컷오버 후에는 `update posts set board_id …` 마이그레이션(§1).
-
-**하지 말 것**: 게시판마다 페이지·컴포넌트 새로 만들기(템플릿 5종으로 끝나야 한다), 권한 분기 중복 구현.
-
-**확인**: 비로그인·member·operator 계정으로 각각 목록이 보이는지/안 보이는지. 테스트 계정은 `db/local/sample.sql`(로컬·dev 공통).
+요지: 코드가 아니라 데이터다 — 관리자 화면 `/admin/boards` 로 추가·수정(저장 시 `menu` 태그 무효화). 모든 환경에 필요한 초기값은 `db/seed.sql` 에도. 권한은 `read_roles/write_roles` + RLS 가 판단하고 앱에 분기를 두지 않는다. 통폐합은 ETL 매핑(`mapping.json`, `legacy_mid`).
 
 ## 3. 화면·기능 추가
 
 **순서**
 1. `/task GFM-n` (이슈 없으면 먼저 만든다 — 한 이슈 = 한 브랜치 = 한 PR).
-2. 데이터 접근은 서버에서만: 서버 컴포넌트·서버 액션 안에서 `withUser(userId, …)` (공개 데이터는 `withUser(null, …)` + `unstable_cache` + 태그). 클라이언트 컴포넌트는 서버 액션만 호출한다. 패턴은 [code-patterns.md](./code-patterns.md) §3~§6.
+2. 데이터 접근은 서버에서만: 서버 컴포넌트·서버 액션 안에서 `withUser(userId, …)` (공개 데이터는 `withUser(null, …)` + `unstable_cache` + 태그). 클라이언트 컴포넌트는 서버 액션만 호출한다. 패턴은 [code-patterns.md](./code-patterns.md) §3~§6 (Claude 는 `app/**`·`lib/**` 를 열면 `.claude/rules/app.md` 가 자동 로드된다).
 3. 쓰기 액션은 성공 후 관련 태그를 무효화한다(`board:<slug>`, `post:<id>`, `menu`). 표는 `docs/design/rendering.md`.
 4. 모바일 퍼스트 단일 반응형, 탭 타겟 44px+, 다크모드 없음. 색은 `app/globals.css` 의 forest 팔레트.
 5. 이미지 업로드는 `createUploadUrl` → presigned PUT (로컬은 MinIO). 새 업로드 종류를 만들지 않는다.
@@ -79,13 +58,9 @@
 
 ## 5. 핫픽스
 
-**언제**: prod 에 당장 고쳐야 할 문제가 있고, develop 에는 아직 내보내면 안 되는 변경이 섞여 있을 때. 급하지 않으면 그냥 develop 을 거친다(더 단순하다).
+**원본**: [`.claude/skills/hotfix/SKILL.md`](../../.claude/skills/hotfix/SKILL.md) · 규칙: [branching-and-release.md](./branching-and-release.md) §5
 
-1. `git fetch && git checkout -b hotfix/GFM-n-<slug> origin/main`.
-2. 수정 → 로컬 검증 → `npm run check` → PR **base=main** (`release-guard` 가 hotfix/* 를 허용한다).
-3. `ci`·`release-guard` 초록 → **merge commit** 으로 병합 → Actions 에서 Owner 가 prod 배포 승인 → 태그 자동.
-4. 배포 후 `sync-develop` 워크플로가 `main → develop` 역병합 PR 을 연다 → 확인하고 **merge commit** 으로 합친다(squash 금지).
-5. Jira 이슈에 "핫픽스로 나감" 을 남긴다.
+요지: 급하지 않으면 develop 을 거친다. 급하면 `origin/main` 에서 `hotfix/GFM-n-<slug>` → PR base=main(`release-guard` 허용) → **merge commit** → Owner 가 prod 배포 승인 → 태그 자동 → `sync-develop` 이 연 역병합 PR 을 merge commit 으로.
 
 ## 6. 릴리스
 
@@ -100,29 +75,21 @@
 
 ## 7. 환경변수·비밀값 추가
 
-**평문 값**(URL, 버킷 이름, 플래그): `infra/env/dev.tfvars`·`prod.tfvars` 의 `environment` 에 추가 → `.env.local.example` 에도 추가 → 인프라 담당이 `terraform apply` → 다음 배포부터 반영(워크플로가 최신 태스크 정의를 복제한다). 코드에서는 `process.env.X`, 없을 때 기본값을 둔다.
+**원본**: [`.claude/skills/env-var/SKILL.md`](../../.claude/skills/env-var/SKILL.md)
 
-**비밀값**(토큰, 키): 코드·tfvars·`.env.local.example` 에 값을 쓰지 않는다. 인프라 담당이 SSM `/gforest/<env>/<NAME>` 에 넣고 `secret_parameters` 에 이름만 추가 → apply. 로컬은 `.env.local` 에 본인 값. 채팅에 붙여넣은 키는 오염된 것으로 보고 로테이션한다.
-
-**빌드 시점에 필요한 값**(`NEXT_PUBLIC_*`)은 `ecs-deploy.yml` 의 build-args 로 넘겨야 한다 — 드물다. 필요하면 인프라 담당과 PR.
+요지: 평문은 `infra/env/*.tfvars` `environment` + `.env.local.example` → 인프라 담당 apply. 비밀값은 값을 어디에도 쓰지 않고 SSM `/gforest/<env>/<NAME>` + `secret_parameters` 이름만. 로컬은 `.env.local`. 채팅에 붙여넣은 키는 로테이션.
 
 ## 8. 인프라 변경
 
-**누가**: 인프라 담당(AWS SSO 보유자). 개발자는 PR 로 제안할 수 있다(`infra/**` 변경 PR 은 `infra` 워크플로가 fmt/validate 를 돈다).
+**원본**: [`.claude/skills/infra-change/SKILL.md`](../../.claude/skills/infra-change/SKILL.md) · 규칙: [`.claude/rules/infra.md`](../../.claude/rules/infra.md), [cicd-and-ops.md](./cicd-and-ops.md)
 
-1. `infra/GFM-n-<slug>` 브랜치. `infra/shared`(계정 공통) 또는 `infra/env`(환경별) 수정. 리전 변수는 바꾸지 않는다.
-2. `terraform fmt` → `terraform validate` → `terraform plan -var-file=dev.tfvars` 결과를 **PR 본문에 요약**(추가/변경/삭제 개수와 대상).
-3. 병합 후 담당자가 로컬에서 `aws sso login --profile gforest --use-device-code` → `terraform workspace select dev && terraform apply -var-file=dev.tfvars`. prod 는 릴리스와 별개로 담당자가 시점을 정해 apply.
-4. **콘솔에서 만든 리소스는 존재하지 않는 것**으로 취급한다(Terraform 밖). 비용이 붙는 리소스는 Budgets 문서와 대조.
-5. RDS 비상 개방(`db_publicly_accessible=true` + 본인 IP)은 작업 후 **즉시** 되돌린다 — 켜 둔 채 퇴근하지 않는다.
+요지: `infra/GFM-n-<slug>` 브랜치 → `terraform fmt`·`validate`·`plan` 을 PR 본문에 요약 → 병합 후 담당자가 로컬에서 apply(dev 먼저, prod 는 별도 시점). 콘솔 리소스는 없는 것, 비용은 Budgets 와 대조, RDS 비상 개방은 즉시 되돌린다.
 
 ## 9. dev 데이터 재투입
 
-**언제**: 게시판 매핑·역할 규칙을 바꿔 실제 글 모양을 다시 보고 싶을 때, dev 데이터가 어지러워졌을 때. 로컬은 언제든, dev 는 인프라 담당이.
+**원본**: [`.claude/skills/dev-reseed/SKILL.md`](../../.claude/skills/dev-reseed/SKILL.md) · 도구: [`db/tools/xe/README.md`](../../db/tools/xe/README.md)
 
-**로컬**: `npm run db:reset` → `npm run xe:etl -- --anonymize` (20초) → 필요하면 `npm run xe:files -- --since 2025` (첨부 본체, 900MB). XE 복제본이 없으면 `db/tools/xe/README.md` §1.
-
-**dev**(인프라 담당): RDS 비상 개방 → `db/tools/xe/reset-env.sh dev` → ETL(가명화) → 첨부 복사 → RDS 닫기. 명령은 `db/tools/xe/README.md` §2. 테스트 계정 4개는 자동으로 다시 생긴다. **prod 에는 이 스크립트가 실행되지 않는다.**
+요지: 로컬은 `npm run db:reset` → `npm run xe:etl -- --anonymize` → (선택) `npm run xe:files -- --since 2025`. dev 는 인프라 담당이 RDS 비상 개방 → `reset-env.sh dev` → ETL → 첨부 복사 → 닫기. prod 에는 실행되지 않는다.
 
 ## 10. 로컬 환경 복구
 
@@ -134,31 +101,24 @@
 | 메일이 안 온다 | `MAIL_FROM` 없으면 서버 콘솔에 링크가 찍힌다(정상) |
 | `docker compose` 이미지 pull 이 멈춘다 | Docker Desktop 재시작. 그래도 안 되면 잠시 뒤 재시도(2026-09-05 겪음 — 몇 시간 뒤 저절로 풀림) |
 | `next build` 는 되는데 CI 가 깨진다 | 빌드 시점 DB 접근이 들어갔다(§3-6) |
+| Claude 가 compact 뒤에 규칙을 잊은 것 같다 | hook 이 띄운 skill 목록에서 해당 사례를 다시 호출시킨다(`/db-migration` 등). `/context` 로 CLAUDE.md·rules 로드 여부 확인 |
 
 ## 11. 세션 인수인계
 
 - 끝낼 때: PR 을 올렸으면 `/pr` 이 Jira 코멘트까지 남긴다. 못 올렸으면 **`/handover`** — push + Jira 에 "한 것/남은 것/막힌 것".
 - 이어받을 때: `/task GFM-n` 이 이슈 본문과 인수인계 코멘트를 요약해 준다. 다른 사람의 브랜치를 이어 쓰지 말고, 남은 일이 크면 이슈를 쪼갠다.
 - 개인 메모리·채팅 기록은 머신을 넘지 않는다. 팀이 알아야 할 사실은 이 문서들 또는 Confluence 로.
+- 긴 세션에서 `/compact` 가 돌면 대화는 요약으로 바뀐다. CLAUDE.md·rules·호출했던 skill 은 복구되지만 Read 로 읽은 문서 내용은 사라진다 — `.claude/hooks/on-compact.sh` 가 브랜치·이슈·skill 목록을 다시 띄우고, Claude 는 진행 중 사례의 skill 을 다시 호출한 뒤 계속한다([claude-code.md](./claude-code.md) §2-2).
 
 ## 12. 문서·다이어그램 갱신
 
-- 규칙이 바뀌면 **repo 문서가 먼저**(`CLAUDE.md` = 원칙, `docs/conventions/` = 절차, `docs/design` = 근거). Confluence 의 규약 페이지는 미러 — 같은 PR 에서 갱신하거나 PR 본문에 "Confluence 갱신 필요" 를 남긴다.
+- 규칙이 바뀌면 **repo 문서가 먼저**(`CLAUDE.md` = 원칙, `docs/conventions/` = 절차, `.claude/skills` = 절차의 Claude 실행본, `docs/design` = 근거). Confluence 의 규약 페이지는 미러 — 같은 PR 에서 갱신하거나 PR 본문에 "Confluence 갱신 필요" 를 남긴다.
+- skill 을 고치면 이 문서의 요지도, 규칙(`.claude/rules`)을 고치면 해당 규약 문서도 같은 PR 에서 맞춘다. 두 곳이 어긋나면 skill/rule 이 아니라 **문서를 원본 쪽에 맞춘다**(skill 이 원본인 사례는 skill 이 이긴다).
 - 다이어그램은 `docs/diagrams/*.drawio` 가 원본. 고치면 PNG 도 다시 만들어 Confluence 에 올린다(모바일 앱은 draw.io 매크로를 못 그린다). 작성법·페이지 ID 는 [atlassian.md](./atlassian.md).
 - 결정·함정을 새로 겪었으면 [cicd-and-ops.md](./cicd-and-ops.md) 의 함정 표 또는 이 문서에 한 줄 추가한다.
 
 ## 13. 운영 DB 조회 (dbshell)
 
-**언제**: dev/prod RDS 의 실제 데이터를 봐야 할 때(배포 후 이상 확인, 회원 상태 점검). 스키마·데이터 모양만 보려면 로컬 DB(DBeaver, [onboarding.md](./onboarding.md) §6-1)로 충분하다. **누가**: 인프라 담당(Identity Center). RDS 는 계속 비공개다 — 공개로 열지 않는다.
+**원본**: [`.claude/skills/dbshell/SKILL.md`](../../.claude/skills/dbshell/SKILL.md) · 도구: `db/tools/dbshell.sh`
 
-```sh
-aws sso login --profile gforest --use-device-code
-AWS_PROFILE=gforest db/tools/dbshell.sh dev --readonly   # 조회만 (기본으로 이걸 쓴다)
-AWS_PROFILE=gforest db/tools/dbshell.sh dev              # 관리자, 쓰기 가능 — 데이터 수정은 마이그레이션이 원칙, 정말 필요할 때만
-AWS_PROFILE=gforest db/tools/dbshell.sh dev --app        # 앱 롤(gforest_app) — RLS 가 걸린 채로 (권한 문제 재현용)
-```
-
-- VPC 안에 postgres 컨테이너를 띄우고(10~20초) ECS Exec 으로 psql 이 열린다. `\q` 로 나가면 컨테이너는 자동 정리된다. 세션 기록은 CloudWatch `/ecs/gforest-exec`(90일).
-- 필요한 것: aws CLI v2 + `session-manager-plugin`(`brew install --cask session-manager-plugin`, 관리자 권한 없으면 AWS 배포 zip 의 `bin/session-manager-plugin` 을 `~/.local/bin` 에).
-- prod 에서는 `--readonly` 만 쓴다. 쓰기가 필요한 상황이면 마이그레이션 파일(§1)로 만들어 릴리스한다.
-- 옛 방식(RDS 비상 개방)은 dbshell 이 안 될 때의 최후 수단이다.
+요지: 인프라 담당만. `aws sso login --profile gforest --use-device-code` → `AWS_PROFILE=gforest db/tools/dbshell.sh dev --readonly`(기본) / 관리자 / `--app`(RLS 재현). VPC 안 컨테이너 + ECS Exec, RDS 는 계속 비공개, 기록은 CloudWatch `/ecs/gforest-exec`. prod 는 `--readonly` 만.

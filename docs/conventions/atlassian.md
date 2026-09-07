@@ -124,3 +124,19 @@
 - 실제 키·토큰·DB 비밀번호·테스트 계정·웹훅 URL → Confluence **05 운영 > "인프라·자격증명
   레퍼런스"** 페이지(팀 전용 보안 경계). repo·이 문서에는 두지 않는다.
 - 로컬 비밀값: `.env`(Atlassian), `.env.local`(DB 접속 문자열·AUTH_SECRET·S3 설정). 둘 다 gitignore.
+
+---
+
+## Confluence 미러 갱신 함정 (`atlassian-gforest` MCP, markdown 본문)
+
+repo 의 `docs/conventions/*.md` 를 `confluence_update_page`(markdown)로 미러할 때 실제로 겪은 것. Claude 는 `docs/**` 를 열면 `.claude/rules/docs.md` 로 같은 내용을 자동으로 본다.
+
+| 함정 | 처방 |
+|---|---|
+| 한 줄에 달러 기호가 두 개 있으면 그 사이가 수식으로 렌더된다(금액 두 개를 한 줄에 쓸 때) | 금액은 `USD 3.97` 처럼 통화 코드로 쓴다 |
+| 상대 `.md` 링크(`./playbooks.md`, `../../db/README.md`)는 Confluence 에서 깨진다(❌ 표시) | 올리기 전에 `https://github.com/gforest-or-kr/gforest/blob/develop/<경로>` 로 바꾼다 |
+| `content_file` 은 repo 밖 경로를 읽지 못한다 | `.tmp-confluence/` 에 임시 파일을 만들고 올린 뒤 삭제한다(커밋하지 않는다) |
+| `page_width` 를 넘기지 않으면 기존 값이 유지되고, `full-width` 를 넘기면 페이지 너비가 바뀐다 | **넘기지 않는다** — 팀 결정(2026-09-06): 모든 페이지 기본 너비 |
+| 패널·접기 등 Confluence 전용 요소 | 위 "페이지 작성법" 의 `contentFormat: html` + `data-type` 규칙 |
+
+미러 페이지: 개발 협업 규약 하위(온보딩 `27721765`, 플레이북 `27754504`, AWS 구성 현황 `27721796`). ID 는 이 문서의 섹션 표와 함께 갱신한다.
