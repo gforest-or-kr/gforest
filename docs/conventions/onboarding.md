@@ -162,7 +162,8 @@ claude            # 첫 실행: 브라우저로 claude.ai 로그인
 
 - 저장소의 `.mcp.json` 이 Atlassian MCP 서버(`atlassian-gforest`)를 정의한다. 첫 세션에서 "프로젝트 MCP 서버를 쓸까요?" 확인창이 뜨면 **허용**한다. `.env` 의 토큰을 읽어 뜬다(`uv` 필요).
 - `CLAUDE.md`(원칙)와 `.claude/settings.json`(허용 명령)은 저장소에 있어 자동 적용된다. 개인 설정은 `.claude/settings.local.json`, 개인 메모는 `CLAUDE.local.md`(둘 다 gitignore).
-- 공용 명령: `/task GFM-n`(작업 시작), `/pr`(PR 까지), `/handover`(인수인계), 상세는 [claude-code.md](./claude-code.md) §2-1.
+- 공용 명령: `/task GFM-n`(작업 시작), `/pr`(PR 까지), `/handover`(인수인계), 상세는 [claude-code.md](./claude-code.md) §2-1. 사례별 절차는 skill(`/db-migration`, `/add-board`, `/hotfix`, `/env-var`, `/infra-change`, `/dev-reseed`, `/dbshell`)로 있어 Claude 가 상황에 맞춰 스스로 호출한다.
+- `/context` 를 치면 `CLAUDE.md` 와 `.claude/rules/` 가 로드됐는지 보인다. 긴 세션에서 `/compact`(요약)가 돌면 hook 이 브랜치·skill 목록을 다시 띄우는데, 그 뒤 Claude 가 skill 을 다시 호출하고 이어가는지 지켜본다(안 하면 `/db-migration` 처럼 직접 호출). 배경은 [claude-code.md](./claude-code.md) §2-2.
 - 회사 등 **다른 Atlassian MCP 가 이미 연결돼 있으면 이 프로젝트에서는 쓰지 않는다** — `gforest.atlassian.net` 은 `atlassian-gforest` 서버만.
 
 ## 8. 첫 작업 — 흐름 익히기
@@ -208,5 +209,5 @@ develop→main ─── 같은 파이프라인이 prod 로 (Owner 승인 후) +
 - [ ] `npm run check` 통과
 - [ ] DBeaver 로 `localhost:5432/gforest` 접속, `public.boards` 38행 확인
 - [ ] `.env`·`.env.local` 이 `git status` 에 안 나옴
-- [ ] (Claude) `claude` 로그인, `/task` 가 목록에 보임, Jira 이슈를 읽어 옴
+- [ ] (Claude) `claude` 로그인, `/task`·`/db-migration` 이 목록에 보임, `/context` 에 `CLAUDE.md` 가 보임, Jira 이슈를 읽어 옴
 - [ ] Discord `#deploy` 알림 수신

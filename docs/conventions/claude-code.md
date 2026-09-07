@@ -7,6 +7,7 @@
 | 층 | 파일 | 성격 | 누가 바꾸나 |
 |---|---|---|---|
 | **헌법** | `CLAUDE.md` (루트) | 원칙과 절대 규칙. Claude 세션에 **자동 로드**. 짧게, 바뀌지 않게 | 팀 합의로만 (PR 리뷰 필수) |
+| **Claude 실행본** | `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, `.claude/commands/*.md`, `.claude/hooks/` | 규약을 Claude 가 **잊지 않게** 만든 형태 — rule 은 파일을 열 때 자동 로드, skill 은 사례를 시작할 때 호출, hook 은 compact 뒤 재주입(§2-2) | 규약 문서와 같은 PR 로 |
 | **규약(how-to)** | `docs/conventions/*.md` | **사례별 절차(playbooks)**, 브랜치·릴리스, CI/CD·운영, 코드 패턴, Jira·Confluence 작성, 이 문서 | 담당자가 PR로. README 목차 갱신 |
 | **설계·근거** | `docs/design/*`, `docs/research/*`, `docs/plans/*` | 왜 이렇게 결정했나. 낡으면 "역사적 문서" 배너 | 결정이 바뀔 때 |
 | **코드 곁 문서** | `infra/*/README.md`, 파일 상단 주석 | 그 폴더를 열었을 때 바로 필요한 실행법 | 코드와 함께 |
@@ -32,6 +33,31 @@
 | `/release` | (Owner) `develop → main` 릴리스 PR, 포함 PR 목록·마이그레이션 여부 본문 | 병합, prod 승인 |
 
 명령은 절차를 고정할 뿐 판단을 대신하지 않는다 — 멈추고 묻는 지점(미커밋 변경, check 실패, 이슈 없음)이 의도된 것이다. 절차를 바꾸려면 명령 파일을 PR 로 고친다(규약 문서와 함께).
+
+### 2-2. rules · skills · compact 대비 (`.claude/`, repo 에 포함)
+
+**왜 필요한가.** 긴 세션에서 `/compact`(자동 포함)가 돌면 대화가 요약으로 바뀐다. 이때 살아남는 것과 사라지는 것이 다르다:
+
+| 무엇 | compact 뒤 |
+|---|---|
+| 루트 `CLAUDE.md`, `paths` 없는 rule, 자동 메모리 | 디스크에서 통째로 재주입 |
+| `paths` 가 있는 rule (`.claude/rules/*.md`) | 매칭되는 파일을 다시 읽을 때 재로드 (compact 직후 최근 수정 파일 최대 5개는 자동) |
+| 호출했던 skill 본문 | 재주입 (skill 당 5,000토큰, 합계 25,000토큰까지) |
+| **skill 목록(설명 줄)** | **재주입되지 않는다** → hook 이 다시 띄운다 |
+| Read 로 읽은 `docs/conventions/*.md` 내용 | **요약으로 대체돼 사라진다**(5,000토큰 넘는 파일은 경로만 남음) |
+
+그래서 "참고할 것" 문장만 두면 규칙이 있다는 사실은 남고 내용은 없어진다. 규칙은 rule 로, 절차는 skill 로 둔다.
+
+| 층 | 파일 | 언제 로드 | 내용 |
+|---|---|---|---|
+| rule | `.claude/rules/db.md` (`db/**`, `lib/db/**`) · `app.md` (`app/**`, `lib/**`, `components/**`) · `infra.md` (`infra/**`, `.github/**`) · `docs.md` (`docs/**`, `CLAUDE.md`, `.claude/**`) | 해당 경로 파일을 읽거나 수정할 때 자동 | 1~2KB 의 "반드시" 목록. 이유는 규약 문서에 링크 |
+| skill | `.claude/skills/{db-migration,add-board,hotfix,env-var,infra-change,dev-reseed,dbshell}/SKILL.md` | 사례를 시작할 때 Claude 가 스스로 호출하거나 사람이 `/이름` | playbooks §1·2·5·7·8·9·13 의 원본 절차 |
+| command | `.claude/commands/{task,pr,handover,release}.md` | 사람이 `/이름` | 브랜치·PR·인수인계·릴리스 절차(§2-1) |
+| hook | `.claude/hooks/on-compact.sh` (`settings.json` `SessionStart` matcher `compact`) | compact 직후 자동 | 브랜치·이슈·미커밋 변경·skill 목록 + "skill 을 다시 호출할 것" |
+
+- **확인법**: `/context` 에 `CLAUDE.md` 와 로드된 rule 이 보인다. compact 뒤에는 터미널에 hook 출력이 보이고, Claude 가 이어서 일하기 전에 skill 을 다시 호출해야 정상이다. 호출하지 않으면 사람이 `/db-migration` 처럼 직접 호출해 준다.
+- **쓰는 법**: rule 은 짧게(파일당 1~2KB), 이유·배경은 쓰지 않고 규약 문서에 링크한다. skill 은 5,000토큰 이내, 가장 중요한 순서를 위에(넘치면 뒤가 잘린다). `@import` 로 규약 문서 전체를 CLAUDE.md 에 넣지 않는다 — 매 세션 2만 토큰을 싣게 되고 compact 내성은 rule/skill 로 충분하다.
+- **바꾸는 법**: rule 을 고치면 해당 규약 문서를, skill 을 고치면 `playbooks.md` 의 요지를 같은 PR 에서 맞춘다(playbooks §12).
 
 ## 3. 머신마다 맞춰야 하는 것 (1회) — 처음이면 [onboarding.md](./onboarding.md)
 

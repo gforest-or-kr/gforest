@@ -55,3 +55,4 @@ infra/**/crash.log
 CLAUDE.local.md
 # XE 원본 덤프(개인정보 포함) — 절대 커밋 금지
 db/tools/xe/dump/
+.tmp-confluence/
