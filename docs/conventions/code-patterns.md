@@ -71,6 +71,7 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
   모바일 저속망 병목 제거).
 - 이미지 업로드는 **클라이언트 리사이즈(장변 1600px) 후** — S3 저장·전송 비용과 모바일 체감 속도 모두를 위해.
 - 페이지 전환 즉시 피드백을 위해 `loading.tsx`(스켈레톤)를 실제 레이아웃과 위치·높이 맞춰 둔다.
+- **레거시 본문·모바일 CSS 는 WebKit 으로도 확인한다.** 학부모 사용자 상당수가 iPhone 이고, Chromium 과 WebKit 의 렌더 차이가 실제 버그로 나타난다(GFM-49: Tailwind preflight 의 `ul,ol{padding:0}` 리셋 때문에 XE 본문의 목록 마커가 화면 왼쪽 끝에 붙는 문제를 Chromium 에서는 재현 못 하고 Playwright WebKit 390px 렌더로만 사용자 캡처와 일치시켰다). 도구: `npx playwright@1.61 install webkit` 후 `import { webkit }` 로 `viewport:{width:390}` 스크린샷. 레거시 본문 래퍼 CSS 는 `components/post-view.tsx` 의 `legacy_document_srl` 분기(목록 들여쓰기 `[&_ul]:pl-6`, 표 `[&_table]:block overflow-x-auto`, 자손 폭 `[&_*]:max-w-full`)에서 preflight 가 지운 기본 스타일을 복원한다.
 
 ## 8. 커밋 · 검증
 

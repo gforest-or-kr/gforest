@@ -7,6 +7,8 @@
 
 1. phpMyAdmin(`https://www.gforest.or.kr/xe/phpMyAdmin/`) → DB `purunsup7` → 내보내기 → 사용자 정의, gzip, 아래 15개 테이블:
    `xe_member xe_member_group xe_member_group_member xe_modules xe_module_extra_vars xe_menu xe_menu_item xe_documents xe_document_extra_keys xe_document_extra_vars xe_document_categories xe_comments xe_comments_list xe_files xe_tags`
+   - phpMyAdmin 의 **SQL 탭이 멈추면**(렌더러가 굳는 증상, 2026-09-05 겪음) 브라우저 콘솔에서 `import.php` 에 직접 요청한다: `fetch('import.php', {method:'POST', body: new URLSearchParams({token: PMA_commonParams.get('token'), ajax_request: true, sql_query: '...', db: 'purunsup7'})})`. 내보내기 화면도 폼을 JS 로 채우고 `#buttonGo` 를 누르면 된다.
+   - 첨부 본체는 FTP 없이 `https://www.gforest.or.kr/xe/files/attach/...` 로 로그인 없이 HTTP 수신된다(`copy-files.mjs` 가 이 경로를 쓴다).
 2. 받은 `*.sql.gz` 를 `db/tools/xe/dump/` 에 둔다(**gitignore — 개인정보**).
 3. `docker compose --profile xe up -d xe` → 최초 기동 때 자동 임포트(MariaDB 10.6, `127.0.0.1:3307`, root/xe). 다시 임포트하려면 `docker compose --profile xe down -v xe` 후 재기동.
 
