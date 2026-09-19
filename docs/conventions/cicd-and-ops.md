@@ -9,6 +9,7 @@
 - **공용 앵커 계정 1개**: `gforest.or.kr@gmail.com` — AWS root(`+aws`)·GitHub Org 청구(`+github`)·AWS 청구(`+billing`) 수신함.
   비밀번호·TOTP 시드·백업코드는 **Bitwarden Organization "gforest"** 금고에만 있다. 사람은 개인 계정, 권한은 조직 단위.
 - **GitHub**: Org `gforest-or-kr`, repo `gforest` (public — Free Org에서 브랜치 보호는 public에서만). 멤버는 개인 계정 + 2FA 필수.
+  **Owner 는 세 겹**: 일하는 Owner = 개인 계정 2명(Owner + 리더), **봉인 Owner** = 공용 Gmail 의 GitHub 계정(AWS root 와 같은 대우 — 2FA 시드·복구 코드는 Bitwarden, SSH 키·토큰·커밋·일상 로그인 금지, 두 개인 계정을 모두 잃었을 때만). 사람이 바뀌면 개인 Owner 를 추가·제거하고 봉인 계정은 그대로 둔다. 조직 청구·통지 메일은 `gforest.or.kr+github@gmail.com`.
 - **AWS**: 계정 1개(서울). root는 **봉인**(MFA, 액세스 키 없음, 일상 로그인 금지). 사람은 **IAM Identity Center**
   포털 `https://gforest.awsapps.com/start`(그룹 `admins` = AdministratorAccess 8h). CI는 **OIDC 롤** `gforest-github-deploy`.
   **장기 액세스 키는 어디에도 만들지 않는다.**
