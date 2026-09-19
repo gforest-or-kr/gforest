@@ -2,7 +2,7 @@
 
 > "이런 상황이면 이렇게 한다"를 사례별로 적은 문서. 사람도 Claude 세션도 **해당 사례를 찾아 그대로 따른다.**
 > 원칙은 `CLAUDE.md`, 규칙의 이유는 각 규약 문서([README](./README.md))에 있다. 여기는 순서만 있다.
-> 모든 사례의 공통 뼈대: **`/task GFM-n` → 로컬에서 만들고 검증 → `/pr` → develop 병합 → dev 에서 눈으로 확인.**
+> 모든 사례의 공통 뼈대: **`/task GFM-n` → 로컬에서 만들고 검증 → `/pr` → `/merge`(core·Owner; contributors 는 core 에게 요청) → dev 에서 눈으로 확인.**
 >
 > **절차의 원본은 두 곳으로 나뉜다.** 판단이 필요한 사례(§1·2·5·7·8·9·13)는 `.claude/skills/<이름>/SKILL.md` 가 원본이다 — Claude 세션이 `/이름` 으로 호출하면 그 순서가 로드되고, `/compact`(요약) 뒤에도 다시 호출하면 복구된다. 사람은 같은 파일을 읽으면 된다. 나머지 사례는 이 문서가 원본이다.
 
@@ -45,7 +45,7 @@
 4. 모바일 퍼스트 단일 반응형, 탭 타겟 44px+, 다크모드 없음. 색은 `app/globals.css` 의 forest 팔레트.
 5. 이미지 업로드는 `createUploadUrl` → presigned PUT (로컬은 MinIO). 새 업로드 종류를 만들지 않는다.
 6. 빌드 시점 DB 접근 금지(`generateStaticParams`, 정적 라우트에서 쿼리 X) — CI 는 DB 없이 빌드한다.
-7. `npm run check` → `/pr` → 병합 → `https://dev.gforest.or.kr/version` 에서 내 커밋 확인 → 화면 확인.
+7. `npm run check` → `/pr` → `/merge`(core·Owner) → `https://dev.gforest.or.kr/version` 에서 내 커밋 확인 → 화면 확인.
 
 **하지 말 것**: 새 라이브러리 추가(필요하면 PR 본문에 이유), 클라이언트에서 DB/인증 직접 접근, 큰 PR(며칠 넘게 들고 있기).
 
