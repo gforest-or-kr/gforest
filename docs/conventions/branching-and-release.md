@@ -68,6 +68,8 @@
 ## 7. 관련 설정 (변경 시 이 문서도 갱신)
 
 - 룰셋 `protect-develop`: PR 필수, `ci` 필수, 병합 방식 squash·merge, 삭제·강제 push 금지
+- 룰셋 `restrict-develop-merge`: develop 업데이트 제한. bypass = 팀 `core` + Org Owner. 즉 **PR 을 develop 에 병합할 수 있는 사람은 core 팀과 Owner 뿐**이고, `contributors` 팀은 PR 까지만(병합은 core 가 리뷰 후). 배포 권한은 팀과 무관하다(develop 병합 = dev 자동, prod = Owner 승인)
+- 팀: `core`·`contributors` 모두 repo **Write**. 사람을 옮길 때는 팀 멤버십만 바꾸고 룰셋은 손대지 않는다
 - 룰셋 `protect-main`(`refs/heads/main` 명시 — 기본 브랜치 참조 아님): PR 필수, `ci`·`release-guard` 필수, 병합 방식 merge commit 만, 삭제·강제 push 금지
 - 룰셋 `protect-release-tags`: `v*` 태그 갱신·삭제 금지(생성은 워크플로가 한다)
 - 저장소 설정: 기본 브랜치 `develop`, 병합 방식 merge·squash 허용(룰셋이 브랜치별로 고른다), 병합 후 브랜치 자동 삭제
