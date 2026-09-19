@@ -1,6 +1,6 @@
 ---
 description: 현재 브랜치를 PR로 — npm run check, 커밋(트레일러), push, develop 대상 PR, Jira 인수인계 코멘트·검토 중 전환
-allowed-tools: Bash(npm run check) Bash(git *) Bash(gh pr *) Bash(gh auth status) mcp__atlassian-gforest__jira_add_comment mcp__atlassian-gforest__jira_transition_issue mcp__atlassian-gforest__jira_get_issue
+allowed-tools: Bash(npm run check) Bash(git *) Bash(gh pr view *) Bash(gh pr create *) Bash(gh pr list *) Bash(gh pr checks *) Bash(gh auth status) mcp__atlassian-gforest__jira_add_comment mcp__atlassian-gforest__jira_transition_issue mcp__atlassian-gforest__jira_get_issue
 ---
 브랜치·변경 요약:
 !`git status --short --branch | head -20`

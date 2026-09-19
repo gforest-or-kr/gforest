@@ -26,9 +26,9 @@
 
 ## 개발 워크플로
 
-- **Claude Code 층**: `.claude/rules/`(db·app·infra·docs — 해당 파일을 읽을 때 자동 로드되는 "반드시" 목록) · `.claude/skills/`(사례별 절차: `db-migration` `add-board` `hotfix` `env-var` `infra-change` `dev-reseed` `dbshell`) · `.claude/commands/`(`/task` `/pr` `/handover` `/release`). 사례가 맞으면 skill 을 먼저 호출한다. **compact(요약) 후에는 요약만 믿고 이어가지 말고, 진행 중 사례의 skill 을 다시 호출하고 만지는 파일의 rule 이 로드된 것을 확인한 뒤 진행한다**(`.claude/hooks/on-compact.sh` 가 브랜치·skill 목록을 다시 띄운다)
+- **Claude Code 층**: `.claude/rules/`(db·app·infra·docs — 해당 파일을 읽을 때 자동 로드되는 "반드시" 목록) · `.claude/skills/`(사례별 절차: `db-migration` `add-board` `hotfix` `env-var` `infra-change` `dev-reseed` `dbshell`) · `.claude/commands/`(`/task` `/pr` `/merge` `/handover` `/release`). 사례가 맞으면 skill 을 먼저 호출한다. **compact(요약) 후에는 요약만 믿고 이어가지 말고, 진행 중 사례의 skill 을 다시 호출하고 만지는 파일의 rule 이 로드된 것을 확인한 뒤 진행한다**(`.claude/hooks/on-compact.sh` 가 브랜치·skill 목록을 다시 띄운다)
 - **로컬 우선**: 개발자는 AWS 계정 없이 로컬(Docker Compose Postgres·MinIO, `npm run db:up`)에서 개발·검증한다. dev RDS 에 직접 붙지 않는다. **PR 전에 `npm run check`**(tsc·eslint·build) 통과가 필수 — CI 초록은 필요조건일 뿐이다
-- **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `develop`(= dev 환경)과 `main`(= prod 환경) 둘. 작업은 `develop` 에서 딴 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합** → **dev 자동 배포**. **prod 배포 = `develop → main` 릴리스 PR 을 merge commit 으로**(Owner 승인) → 자동 배포 + 날짜 태그 `vYYYY.MM.DD`. 작업 브랜치에서 main 으로 직접 PR·태그 삭제·main/develop 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
+- **브랜치·릴리스 (필수 규칙)**: 장기 브랜치는 `develop`(= dev 환경)과 `main`(= prod 환경) 둘. 작업은 `develop` 에서 딴 `<type>/<GFM-키>-<slug>` 브랜치 → PR → `ci` 통과 → **squash 병합**(core 팀·Owner 만, `/merge`; contributors 는 core 에게 요청) → **dev 자동 배포**. **prod 배포 = `develop → main` 릴리스 PR 을 merge commit 으로**(Owner 승인) → 자동 배포 + 날짜 태그 `vYYYY.MM.DD`. 작업 브랜치에서 main 으로 직접 PR·태그 삭제·main/develop 직접 push 금지. 상세·핫픽스·롤백은 `docs/conventions/branching-and-release.md`
 - **Jira 동기화**: 작업 시작 시 해당 GFM 이슈를 `진행 중`으로, 완료 시 `완료`(리뷰 필요 시 `검토 중`)로 전환. 없는 작업은 이슈를 먼저 만든다. **세션·머신 간 인수인계는 Jira 코멘트 + PR 본문으로**(개인 메모리는 머신을 넘지 않는다). Confluence 계획서의 진행 현황은 Jira 매크로로 자동 연동되므로 위키를 수동 갱신하지 않는다
 - **커밋**: 관련 이슈 키를 메시지에 포함 (예: `feat: ... (GFM-2)`). PR 제목 = squash 커밋 제목
 - **문서 역할 분담**: 코드·SQL·다이어그램 원본(`docs/diagrams/*.drawio`)은 repo가 단일 진실, Confluence는 설계 설명·협업용. 설계 변경 시 둘 다 갱신
