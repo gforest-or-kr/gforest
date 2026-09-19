@@ -28,6 +28,7 @@
 - PR 제목 = squash 커밋 제목: `type: 무엇을 (GFM-n)` — 예 `feat: 댓글 좋아요 (GFM-85)`. 한국어, 짧게.
 - PR 본문: 무엇을/왜, 확인 방법(로컬에서 무엇을 봤나), 후속. Claude 가 만든 PR 은 세션 링크 트레일러를 포함한다.
 - 올리기 전 **`npm run check`**(tsc·eslint·`next build`) 로컬 통과. 병합 조건: `ci` 초록 + 리뷰 스레드 해결. 승인 수는 현재 0(인원이 적음) — 팀이 커지면 1 로 올린다.
+- **병합은 core 팀·Owner 가 한다**(룰셋 `restrict-develop-merge`, §7). CLI: `gh pr merge <n> --squash --delete-branch --admin`(Claude 는 `/merge`), 웹: 'Bypass rules and merge' 버튼. `contributors` 는 PR 까지 올리고 Discord `#dev` 에서 core 에게 병합을 요청한다.
 - 병합 후 **dev 에서 눈으로 확인**한다. `/version` 에서 자기 커밋이 배포됐는지 본다.
 
 ## 4. 릴리스 = `develop` → `main` PR
@@ -70,7 +71,7 @@
 - 룰셋 `protect-develop`: PR 필수, `ci` 필수, 병합 방식 squash·merge, 삭제·강제 push 금지
 - 룰셋 `restrict-develop-merge`: develop 업데이트 제한. bypass = 팀 `core` + Org Owner. 즉 **PR 을 develop 에 병합할 수 있는 사람은 core 팀과 Owner 뿐**이고, `contributors` 팀은 PR 까지만(병합은 core 가 리뷰 후). 배포 권한은 팀과 무관하다(develop 병합 = dev 자동, prod = Owner 승인)
 - 팀: `core`·`contributors` 모두 repo **Write**. 사람을 옮길 때는 팀 멤버십만 바꾸고 룰셋은 손대지 않는다
-  - 이 룰셋 때문에 develop 대상 PR 은 모든 사람에게 **BLOCKED** 로 표시되고, core·Owner 에게만 병합 버튼이 "Bypass rules and merge" 로 뜬다. **그 버튼으로 squash 병합하는 것이 정상 절차**다(우회가 아니라 룰셋이 병합 권한을 표현하는 방식). CLI 는 Owner 만 `gh pr merge --squash --admin` 이 되고, core 팀원은 웹에서 병합한다. 2026-09-19 확인(PR #80)
+  - 이 룰셋 때문에 develop 대상 PR 은 모든 사람에게 **BLOCKED** 로 표시되고, core·Owner 에게만 병합 버튼이 "Bypass rules and merge" 로 뜬다. **그 버튼으로 squash 병합하는 것이 정상 절차**다(우회가 아니라 룰셋이 병합 권한을 표현하는 방식). CLI 는 `gh pr merge <n> --squash --delete-branch --admin` — `--admin` 은 gh 가 BLOCKED 상태를 클라이언트에서 거르지 않게 하는 플래그일 뿐이고 허용은 서버가 bypass 권한으로 판단하므로 core 팀원도 된다(Claude 명령 `/merge`). Owner 로 확인(PR #80, 2026-09-19), core 팀원 첫 병합 때 재확인
 - 룰셋 `protect-main`(`refs/heads/main` 명시 — 기본 브랜치 참조 아님): PR 필수, `ci`·`release-guard` 필수, 병합 방식 merge commit 만, 삭제·강제 push 금지
 - 룰셋 `protect-release-tags`: `v*` 태그 갱신·삭제 금지(생성은 워크플로가 한다)
 - 저장소 설정: 기본 브랜치 `develop`, 병합 방식 merge·squash 허용(룰셋이 브랜치별로 고른다), 병합 후 브랜치 자동 삭제

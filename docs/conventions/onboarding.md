@@ -173,7 +173,7 @@ claude            # 첫 실행: 브라우저로 claude.ai 로그인
 3. 코드를 고치고 로컬에서 확인한다. 사례별 순서는 [playbooks.md](./playbooks.md).
 4. `npm run check` (tsc·eslint·build — CI 와 같은 검사).
 5. `/pr` (또는 수동: 커밋 → push → `gh pr create --base develop`). PR 제목은 `type: 무엇을 (GFM-n)`.
-6. GitHub 에서 `ci` 초록 확인 → 병합 권한자가 **squash** 병합.
+6. GitHub 에서 `ci` 초록 확인 → core 팀원이 **squash** 병합: `claude` 에서 `/merge`, 또는 웹의 'Bypass rules and merge' 버튼(룰셋 구조상 이 문구가 정상). contributors 는 Discord `#dev` 에 병합을 요청한다.
 7. 몇 분 뒤 `https://dev.gforest.or.kr/version` 에 내 커밋이 보이면 dev 에서 화면을 확인한다. Discord `#deploy` 에도 알림.
 
 **CI/CD 가 하는 일**(상세: [cicd-and-ops.md](./cicd-and-ops.md))

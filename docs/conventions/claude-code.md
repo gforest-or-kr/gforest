@@ -30,6 +30,7 @@
 | `/task GFM-n` | 이슈 `진행 중` 전환 → develop 최신화 → `<type>/GFM-n-<slug>` 브랜치 → 이슈·인수인계 코멘트 요약 → 로컬 환경 확인 | 코드 수정 시작, stash |
 | `/pr` | `npm run check` → 커밋(트레일러) → push → **develop 대상 PR**(제목 규약) → Jira 인수인계 코멘트 + `검토 중` | 병합, check 실패 시 자동 수정 |
 | `/handover [GFM-n]` | 세션 끝: push 확인 + Jira 인수인계 코멘트(§5 템플릿) | 이슈 상태 변경 |
+| `/merge [n]` | (core·Owner) develop 대상 PR: `ci` 초록 확인 → squash 병합(`gh pr merge --admin`, 룰셋 bypass) → develop 최신화 → Jira `완료` | main 병합, 체크 미통과·권한 거부 시 강행 |
 | `/release` | (Owner) `develop → main` 릴리스 PR, 포함 PR 목록·마이그레이션 여부 본문 | 병합, prod 승인 |
 
 명령은 절차를 고정할 뿐 판단을 대신하지 않는다 — 멈추고 묻는 지점(미커밋 변경, check 실패, 이슈 없음)이 의도된 것이다. 절차를 바꾸려면 명령 파일을 PR 로 고친다(규약 문서와 함께).
