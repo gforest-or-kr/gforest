@@ -1,0 +1,23 @@
+# CLAUDE.local.md — 개인 설정 (gitignore, 이 파일을 복사해서 쓴다)
+#
+#   cp CLAUDE.local.md.example CLAUDE.local.md
+#
+# 여기에는 **나에게만 해당하는 것**만 쓴다. 호칭·말투·출력 형식 취향, 내 머신의 경로·도구.
+# 팀이 알아야 할 사실(결정·함정·절차)은 여기가 아니라 repo(docs/conventions, .claude/rules·skills)나 Confluence 에 PR 로 올린다.
+# 이 프로젝트는 Claude 의 자동 메모리를 꺼 두었다(.claude/settings.json) — 개인 취향의 저장소는 이 파일이다.
+
+## 호칭·말투
+- 나를 "OO님" 으로 부른다. 반말/존댓말: 존댓말.
+- 답변은 결론부터, 표보다 문장을 선호한다.
+
+## 출력 형식
+- 인용 표시(`|`) 없이 평문으로 출력한다.
+- 긴 명령은 코드 블록으로.
+
+## 내 머신
+- 에디터: VS Code (`code .`)
+- psql 은 `/opt/homebrew/opt/libpq/bin` 에 있다 (또는 "psql 없음 — docker compose exec db psql 사용")
+- Docker Desktop 대신 Rancher Desktop 사용
+
+## 내가 자주 하는 실수 / Claude 가 잡아 줄 것
+- 브랜치 안 바꾸고 develop 에서 작업 시작하는 것 — /task 를 먼저 쓰라고 알려 달라.
