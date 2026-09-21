@@ -77,7 +77,7 @@
 - **CLAUDE.md는 명령이다.** 세션이 원칙과 충돌하는 제안을 하면 원칙이 이긴다. 원칙을 바꾸고 싶으면 PR로.
 - **팀 지식은 repo, 개인 취향은 `CLAUDE.local.md`.** 이 프로젝트는 Claude 자동 메모리를 **꺼 두었다**(`.claude/settings.json` `autoMemoryEnabled: false`, 2026-09-19 결정). 자동 메모리(`~/.claude/projects/...`)는 그 머신·그 사람에게만 남아 팀원 간 퍼포먼스 격차를 만들기 때문이다. 다른 사람이 알아야 할 사실(결정, 함정, 절차)은 `docs/conventions`·`.claude/rules·skills`·Confluence 에 PR 로 올린다. 호칭·말투·출력 형식·내 머신 경로는 `CLAUDE.local.md`(gitignore) — 템플릿 `CLAUDE.local.md.example` 을 복사해서 쓴다. 예전에 쌓인 메모리가 있으면 팀 사실인지 보고 repo 로 옮긴 뒤 지운다.
 - **비밀값은 채팅에 붙여넣지 않는다.** 붙여넣어야 했다면 그 키는 오염된 것으로 보고 로테이션한다. 값은 SSM/Bitwarden/`.env`에서 도구가 읽게 한다.
-- **커밋 트레일러**: Claude가 만든 커밋·PR에는 `Co-Authored-By`와 세션 링크가 붙는다. 지우지 않는다 — 나중에 "왜 이렇게 했지"를 세션에서 추적한다.
+- **커밋 트레일러**: Claude가 만든 커밋에는 `Co-Authored-By: Claude <이 세션의 실제 모델명> <noreply@anthropic.com>` 가 붙는다. 지우지 않는다. "왜 이렇게 했지"는 PR 본문 `무엇을/왜` 와 Jira 코멘트에 남긴다(§5).
 - **한 이슈 = 한 브랜치 = 한 세션 흐름.** 다른 이슈로 넘어가면 브랜치를 바꾼다. 병렬 작업은 `git worktree`(`EnterWorktree`)로 폴더를 분리한다.
 - **AI가 만든 변경도 사람이 dev에서 눈으로 확인**하고 나서 릴리스 PR(develop → main)을 연다. `ci` 초록은 필요조건이지 충분조건이 아니다.
 - **인프라 apply는 사람이 로컬에서.** Claude에게 `terraform apply`를 시킬 수 있지만 plan을 먼저 보고 승인한다. 콘솔 클릭으로 만든 리소스는 존재하지 않는 것으로 취급한다(Terraform 밖).
