@@ -26,7 +26,7 @@
 ## 3. PR · 커밋
 
 - PR 제목 = squash 커밋 제목: `type: 무엇을 (GFM-n)` — 예 `feat: 댓글 좋아요 (GFM-85)`. 한국어, 짧게.
-- PR 본문: 무엇을/왜, 확인 방법(로컬에서 무엇을 봤나), 후속. Claude 가 만든 PR 은 세션 링크 트레일러를 포함한다.
+- PR 본문: 무엇을/왜, 확인 방법(로컬에서 무엇을 봤나), 후속. Claude 가 만든 PR 은 본문 끝에 `🤖 Generated with Claude Code` 문구를 포함한다.
 - 올리기 전 **`npm run check`**(tsc·eslint·`next build`) 로컬 통과. 병합 조건: `ci` 초록 + 리뷰 스레드 해결. 승인 수는 현재 0(인원이 적음) — 팀이 커지면 1 로 올린다.
 - **병합은 core 팀·Owner 가 한다**(룰셋 `restrict-develop-merge`, §7). CLI: `gh pr merge <n> --squash --delete-branch --admin`(Claude 는 `/merge`), 웹: 'Bypass rules and merge' 버튼. `contributors` 는 PR 까지 올리고 Discord `#dev` 에서 core 에게 병합을 요청한다.
 - 병합 후 **dev 에서 눈으로 확인**한다. `/version` 에서 자기 커밋이 배포됐는지 본다.
