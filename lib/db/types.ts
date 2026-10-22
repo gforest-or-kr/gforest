@@ -469,6 +469,82 @@ export type Database = {
           },
         ]
       }
+      survey_answers: {
+        Row: {
+          question_id: string
+          response_id: string
+          value: Json
+        }
+        Insert: {
+          question_id: string
+          response_id: string
+          value: Json
+        }
+        Update: {
+          question_id?: string
+          response_id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_response_hashes: {
+        Row: {
+          browser_hash: string | null
+          ip_hash: string | null
+          response_id: string
+        }
+        Insert: {
+          browser_hash?: string | null
+          ip_hash?: string | null
+          response_id: string
+        }
+        Update: {
+          browser_hash?: string | null
+          ip_hash?: string | null
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_response_hashes_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: true
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_responses: {
+        Row: {
+          id: string
+          respondent_other: string | null
+          respondent_roles: string[]
+          response_no: number
+          submitted_at: string
+        }
+        Insert: {
+          id: string
+          respondent_other?: string | null
+          respondent_roles: string[]
+          response_no?: never
+          submitted_at?: string
+        }
+        Update: {
+          id?: string
+          respondent_other?: string | null
+          respondent_roles?: string[]
+          response_no?: never
+          submitted_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
