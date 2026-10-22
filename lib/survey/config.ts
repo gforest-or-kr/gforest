@@ -1,10 +1,25 @@
 // 질의서 응답 마감(SURVEY_CLOSES_AT)과 한국 시각 표시. 순수 모듈 — 서버(페이지·서버 액션)에서 쓴다.
-// 서버 시간대는 UTC(Fargate)라 오프셋 없는 값을 그대로 Date.parse 하면 9시간 어긋난다 → KST 로 읽는다.
+// 서버 시간대는 UTC(Fargate)라 오프셋 없는 값을 그대로 Date.parse 하면 9시간 어긋난다 → 직접 읽어 KST 로 둔다.
 // 미설정·해석 불가는 "열림"(오타로 설문이 닫히는 사고 방지) + 프로세스당 경고 한 번. 원래 값은 로그에 남기지 않는다.
 
 export type ClosesAt = { kind: "unset" } | { kind: "invalid" } | { kind: "set"; ms: number };
 
-const LOCAL_DATETIME = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/;
+// 받는 형태는 셋뿐이다(그 밖의 값 — 슬래시, 월 이름 등 — 은 해석 불가):
+//   2026-11-06T23:59(:59(.000))?(+09:00|Z)  오프셋·Z 가 있으면 그대로
+//   2026-11-06T23:59(:59(.000))?            오프셋이 없으면 KST (T 대신 공백도 됨)
+//   2026-11-06                              그날 23:59:59 KST
+// Date.parse 는 쓰지 않는다 — 서버 시간대(UTC)에 따라 해석이 달라지기 때문이다.
+const ISO_LIKE = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?([zZ]|[+-]\d{2}:?\d{2})?)?$/;
+const KST_OFFSET_MIN = 9 * 60;
+
+function offsetMinutes(off: string | undefined): number | null {
+  if (off === undefined) return KST_OFFSET_MIN;
+  if (off === "Z" || off === "z") return 0;
+  const hh = Number(off.slice(1, 3));
+  const mm = Number(off.slice(-2));
+  if (hh > 23 || mm > 59) return null;
+  return (off[0] === "-" ? -1 : 1) * (hh * 60 + mm);
+}
 
 // 표시·검증 모두 이 하나의 포맷터를 쓴다. hour12:false 는 자정을 "24:00" 으로 내는 엔진이 있어 hourCycle 을 쓴다.
 const KST = new Intl.DateTimeFormat("ko-KR", {
@@ -38,18 +53,32 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 export function parseClosesAt(raw: string | undefined): ClosesAt {
   const s = (raw ?? "").trim();
   if (s === "") return { kind: "unset" };
-  const m = LOCAL_DATETIME.exec(s);
-  if (m) {
-    const [, y, mo, d, h, mi, sec = "00"] = m;
-    const ms = Date.parse(`${y}-${mo}-${d}T${h}:${mi}:${sec}+09:00`);
-    if (Number.isNaN(ms)) return { kind: "invalid" };
-    // 2026-02-30 처럼 엔진이 다음 달로 넘겨 받아 주는 값은 거절(되돌려 본 KST 값이 입력과 같아야 함)
-    const p = kstParts(ms);
-    const same = p.y === +y && p.mo === +mo && p.d === +d && p.h === +h && p.mi === +mi && p.s === +sec;
-    return same ? { kind: "set", ms } : { kind: "invalid" };
-  }
-  const ms = Date.parse(s);
-  return Number.isNaN(ms) ? { kind: "invalid" } : { kind: "set", ms };
+  const m = ISO_LIKE.exec(s);
+  if (!m) return { kind: "invalid" };
+  const [, y, mo, d, h, mi, sec, frac, off] = m;
+  const dateOnly = h === undefined;
+  const wall = {
+    y: +y,
+    mo: +mo,
+    d: +d,
+    h: dateOnly ? 23 : +h,
+    mi: dateOnly ? 59 : +mi,
+    s: dateOnly ? 59 : +(sec ?? 0),
+  };
+  const offMin = offsetMinutes(off);
+  if (offMin === null) return { kind: "invalid" };
+  const fracMs = frac === undefined ? 0 : Number(frac.padEnd(3, "0"));
+  const wallMs = Date.UTC(wall.y, wall.mo - 1, wall.d, wall.h, wall.mi, wall.s, fracMs);
+  // 2026-02-30·25:00 처럼 Date.UTC 가 다음 칸으로 넘겨 받아 주는 값은 거절(되돌려 본 값이 입력과 같아야 함)
+  const back = new Date(wallMs);
+  const same =
+    back.getUTCFullYear() === wall.y &&
+    back.getUTCMonth() + 1 === wall.mo &&
+    back.getUTCDate() === wall.d &&
+    back.getUTCHours() === wall.h &&
+    back.getUTCMinutes() === wall.mi &&
+    back.getUTCSeconds() === wall.s;
+  return same ? { kind: "set", ms: wallMs - offMin * 60_000 } : { kind: "invalid" };
 }
 
 let warnedUnset = false;
