@@ -611,6 +611,26 @@
   font-size: 14px;
   color: var(--faint);
 }
+/* 항목 제목 + 우측 보조 건수(응답 N건 / 전체 M건). 제목이 없으면 건수만 오른쪽에 둔다 */
+.svy-sh--count {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+.svy-sh--count > .svy-faint {
+  margin-left: auto;
+  font-weight: 400;
+}
+/* 관리자 종이 바로 아래 요약 상자(응답 현황·구분별 건수)는 집계 기준 상자·바로가기와 같이 들여쓰지 않는다 */
+.svy-paper > .svy-lead-box {
+  margin-left: 0;
+}
+/* 관리자 Q1 행: 직접 쓴 답을 펼쳐 행이 길어져도 건수는 게시판명 줄에 둔다 */
+.svy-brd > .svy-qn {
+  align-self: start;
+}
 .svy-more {
   margin: 8px 0;
 }

@@ -53,8 +53,8 @@ const Nothing = () => <p className="svy-sm">표시 없음</p>;
 
 function SubHead({ title, answered, total }: { title: string | null; answered: number; total: number }) {
   return (
-    <p className="svy-sh">
-      {title ? `${title} ` : ""}
+    <p className="svy-sh svy-sh--count">
+      {title && <span>{title}</span>}
       <span className="svy-faint">
         응답 {answered}건 / 전체 {total}건
       </span>
