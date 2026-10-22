@@ -122,6 +122,40 @@
   padding-left: 20px;
 }
 
+/* ---- 표지(여는 쪽) ---- */
+.svy-cover-greet {
+  margin: 0 0 24px;
+}
+.svy-cover-how {
+  list-style: disc;
+  padding: 8px 12px 8px 32px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-cover-how li + li {
+  margin-top: 4px;
+}
+.svy-info {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-info-row {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px dotted #777;
+}
+.svy-info-row dt {
+  flex: 0 0 80px;
+  font-weight: 700;
+}
+.svy-info-row dd {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+
 /* ---- 절 제목 ---- */
 .svy-sec {
   margin: 0 0 16px;

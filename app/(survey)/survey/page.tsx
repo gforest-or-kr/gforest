@@ -7,7 +7,8 @@ import { SurveyApp } from "./_components/survey-app";
 // 요청 시점 렌더(마감·제출 쿠키는 요청마다 다르다). 빌드 시점에 DB·SURVEY_* env 를 읽지 않는다.
 export const dynamic = "force-dynamic";
 
-// 첫 화면은 서버가 정한다(깜박임 없음): 마감 → 마감 안내 / 이 기기 제출 쿠키 → 재방문 안내 / 그 외 → 작성.
+// 첫 화면은 서버가 정한다(깜박임 없음): 마감 → 마감 안내 / 이 기기 제출 쿠키 → 재방문 안내 / 그 외 → 작성(표지).
+// 표지의 응답 마감 라벨도 여기서 계산해 넘긴다 — 클라이언트 코드는 env 를 읽지 않는다(설정 없음·해석 불가 → null, 줄 없음).
 export default async function SurveyPage() {
   const { closed, closesAt } = surveyClosedNow();
   if (closed) {
@@ -17,10 +18,11 @@ export default async function SurveyPage() {
       </main>
     );
   }
+  const deadlineLabel = closesAt.kind === "set" ? formatKst(closesAt.ms) : null;
   const submittedHere = (await cookies()).has(BID_COOKIE);
   return (
     <main className="svy-frame">
-      <SurveyApp initialView={submittedHere ? "revisit" : "form"} />
+      <SurveyApp initialView={submittedHere ? "revisit" : "form"} deadlineLabel={deadlineLabel} />
     </main>
   );
 }

@@ -7,7 +7,7 @@ import { parseDraft, ROLE_OTHER_MAX } from "@/lib/survey/validate";
 import type { ItemValue, QuestionValue } from "@/lib/survey/types";
 import { submitSurvey, type SubmitResult } from "../actions";
 import { clearDraft, DRAFT_UNAVAILABLE, writeDraft, type DraftFields } from "./draft";
-import { HowBox, PaperHead } from "./papers";
+import { PaperHead } from "./papers";
 import { QuestionBlock } from "./question-block";
 import { preventEnter } from "./text-fields";
 
@@ -223,12 +223,7 @@ export function SurveyForm({ initialRaw, onDone, onClosed }: SurveyFormProps) {
           {statusText(saver.status)}
         </span>
       </div>
-      {page === 0 && (
-        <>
-          <PaperHead />
-          <HowBox />
-        </>
-      )}
+      {page === 0 && <PaperHead />}
       <h2 className="svy-sec" tabIndex={-1} ref={heading}>
         {section.no}. {section.title}
       </h2>
