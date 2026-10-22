@@ -1,10 +1,20 @@
 import { pgCode, withUser } from "@/lib/db";
-import { countedResponses, dupGroups, overview, type DupMode, type Overview } from "@/lib/survey/aggregate";
+import {
+  aggregateQuestions,
+  countedResponses,
+  dupGroups,
+  overview,
+  roleOtherTexts,
+  type DupMode,
+  type Overview,
+} from "@/lib/survey/aggregate";
 import { requireAdminPage } from "@/lib/survey/admin-guard";
 import { formatKst, formatKstCompact, readClosesAt } from "@/lib/survey/config";
-import { RESPONDENT_ROLES } from "@/lib/survey/questions";
+import { QUESTIONS, RESPONDENT_ROLES, SECTIONS } from "@/lib/survey/questions";
 import { loadAdminRows } from "@/lib/survey/store";
 import { PaperHead } from "../_components/papers";
+import { QuestionResults } from "./_components/question-results";
+import { ResponseList } from "./_components/response-list";
 
 // 질의서 결과(관리자). 요청마다 렌더하고, 가드는 이 페이지가 직접 건다(레이아웃 가드 없음).
 // 관리자 id 로 withUser — 관리자가 아니면 RLS 가 0행을 돌려준다. 사용자 글은 React 텍스트 노드로만 출력.
@@ -177,12 +187,16 @@ export default async function SurveyAdminPage({ searchParams }: { searchParams: 
       <OverviewBox ov={ov} />
       <RoleCountsBox ov={ov} />
       <CsvArea enabled />
-      {counted.length === 0 && (
-        <Notice
-          head="집계에 쓸 응답이 없어요."
-          body="위에서 '중복 의심 응답 포함'을 선택해 보세요."
+      {counted.length === 0 ? (
+        <Notice head="집계에 쓸 응답이 없어요." body="위에서 '중복 의심 응답 포함'을 선택해 보세요." />
+      ) : (
+        <QuestionResults
+          sections={SECTIONS}
+          questions={aggregateQuestions(QUESTIONS, RESPONDENT_ROLES, counted, data.answers)}
+          roleOther={roleOtherTexts(counted, RESPONDENT_ROLES)}
         />
       )}
+      <ResponseList rows={rows} dup={dup} roles={RESPONDENT_ROLES} />
     </Paper>
   );
 }

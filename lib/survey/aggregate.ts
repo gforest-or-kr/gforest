@@ -1,6 +1,27 @@
 // 질의서 관리자 집계 — 순수 모듈(DB·React 없음). 데이터는 인자로 받고, 입력을 바꾸지 않는다.
-// 중복 의심 묶음(union-find), 집계 대상 고르기, 응답 현황을 계산한다.
-import type { AdminResponseRow, RespondentRole } from "./types";
+// 중복 의심 묶음(union-find), 집계 대상 고르기, 응답 현황, 문항별 집계를 계산한다.
+// 문항별 집계는 item 종류로만 갈린다(문항 id 분기 없음) — 문항을 고치면 집계도 따라온다.
+import {
+  itemValue,
+  readBoards,
+  readCards,
+  readMulti,
+  readSingle,
+  readText,
+  type BoardsRead,
+  type CardsRead,
+} from "./read-values";
+import type {
+  AdminAnswerRow,
+  AdminResponseRow,
+  BoardAccess,
+  BoardChoice,
+  CardDef,
+  Choice,
+  Item,
+  Question,
+  RespondentRole,
+} from "./types";
 
 export type DupReason = "browser" | "ip" | "both";
 
@@ -143,4 +164,234 @@ export function roleLabels(keys: readonly string[], roles: readonly RespondentRo
     .filter((r) => keys.includes(r.key))
     .map((r) => r.label)
     .join(", ");
+}
+
+// ---- 문항별 집계 ----
+
+export const SKIP_LABEL = "미정 / 모름";
+
+export interface FreeText {
+  no: number;
+  roleLabels: string;
+  text: string;
+}
+
+export interface OptionAggregate {
+  key: string;
+  label: string;
+  count: number;
+  byRole: RoleCount[];
+  blanks: FreeText[];
+  hasBlank: boolean;
+}
+
+export interface BoardAggregate {
+  key: string;
+  name: string;
+  access: BoardAccess;
+  answered: number; // 0 = 표시 없음
+  counts: Record<BoardChoice, number>;
+  byRole: Record<BoardChoice, RoleCount[]>;
+  targets: FreeText[];
+}
+
+export interface CardAggregate {
+  key: string;
+  name: string;
+  meta: string;
+  purposeLabel: string;
+  answered: number;
+  purposes: FreeText[];
+  options: OptionAggregate[];
+}
+
+interface ItemBase {
+  key: string;
+  title: string | null;
+  answered: number; // 이 항목에 값이 있는 집계 대상 응답 수
+  total: number; // 집계 대상 응답 수
+}
+
+export type ItemAggregate =
+  | (ItemBase & { kind: "single" | "multi"; options: OptionAggregate[] })
+  | (ItemBase & { kind: "text"; texts: FreeText[] })
+  | (ItemBase & { kind: "boards"; rows: BoardAggregate[] })
+  | (ItemBase & { kind: "cards"; cards: CardAggregate[] });
+
+export interface QuestionAggregate {
+  id: string;
+  no: number | null;
+  section: number;
+  title: string;
+  items: ItemAggregate[];
+}
+
+interface Resp {
+  no: number;
+  roles: readonly string[];
+  roleLabels: string;
+  answers: ReadonlyMap<string, unknown>;
+}
+
+interface Pick {
+  r: Resp;
+  key: string;
+  blank?: string;
+}
+
+const free = (r: Resp, text: string): FreeText => ({ no: r.no, roleLabels: r.roleLabels, text });
+
+function byRole(rs: readonly Resp[], roles: readonly RespondentRole[]): RoleCount[] {
+  return roles.map((role) => ({
+    key: role.key,
+    label: role.label,
+    count: rs.filter((r) => r.roles.includes(role.key)).length,
+  }));
+}
+
+function optionAggregates(options: readonly Choice[], picks: readonly Pick[], roles: readonly RespondentRole[]) {
+  return options.map((o): OptionAggregate => {
+    const hit = picks.filter((p) => p.key === o.key);
+    return {
+      key: o.key,
+      label: o.label,
+      count: hit.length,
+      byRole: byRole(
+        hit.map((p) => p.r),
+        roles,
+      ),
+      blanks: hit.flatMap((p) => (p.blank === undefined ? [] : [free(p.r, p.blank)])),
+      hasBlank: o.blank !== undefined,
+    };
+  });
+}
+
+// 접미 콜론 없는 라벨(예: "기타 의견:" → "기타 의견") — 화면 소제목·CSV 머리글 공용
+export function plainLabel(label: string): string {
+  return label.replace(/\s*:\s*$/, "");
+}
+
+function boardAggregates(item: Extract<Item, { type: "boards" }>, values: readonly [Resp, BoardsRead][], roles: readonly RespondentRole[]) {
+  return item.rows.map((row): BoardAggregate => {
+    const picks = values.flatMap(([r, v]) => (v[row.key] ? [{ r, ...v[row.key] }] : []));
+    const of = (c: BoardChoice) => picks.filter((p) => p.choice === c);
+    return {
+      key: row.key,
+      name: row.name,
+      access: row.access,
+      answered: picks.length,
+      counts: { keep: of("keep").length, merge: of("merge").length, drop: of("drop").length },
+      byRole: {
+        keep: byRole(of("keep").map((p) => p.r), roles),
+        merge: byRole(of("merge").map((p) => p.r), roles),
+        drop: byRole(of("drop").map((p) => p.r), roles),
+      },
+      targets: of("merge").flatMap((p) => (p.target === undefined ? [] : [free(p.r, p.target)])),
+    };
+  });
+}
+
+function cardAggregate(card: CardDef, values: readonly [Resp, CardsRead][], roles: readonly RespondentRole[]): CardAggregate {
+  const mine = values.flatMap(([r, v]) => (v[card.key] ? [{ r, c: v[card.key] }] : []));
+  const picks = mine.flatMap(({ r, c }) => (c.choice === undefined ? [] : [{ r, key: c.choice, blank: c.blank }]));
+  return {
+    key: card.key,
+    name: card.name,
+    meta: card.meta,
+    purposeLabel: card.purposeLabel,
+    answered: mine.length,
+    purposes: mine.flatMap(({ r, c }) => (c.purpose === undefined ? [] : [free(r, c.purpose)])),
+    options: optionAggregates(card.options, picks, roles),
+  };
+}
+
+function aggregateItem(qid: string, item: Item, rs: readonly Resp[], roles: readonly RespondentRole[]): ItemAggregate | null {
+  const raw = (r: Resp) => itemValue(r.answers.get(qid), "key" in item ? item.key : "");
+  const total = rs.length;
+  switch (item.type) {
+    case "single": {
+      const picks = rs.flatMap((r) => {
+        const v = readSingle(raw(r));
+        return v ? [{ r, key: v.choice, blank: v.blank }] : [];
+      });
+      const options = optionAggregates(item.options, picks, roles);
+      return { kind: "single", key: item.key, title: item.title ?? null, answered: picks.length, total, options };
+    }
+    case "multi": {
+      const values = rs.flatMap((r) => {
+        const v = readMulti(raw(r));
+        return v ? [{ r, v }] : [];
+      });
+      const picks = values.flatMap(({ r, v }) => v.choices.map((key) => ({ r, key, blank: v.blanks[key] })));
+      const options = optionAggregates(item.options, picks, roles);
+      return { kind: "multi", key: item.key, title: item.title ?? null, answered: values.length, total, options };
+    }
+    case "text":
+    case "textarea": {
+      const texts = rs.flatMap((r) => {
+        const v = readText(raw(r));
+        if (v === null || ("skip" in v && item.type === "textarea")) return [];
+        return [free(r, "skip" in v ? SKIP_LABEL : v.text)];
+      });
+      return { kind: "text", key: item.key, title: plainLabel(item.label), answered: texts.length, total, texts };
+    }
+    case "boards": {
+      const values = rs.map((r): [Resp, BoardsRead] => [r, readBoards(raw(r))]);
+      const answered = values.filter(([, v]) => Object.keys(v).length > 0).length;
+      return { kind: "boards", key: item.key, title: null, answered, total, rows: boardAggregates(item, values, roles) };
+    }
+    case "cards": {
+      const values = rs.map((r): [Resp, CardsRead] => [r, readCards(raw(r))]);
+      const answered = values.filter(([, v]) => Object.keys(v).length > 0).length;
+      const cards = item.cards.map((c) => cardAggregate(c, values, roles));
+      return { kind: "cards", key: item.key, title: null, answered, total, cards };
+    }
+    case "leader-list":
+    case "note":
+      return null; // 읽기 전용 — 값이 없다
+  }
+}
+
+function toResps(
+  counted: readonly AdminResponseRow[],
+  answers: readonly AdminAnswerRow[],
+  roles: readonly RespondentRole[],
+): Resp[] {
+  const ids = new Set(counted.map((r) => r.id));
+  const byResponse = new Map<string, Map<string, unknown>>();
+  for (const a of answers) {
+    if (!ids.has(a.responseId)) continue;
+    const m = byResponse.get(a.responseId) ?? new Map<string, unknown>();
+    m.set(a.questionId, a.value);
+    byResponse.set(a.responseId, m);
+  }
+  return [...counted]
+    .sort((a, b) => a.no - b.no)
+    .map((r) => ({ no: r.no, roles: r.roles, roleLabels: roleLabels(r.roles, roles), answers: byResponse.get(r.id) ?? new Map() }));
+}
+
+export function aggregateQuestions(
+  questions: readonly Question[],
+  roles: readonly RespondentRole[],
+  counted: readonly AdminResponseRow[],
+  answers: readonly AdminAnswerRow[],
+): QuestionAggregate[] {
+  const rs = toResps(counted, answers, roles);
+  return questions.map((q) => ({
+    id: q.id,
+    no: q.no,
+    section: q.section,
+    title: q.title,
+    items: q.items.flatMap((item) => {
+      const a = aggregateItem(q.id, item, rs, roles);
+      return a ? [a] : [];
+    }),
+  }));
+}
+
+// 0절 기타 직접 입력(응답 메타)
+export function roleOtherTexts(counted: readonly AdminResponseRow[], roles: readonly RespondentRole[]): FreeText[] {
+  return [...counted]
+    .sort((a, b) => a.no - b.no)
+    .flatMap((r) => (r.roleOther ? [{ no: r.no, roleLabels: roleLabels(r.roles, roles), text: r.roleOther }] : []));
 }
