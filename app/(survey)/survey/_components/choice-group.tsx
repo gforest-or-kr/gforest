@@ -60,7 +60,7 @@ interface OptionRowProps {
   onChange: (checked: boolean) => void;
 }
 
-function OptionRow({ type, name, option, glyph, checked, disabled, onChange }: OptionRowProps) {
+export function OptionRow({ type, name, option, glyph, checked, disabled, onChange }: OptionRowProps) {
   return (
     <label className={type === "radio" ? "svy-opt" : "svy-opt svy-opt--check"}>
       <input

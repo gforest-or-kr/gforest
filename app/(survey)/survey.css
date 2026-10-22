@@ -172,6 +172,9 @@
   line-height: 1.6;
   color: var(--sub);
 }
+.svy-q > .svy-sm {
+  margin: 16px 0 0 var(--indent); /* 문항 안 안내 문단(Q1 표 뒤 등) — 들여쓰기를 보기·표와 맞춘다 */
+}
 .svy-center {
   text-align: center;
 }
