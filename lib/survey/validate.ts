@@ -35,6 +35,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const NUM_BLANK_RE = /^\d{1,2}$/;
 // NUL·C0 제어문자(탭·개행 제외)·DEL — Postgres text/jsonb 는 NUL 을 저장하지 못한다(22P05)
 const CONTROL_RE = /[\u0000-\u0008\u000B-\u001F\u007F]/g;
+// 짝 없는 UTF-16 서로게이트 — jsonb 가 거절한다(22P02). 짝이 맞는 쌍은 그대로 두고 외톨이만 U+FFFD 로 바꾼다
+// (String.prototype.toWellFormed 와 같은 결과. 브라우저에서도 돌므로 구형 Safari 에 없는 그 메서드·lookbehind 는 쓰지 않는다)
+const SURROGATE_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g;
+
+function wellFormed(s: string): string {
+  return s.replace(SURROGATE_RE, (m) => (m.length === 2 ? m : "\uFFFD"));
+}
+
 const BOARD_CHOICES: readonly BoardChoice[] = ["keep", "merge", "drop"];
 
 type Obj = Record<string, unknown>;
@@ -58,7 +66,7 @@ function ownObj(o: unknown, key: string): Obj | null {
 // 문자열 정리: 문자열이 아니거나, 비었거나, max 를 넘으면 null
 function cleanText(v: unknown, max: number): string | null {
   if (typeof v !== "string") return null;
-  const s = v.replace(CONTROL_RE, "").trim();
+  const s = wellFormed(v).replace(CONTROL_RE, "").trim();
   if (s === "" || s.length > max) return null;
   return s;
 }
