@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { pgCode, withUser } from "@/lib/db";
+import { formatKst, surveyClosedNow } from "@/lib/survey/config";
 import { BID_COOKIE, BID_COOKIE_MAX_AGE_S, clientIp, getHashKey, hmacHex } from "@/lib/survey/hash";
 import { QUESTIONS, RESPONDENT_ROLES } from "@/lib/survey/questions";
 import { insertResponse } from "@/lib/survey/store";
@@ -20,6 +21,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // 중복 제출은 막지 않는다: 브라우저 쿠키 id·IP 의 HMAC 만 남겨 관리자 화면에서 '중복 의심'으로 묶는다.
 // 예상 가능한 실패는 throw 하지 않고 값으로 돌려준다. 로그에는 오류 코드만(응답 내용·IP·쿠키 금지).
 export async function submitSurvey(raw: unknown): Promise<SubmitResult> {
+  // 마감 판정이 맨 먼저 — 오래 열어 둔 페이지에서 보낸 제출도 거절한다(쿠키·DB 를 건드리지 않음).
+  const { closed, closesAt } = surveyClosedNow();
+  if (closed) return { ok: false, reason: "closed", closedAtLabel: formatKst(closesAt.ms) };
+
   const v = validateSubmission(raw, QUESTIONS, RESPONDENT_ROLES);
   if (!v.ok) return { ok: false, reason: "invalid" };
 

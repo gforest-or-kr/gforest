@@ -2,54 +2,26 @@
 
 import { useId, useRef, useState, useTransition } from "react";
 import { RESPONDENT_ROLES, SECTIONS } from "@/lib/survey/questions";
-import { submitSurvey } from "../actions";
+import { submitSurvey, type SubmitResult } from "../actions";
+import { ClosedPaper, DonePaper, HowBox, PaperHead, RevisitPaper } from "./papers";
 
 // 질의서 응답 화면(클라이언트). 첫 화면은 서버가 정해 initialView 로 넘긴다 — 초깃값으로만 쓰고
 // 이후 prop 으로 화면을 다시 파생하지 않는다(서버 액션이 쿠키를 심으면 페이지가 다시 렌더되기 때문).
 // form 요소를 쓰지 않는다: 모든 버튼은 type="button", Enter 로 제출되지 않는다.
 
-type View = "form" | "done";
+type View = "form" | "done" | "revisit" | "closed";
 
 const NOTICE_NO_ROLES = "※ 응답자 구분을 하나 이상 선택해 주세요.";
 const NOTICE_FAILED = "제출하지 못했어요. 입력하신 내용은 그대로 남아 있어요. 잠시 뒤 다시 눌러 주세요.";
 
-function Head() {
-  return (
-    <>
-      <h1 className="svy-title">새 홈페이지 이해관계자 의견 조사</h1>
-      <p className="svy-subtitle">푸른숲발도르프학교</p>
-      <hr className="svy-rule" />
-    </>
-  );
-}
-
-function Done({ onRewrite }: { onRewrite: () => void }) {
-  return (
-    <div className="svy-paper">
-      <Head />
-      <p className="svy-stamp">
-        <span>제 출 완 료</span>
-      </p>
-      <div className="svy-center">
-        <p>의견을 보내 주셔서 감사합니다.</p>
-        <p>보내신 내용은 이 화면에서 수정할 수 없어요.</p>
-      </div>
-      <div className="svy-notice">
-        <b>※ 같은 분이 다시 제출하셔도 막지는 않지만,</b>
-        결과를 볼 때 중복 응답으로 표시될 수 있어요. 잘못 보내셨다면 다시 한 번 제출해 주세요.
-      </div>
-      <div className="svy-center">
-        <button type="button" className="svy-btn" onClick={onRewrite}>
-          다시 작성하기
-        </button>
-      </div>
-    </div>
-  );
-}
-
 type Notice = "none" | "no_roles" | "failed";
 
-function SurveyForm({ onDone }: { onDone: () => void }) {
+interface SurveyFormProps {
+  onDone: () => void;
+  onClosed: (closedAtLabel: string) => void;
+}
+
+function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
   const [roles, setRoles] = useState<readonly string[]>([]);
   const [roleOther, setRoleOther] = useState("");
   const [notice, setNotice] = useState<Notice>("none");
@@ -75,8 +47,11 @@ function SurveyForm({ onDone }: { onDone: () => void }) {
     const payload = { submissionId: submissionId.current, roles: [...roles], roleOther, answers: {} };
     setNotice("none");
     startTransition(async () => {
-      const r = await submitSurvey(payload);
+      // 네트워크 끊김 등으로 액션 호출 자체가 실패해도 오류 화면이 아니라 같은 쪽 안내로 끝낸다(입력 유지)
+      const r = await submitSurvey(payload).catch((): SubmitResult => ({ ok: false, reason: "error" }));
       if (r.ok) onDone();
+      // 작성 도중 마감: 서버가 거절 → 마감 화면 + "제출되지 않았어요". 임시 저장본(02-04)은 건드리지 않는다.
+      else if (r.reason === "closed") onClosed(r.closedAtLabel);
       else setNotice("failed");
     });
   }
@@ -88,16 +63,8 @@ function SurveyForm({ onDone }: { onDone: () => void }) {
           제 <b>1</b>쪽 / {SECTIONS.length}쪽 · {SECTIONS[0].title}
         </span>
       </div>
-      <Head />
-      <div className="svy-how">
-        <ul>
-          <li>본인이 답할 수 있는 문항만 답해 주세요. 잘 모르시면 비워 두시거나 &quot;미정 / 모름&quot;에 표시하세요.</li>
-          <li>해당하는 번호를 눌러 표시합니다. 보기에 없는 생각은 &quot;기타&quot; 칸에 적어 주세요.</li>
-          <li>
-            쓰신 내용은 <b>이 기기의 브라우저에 자동으로 임시 저장</b>됩니다. 제출하기 전까지는 서버로 보내지지 않아요.
-          </li>
-        </ul>
-      </div>
+      <PaperHead />
+      <HowBox />
       <h2 className="svy-sec">0. {SECTIONS[0].title}</h2>
       {notice === "no_roles" && (
         <div className="svy-notice" role="alert">
@@ -190,19 +157,34 @@ function RoleOption({
 }
 
 export function SurveyApp({ initialView }: { initialView: "form" | "revisit" }) {
-  const [view, setView] = useState<View>(initialView === "revisit" ? "form" : initialView);
-  // 다시 작성하기 = 폼을 새로 마운트(빈 입력·새 제출 id)
+  // initialView 는 마운트 때 한 번만 읽는다. 제출 뒤 쿠키가 생겨 서버가 "revisit" 을 다시 넘겨도 화면은 그대로.
+  const [view, setView] = useState<View>(initialView);
+  // 새로 작성 = 폼을 새로 마운트(빈 입력·새 제출 id)
   const [formKey, setFormKey] = useState(0);
+  const [closedAtLabel, setClosedAtLabel] = useState("");
 
-  if (view === "done") {
-    return (
-      <Done
-        onRewrite={() => {
-          setFormKey((k) => k + 1);
-          setView("form");
-        }}
-      />
-    );
+  function freshForm() {
+    setFormKey((k) => k + 1);
+    setView("form");
   }
-  return <SurveyForm key={formKey} onDone={() => setView("done")} />;
+
+  switch (view) {
+    case "done":
+      return <DonePaper onRewrite={freshForm} />;
+    case "revisit":
+      return <RevisitPaper onShowDone={() => setView("done")} onRewrite={freshForm} />;
+    case "closed":
+      return <ClosedPaper closedAtLabel={closedAtLabel} notSubmitted />;
+    case "form":
+      return (
+        <SurveyForm
+          key={formKey}
+          onDone={() => setView("done")}
+          onClosed={(label) => {
+            setClosedAtLabel(label);
+            setView("closed");
+          }}
+        />
+      );
+  }
 }
