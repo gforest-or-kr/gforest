@@ -3,6 +3,7 @@
 // 문구 변경은 이 파일과 questions-part*.ts·questions-tables.ts 만 고친다(PR). 키(질문 id·item key·보기 key)는 리터럴로 적고,
 // 의미가 바뀌면 새 키를 쓴다 — 이미 저장된 응답이 다른 뜻으로 읽히지 않게.
 import { QUESTIONS_PART1 } from "./questions-part1";
+import { QUESTIONS_PART2 } from "./questions-part2";
 import type { Question, RespondentRole, Section } from "./types";
 
 export const SECTIONS: readonly Section[] = [
@@ -29,5 +30,5 @@ export const RESPONDENT_ROLES: readonly RespondentRole[] = [
   { key: "other", label: "기타(학부모회 산하 소위원회 등)", other: true },
 ];
 
-// 1~4절(Q1–Q14). 순서 = 화면·CSV 열 순서.
-export const QUESTIONS: readonly Question[] = [...QUESTIONS_PART1];
+// 1~4절(Q1–Q14) + 5~10절(Q15–Q27, 자유 의견 free). 순서 = 화면·CSV 열 순서.
+export const QUESTIONS: readonly Question[] = [...QUESTIONS_PART1, ...QUESTIONS_PART2];
