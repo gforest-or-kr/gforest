@@ -2,22 +2,29 @@
 
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode, type Ref } from "react";
 import { QUESTIONS, RESPONDENT_ROLES, SECTIONS } from "@/lib/survey/questions";
-import { ROLE_OTHER_MAX } from "@/lib/survey/validate";
+import { parseDraft, ROLE_OTHER_MAX } from "@/lib/survey/validate";
 import type { ItemValue, QuestionValue } from "@/lib/survey/types";
 import { submitSurvey, type SubmitResult } from "../actions";
+import { clearDraft, DRAFT_UNAVAILABLE, writeDraft, type DraftFields } from "./draft";
 import { HowBox, PaperHead } from "./papers";
 import { QuestionBlock } from "./question-block";
 import { preventEnter } from "./text-fields";
 
 // 질의서 작성 화면(11쪽 = 0~10절). 입력 상태는 전부 이 컴포넌트 최상단에 두고 쪽은 props 로만 그린다
 // (쪽을 넘겨 언마운트돼도 값이 남는다). form 요소 없음 — 모든 버튼 type="button", Enter 로 이동·제출되지 않는다.
+// 임시 저장: 처음 값은 SurveyApp 이 읽어 준 저장본(initialRaw)을 정규화해 한 번만 쓴다. 저장은 이벤트 핸들러에서만
+// (입력 500ms 디바운스, 쪽 이동·제출 시 즉시, pagehide 때 남은 것) — effect 안에서 setState 하지 않는다.
 
 const NOTICE_NO_ROLES = "※ 응답자 구분을 하나 이상 선택해 주세요.";
 const NOTICE_FAILED = "제출하지 못했어요. 입력하신 내용은 그대로 남아 있어요. 잠시 뒤 다시 눌러 주세요.";
 const LAST_PAGE = SECTIONS.length - 1;
+const SAVE_DEBOUNCE_MS = 500;
+const FLASH_MS = 700;
 
 type Notice = "none" | "no_roles" | "failed";
 type Answers = Record<string, QuestionValue>;
+type SaveStatus = { kind: "idle" } | { kind: "saved"; time: string } | { kind: "unavailable" };
+type Timer = ReturnType<typeof setTimeout>;
 
 // 항목 값 하나를 바꾼 새 answers. undefined = 항목 키 삭제, 항목이 모두 비면 질문 자체를 뺀다(불변 갱신)
 function withItem(answers: Answers, qid: string, itemKey: string, v: ItemValue | undefined): Answers {
@@ -27,19 +34,98 @@ function withItem(answers: Answers, qid: string, itemKey: string, v: ItemValue |
   return Object.keys(nextQ).length === 0 ? others : { ...others, [qid]: nextQ };
 }
 
+// 기기 로컬 24시간 HH:MM
+function hhmm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function statusText(s: SaveStatus): string {
+  if (s.kind === "saved") return `자동 저장됨 ${s.time}`;
+  if (s.kind === "unavailable") return "이 기기에서는 임시 저장을 쓸 수 없어요";
+  return "자동 저장 대기 중";
+}
+
+// 자동 저장. 타이머·대기 중인 저장본은 ref 에 두고 핸들러·타이머 콜백에서만 읽고 쓴다(렌더 중 접근 없음).
+function useAutosave(storageOk: boolean) {
+  const [status, setStatus] = useState<SaveStatus>(storageOk ? { kind: "idle" } : { kind: "unavailable" });
+  const [flash, setFlash] = useState(false);
+  const box = useRef<{ save: Timer | null; flash: Timer | null; snap: DraftFields | null }>({
+    save: null,
+    flash: null,
+    snap: null,
+  });
+
+  // 탭을 닫거나 다른 곳으로 갈 때 디바운스 중인 저장본을 바로 쓴다. 언마운트 때 타이머 정리.
+  useEffect(() => {
+    const timers = box.current;
+    const onHide = () => {
+      if (storageOk && timers.snap) writeDraft(timers.snap);
+      timers.snap = null;
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      if (timers.save) clearTimeout(timers.save);
+      if (timers.flash) clearTimeout(timers.flash);
+    };
+  }, [storageOk]);
+
+  function persist(snap: DraftFields) {
+    if (!storageOk) return;
+    if (!writeDraft(snap)) {
+      setStatus({ kind: "unavailable" });
+      return;
+    }
+    setStatus({ kind: "saved", time: hhmm(new Date()) });
+    setFlash(true);
+    const timers = box.current;
+    if (timers.flash) clearTimeout(timers.flash);
+    timers.flash = setTimeout(() => setFlash(false), FLASH_MS);
+  }
+
+  function cancel() {
+    const timers = box.current;
+    if (timers.save) clearTimeout(timers.save);
+    timers.save = null;
+    timers.snap = null;
+  }
+
+  function schedule(snap: DraftFields) {
+    const timers = box.current;
+    if (timers.save) clearTimeout(timers.save);
+    timers.snap = snap;
+    timers.save = setTimeout(() => {
+      const pendingSnap = timers.snap;
+      timers.save = null;
+      timers.snap = null;
+      if (pendingSnap) persist(pendingSnap);
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  function flush(snap: DraftFields) {
+    cancel();
+    persist(snap);
+  }
+
+  return { status, flash, schedule, flush, cancel };
+}
+
 interface SurveyFormProps {
   initialRaw: string;
   onDone: () => void;
   onClosed: (closedAtLabel: string) => void;
 }
 
-export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
-  const [page, setPage] = useState(0);
-  const [roles, setRoles] = useState<readonly string[]>([]);
-  const [roleOther, setRoleOther] = useState("");
-  const [answers, setAnswers] = useState<Answers>({});
+export function SurveyForm({ initialRaw, onDone, onClosed }: SurveyFormProps) {
+  // 저장본은 신뢰하지 않는다: 제출과 같은 정규화로 낡은 문항·보기 키, 한도 초과 값을 버린 뒤 초깃값으로만 쓴다
+  const [draft] = useState(() => parseDraft(initialRaw, QUESTIONS, RESPONDENT_ROLES));
+  const [page, setPage] = useState(() => (draft !== null && draft.roles.length > 0 ? draft.page : 0));
+  const [roles, setRoles] = useState<readonly string[]>(() => draft?.roles ?? []);
+  const [roleOther, setRoleOther] = useState(() => draft?.roleOther ?? "");
+  const [answers, setAnswers] = useState<Answers>(() => draft?.answers ?? {});
   const [notice, setNotice] = useState<Notice>("none");
   const [pending, startTransition] = useTransition();
+  const saver = useAutosave(initialRaw !== DRAFT_UNAVAILABLE);
   // 제출 id 는 클릭 핸들러에서 한 번 만들고 재시도 때 그대로 다시 보낸다(서버가 중복 저장을 막는다)
   const submissionId = useRef<string | null>(null);
   const firstRole = useRef<HTMLInputElement>(null);
@@ -54,15 +140,29 @@ export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
     heading.current?.focus();
   }, [page]);
 
+  function snapshot(over: Partial<DraftFields>): DraftFields {
+    return { page, roles: [...roles], roleOther, answers, ...over };
+  }
+
   function toggleRole(key: string, checked: boolean, isOther: boolean) {
     // 정의 순서를 유지한 새 배열(불변 갱신)
-    setRoles((prev) => RESPONDENT_ROLES.filter((r) => (r.key === key ? checked : prev.includes(r.key))).map((r) => r.key));
-    if (isOther && !checked) setRoleOther("");
+    const nextRoles = RESPONDENT_ROLES.filter((r) => (r.key === key ? checked : roles.includes(r.key))).map((r) => r.key);
+    const nextOther = isOther && !checked ? "" : roleOther;
+    setRoles(nextRoles);
+    setRoleOther(nextOther);
     if (checked && notice === "no_roles") setNotice("none");
+    saver.schedule(snapshot({ roles: nextRoles, roleOther: nextOther }));
+  }
+
+  function changeRoleOther(text: string) {
+    setRoleOther(text);
+    saver.schedule(snapshot({ roleOther: text }));
   }
 
   function setItem(qid: string, itemKey: string, v: ItemValue | undefined) {
-    setAnswers((prev) => withItem(prev, qid, itemKey, v));
+    const next = withItem(answers, qid, itemKey, v);
+    setAnswers(next);
+    saver.schedule(snapshot({ answers: next }));
   }
 
   function goTo(next: number) {
@@ -73,6 +173,7 @@ export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
     }
     setNotice("none");
     setPage(next);
+    saver.flush(snapshot({ page: next }));
   }
 
   function submit() {
@@ -81,14 +182,19 @@ export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
       setNotice("no_roles");
       return;
     }
+    saver.flush(snapshot({}));
     submissionId.current ??= crypto.randomUUID();
     const payload = { submissionId: submissionId.current, roles: [...roles], roleOther, answers };
     setNotice("none");
     startTransition(async () => {
       // 네트워크 끊김 등으로 액션 호출 자체가 실패해도 오류 화면이 아니라 같은 쪽 안내로 끝낸다(입력 유지)
       const r = await submitSurvey(payload).catch((): SubmitResult => ({ ok: false, reason: "error" }));
-      if (r.ok) onDone();
-      // 작성 도중 마감: 서버가 거절 → 마감 화면 + "제출되지 않았어요"
+      if (r.ok) {
+        saver.cancel();
+        clearDraft();
+        onDone();
+      }
+      // 작성 도중 마감: 서버가 거절 → 마감 화면 + "제출되지 않았어요". 임시 저장본은 지우지 않는다(마감 뒤에도 내용을 볼 수 있게).
       else if (r.reason === "closed") onClosed(r.closedAtLabel);
       else setNotice("failed");
     });
@@ -101,8 +207,8 @@ export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
         <span>
           제 <b>{page + 1}</b>쪽 / {SECTIONS.length}쪽 · {section.title}
         </span>
-        <span className="svy-saved" aria-live="off">
-          자동 저장 대기 중
+        <span className="svy-saved" aria-live="off" data-flash={saver.flash ? "true" : undefined}>
+          {statusText(saver.status)}
         </span>
       </div>
       {page === 0 && (
@@ -122,7 +228,7 @@ export function SurveyForm({ onDone, onClosed }: SurveyFormProps) {
           firstRef={firstRole}
           showAlert={notice === "no_roles"}
           onToggle={toggleRole}
-          onOther={setRoleOther}
+          onOther={changeRoleOther}
         />
       ) : (
         QUESTIONS.filter((q) => q.section === section.no).map((q) => (
