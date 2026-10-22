@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode, type Ref } from "react";
+import { unstable_isUnrecognizedActionError } from "next/navigation";
 import { QUESTIONS, RESPONDENT_ROLES, SECTIONS } from "@/lib/survey/questions";
 import { parseDraft, ROLE_OTHER_MAX } from "@/lib/survey/validate";
 import type { ItemValue, QuestionValue } from "@/lib/survey/types";
@@ -17,11 +18,16 @@ import { preventEnter } from "./text-fields";
 
 const NOTICE_NO_ROLES = "※ 응답자 구분을 하나 이상 선택해 주세요.";
 const NOTICE_FAILED = "제출하지 못했어요. 입력하신 내용은 그대로 남아 있어요. 잠시 뒤 다시 눌러 주세요.";
+// 배포로 서버 액션 id 가 바뀐 뒤(이 화면을 배포 전에 열어 둔 경우) — 다시 눌러도 계속 실패하므로 새로고침을 안내한다
+const NOTICE_STALE =
+  "화면이 새 버전으로 바뀌어 제출하지 못했어요. 페이지를 새로고침한 뒤 다시 제출해 주세요. 입력하신 내용은 이 기기에 저장돼 있어 새로고침해도 그대로 돌아와요.";
+const NOTICE_STALE_NO_STORAGE =
+  "화면이 새 버전으로 바뀌어 제출하지 못했어요. 이 기기에서는 임시 저장을 쓸 수 없어 새로고침하면 입력하신 내용이 지워져요. 긴 글은 따로 옮겨 적어 두신 뒤 새로고침해 주세요.";
 const LAST_PAGE = SECTIONS.length - 1;
 const SAVE_DEBOUNCE_MS = 500;
 const FLASH_MS = 700;
 
-type Notice = "none" | "no_roles" | "failed";
+type Notice = "none" | "no_roles" | "failed" | "stale";
 type Answers = Record<string, QuestionValue>;
 type SaveStatus = { kind: "idle" } | { kind: "saved"; time: string } | { kind: "unavailable" };
 type Timer = ReturnType<typeof setTimeout>;
@@ -187,8 +193,14 @@ export function SurveyForm({ initialRaw, onDone, onClosed }: SurveyFormProps) {
     const payload = { submissionId: submissionId.current, roles: [...roles], roleOther, answers };
     setNotice("none");
     startTransition(async () => {
-      // 네트워크 끊김 등으로 액션 호출 자체가 실패해도 오류 화면이 아니라 같은 쪽 안내로 끝낸다(입력 유지)
-      const r = await submitSurvey(payload).catch((): SubmitResult => ({ ok: false, reason: "error" }));
+      // 네트워크 끊김 등으로 액션 호출 자체가 실패해도 오류 화면이 아니라 같은 쪽 안내로 끝낸다(입력·임시 저장본 유지)
+      let r: SubmitResult;
+      try {
+        r = await submitSurvey(payload);
+      } catch (err) {
+        setNotice(unstable_isUnrecognizedActionError(err) ? "stale" : "failed");
+        return;
+      }
       if (r.ok) {
         saver.cancel();
         clearDraft();
@@ -247,6 +259,11 @@ export function SurveyForm({ initialRaw, onDone, onClosed }: SurveyFormProps) {
       {notice === "failed" && (
         <div className="svy-notice" role="alert">
           <b>{NOTICE_FAILED}</b>
+        </div>
+      )}
+      {notice === "stale" && (
+        <div className="svy-notice" role="alert">
+          <b>{saver.status.kind === "unavailable" ? NOTICE_STALE_NO_STORAGE : NOTICE_STALE}</b>
         </div>
       )}
       <div className="svy-nav">
