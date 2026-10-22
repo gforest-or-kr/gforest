@@ -190,7 +190,7 @@ export default async function SurveyAdminPage({ searchParams }: { searchParams: 
       <OverviewBox ov={ov} />
       <RoleCountsBox ov={ov} />
       <CsvArea enabled />
-      {/* 응답이 1건 이상이면 counted 도 1건 이상이다("제외"도 묶음마다 가장 이른 응답은 남긴다) */}
+      {/* 응답이 1건 이상이면 counted 도 1건 이상이다("제외"도 묶음마다 가장 나중에 낸 응답은 남긴다) */}
       <QuestionResults
         sections={SECTIONS}
         questions={aggregateQuestions(QUESTIONS, RESPONDENT_ROLES, counted, data.answers)}

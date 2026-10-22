@@ -103,21 +103,22 @@ export function dupGroups(rows: readonly AdminResponseRow[]): Map<string, DupInf
   return out;
 }
 
-// "제외" = 묶음마다 가장 이른 응답(가장 작은 응답 번호) 하나만 남긴다(PD-04). "포함" = 전부.
+// "제외" = 묶음마다 가장 나중에 낸 응답(가장 큰 응답 번호) 하나만 남긴다(PD-04, 2026-10-22 사용자 변경).
+// 같은 사람이 "다시 작성하기"로 고쳐 낸 경우 마지막 응답이 최종 의견이다. "포함" = 전부.
 export function countedResponses(
   rows: readonly AdminResponseRow[],
   dup: DupMap,
   mode: DupMode,
 ): AdminResponseRow[] {
   if (mode === "include") return [...rows];
-  const firstNo = new Map<number, number>();
+  const lastNo = new Map<number, number>();
   for (const r of rows) {
     const d = dup.get(r.id);
-    if (d) firstNo.set(d.group, Math.min(firstNo.get(d.group) ?? Infinity, r.no));
+    if (d) lastNo.set(d.group, Math.max(lastNo.get(d.group) ?? -Infinity, r.no));
   }
   return rows.filter((r) => {
     const d = dup.get(r.id);
-    return d === undefined || firstNo.get(d.group) === r.no;
+    return d === undefined || lastNo.get(d.group) === r.no;
   });
 }
 
