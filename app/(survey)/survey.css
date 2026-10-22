@@ -326,9 +326,10 @@
   margin: 8px 0 0 var(--indent);
 }
 .svy-free > label {
+  flex-shrink: 0; /* 짧은 라벨은 줄지 않아 한 줄 그대로(nowrap 과 같은 모양) */
+  max-width: 100%; /* 한 줄 폭보다 긴 라벨(Q14 등)만 그 안에서 줄바꿈 — 375px 가로 넘침 방지 */
   font-size: 14px;
   line-height: 1.6;
-  white-space: nowrap;
 }
 
 /* ---- 박스·경고·안내 ---- */
