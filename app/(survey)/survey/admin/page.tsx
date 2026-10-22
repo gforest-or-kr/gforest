@@ -190,15 +190,12 @@ export default async function SurveyAdminPage({ searchParams }: { searchParams: 
       <OverviewBox ov={ov} />
       <RoleCountsBox ov={ov} />
       <CsvArea enabled />
-      {counted.length === 0 ? (
-        <Notice head="집계에 쓸 응답이 없어요." body="위에서 '중복 의심 응답 포함'을 선택해 보세요." />
-      ) : (
-        <QuestionResults
-          sections={SECTIONS}
-          questions={aggregateQuestions(QUESTIONS, RESPONDENT_ROLES, counted, data.answers)}
-          roleOther={roleOtherTexts(counted, RESPONDENT_ROLES)}
-        />
-      )}
+      {/* 응답이 1건 이상이면 counted 도 1건 이상이다("제외"도 묶음마다 가장 이른 응답은 남긴다) */}
+      <QuestionResults
+        sections={SECTIONS}
+        questions={aggregateQuestions(QUESTIONS, RESPONDENT_ROLES, counted, data.answers)}
+        roleOther={roleOtherTexts(counted, RESPONDENT_ROLES)}
+      />
       <ResponseList rows={rows} dup={dup} roles={RESPONDENT_ROLES} />
     </Paper>
   );
