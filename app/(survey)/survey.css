@@ -1,0 +1,760 @@
+/* 이해관계자 웹 질의서 — 답안지(시험지) 스타일. app/(survey)/layout.tsx 에서만 불러온다.
+   계약: .planning 의 UI-SPEC(Phase 2) Component Contract 를 그대로 옮긴 것.
+   규칙: 모든 선택자는 .svy 접두(접두 없는 button{}·body{}·:root{} 금지 — 스타일시트는 라우트 이동 후에도 남는다).
+         토큰은 :root 가 아니라 .svy 에 선언. 글자 크기 14/16/18/24px 만, 굵기 400/700 만.
+         모서리 둥글림은 버블(50%)만, 그림자·그라데이션·전환·애니메이션 없음.
+   이 파일은 Tailwind @layer 밖(unlayered)이라 globals.css 의 preflight·body 스타일보다 우선한다. */
+
+/* ---- 루트·토큰 ---- */
+.svy {
+  --paper: #fdfcf8;
+  --desk: #d9d8d2;
+  --field: #ffffff;
+  --ink: #151515;
+  --sub: #444;
+  --faint: #6f6f6a;
+  --edge: #b9b7ae;
+  --tap: 44px;
+  --indent: 40px;
+  --bubble: 24px;
+  --pad: 48px;
+  display: flow-root; /* .svy-frame 의 위아래 마진이 바깥(흰 body)으로 빠져나가지 않게 */
+  min-height: 100dvh;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+
+/* preflight 가 지운 기본값 복원 — :where() 로 특이도를 .svy 한 단계로 낮춰 아래 클래스 규칙이 이기게 한다 */
+.svy :where(h1, h2, h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.svy :where(p, ul) {
+  margin: 0;
+}
+.svy :where(ul) {
+  list-style: none;
+  padding: 0;
+}
+.svy :where(button, input, textarea) {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  border-radius: 0;
+}
+.svy :where(b, strong) {
+  font-weight: 700;
+}
+
+/* ---- 틀·종이 ---- */
+.svy-frame {
+  max-width: 820px;
+  margin: 16px auto;
+  container-type: inline-size;
+}
+.svy-paper {
+  background: var(--paper);
+  border: 1px solid var(--edge);
+  padding: 0 var(--pad) var(--pad);
+  overflow-wrap: break-word;
+}
+
+/* ---- 상단 고정 바 ---- */
+.svy-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(var(--pad) * -1) 24px;
+  padding: 8px var(--pad);
+  background: var(--paper);
+  border-bottom: 1.5px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  gap: 4px 16px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-saved::before {
+  content: "● ";
+  font-size: 1em;
+}
+.svy-saved[data-flash="true"] {
+  font-weight: 700;
+}
+
+/* ---- 문서 머리 ---- */
+.svy-title {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+}
+.svy-subtitle {
+  margin: 4px 0 16px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-rule {
+  height: 0;
+  border: 0;
+  border-top: 3px double var(--ink);
+  margin: 0 0 16px;
+}
+.svy-how {
+  border: 1px solid var(--ink);
+  padding: 8px 16px;
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-how ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+
+/* ---- 표지(여는 쪽) ---- */
+.svy-cover-greet {
+  margin: 0 0 24px;
+}
+.svy-cover-how {
+  list-style: disc;
+  padding: 8px 12px 8px 32px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-cover-how li + li {
+  margin-top: 4px;
+}
+.svy-info {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-info-row {
+  display: flex;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px dotted #777;
+}
+.svy-info-row dt {
+  flex: 0 0 80px;
+  font-weight: 700;
+}
+.svy-info-row dd {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+
+/* ---- 절 제목 ---- */
+.svy-sec {
+  margin: 0 0 16px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+  scroll-margin-top: 64px;
+}
+.svy-sec:focus {
+  outline: none;
+}
+
+/* ---- 질문 블록 ---- */
+.svy-q {
+  margin-bottom: 32px;
+}
+.svy-qh {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 0 8px;
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.svy-qn {
+  font-variant-numeric: tabular-nums;
+}
+.svy-lead {
+  margin: 0 0 8px var(--indent);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-subq {
+  margin: 16px 0 0 var(--indent);
+}
+.svy-sh {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.svy-sm {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-q > .svy-sm {
+  margin: 16px 0 0 var(--indent); /* 문항 안 안내 문단(Q1 표 뒤 등) — 들여쓰기를 보기·표와 맞춘다 */
+}
+.svy-center {
+  text-align: center;
+}
+.svy-center > .svy-btn {
+  margin: 4px;
+}
+
+/* ---- 보기(OMR) ---- */
+.svy-opts {
+  margin: 8px 0 0 var(--indent);
+}
+.svy-subq .svy-opts {
+  margin-left: 0;
+}
+.svy-opt {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  align-items: start;
+  min-height: var(--tap);
+  padding: 8px 4px 8px 0;
+  cursor: pointer;
+}
+.svy-opt input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.svy-opt:has(input:disabled),
+.svy-opt input:disabled {
+  cursor: default;
+}
+/* 버블은 오프셋이 아니라 구조로 첫 줄 중앙에 맞춘다: 셀 높이 = 16px × 1.7 = 보기 문장 첫 줄 높이 */
+.svy-no-cell {
+  display: flex;
+  align-items: center;
+  height: 1.7em;
+  font-size: 16px;
+}
+.svy-no {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--bubble);
+  height: var(--bubble);
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+}
+.svy-opt-t {
+  line-height: 1.7;
+}
+.svy-opt:has(input:checked) .svy-no {
+  background: var(--ink);
+  color: var(--paper);
+}
+.svy-opt:has(input:focus-visible) {
+  outline: 2px dashed var(--ink);
+}
+
+/* 다중 선택: 네모 마커 + CSS 로 그린 체크(글리프 없음) */
+.svy-opt--check .svy-no {
+  border-radius: 0;
+}
+.svy-opt--check:has(input:checked) .svy-no::after {
+  content: "";
+  width: 6px;
+  height: 12px;
+  border-right: 2px solid var(--paper);
+  border-bottom: 2px solid var(--paper);
+  transform: translateY(-2px) rotate(45deg);
+}
+
+/* ---- 보기 안 빈칸: 앞 보기가 선택되면 펼침 ---- */
+.svy-ans {
+  display: none;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 8px 40px;
+}
+.svy-opt:has(input:checked) + .svy-ans {
+  display: flex;
+}
+.svy-ans > label,
+.svy-ans > span {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.svy-box-b > .svy-ans {
+  flex: 1 1 100%; /* 한 줄 전체 폭 — 왼쪽 들여쓰기만큼 줄어들어 박스를 넘지 않는다 */
+}
+
+/* ---- 입력칸 ---- */
+.svy-line {
+  flex: 1 1 224px;
+  min-width: 128px;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--field);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.svy-line--num {
+  flex: 0 0 72px;
+  min-width: 72px;
+  text-align: center;
+}
+.svy-area {
+  display: block;
+  flex: 1 1 100%;
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--field);
+  font-size: 16px;
+  line-height: 1.7;
+  resize: vertical;
+}
+.svy-line:focus,
+.svy-area:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.svy-line::placeholder,
+.svy-area::placeholder {
+  color: var(--faint);
+}
+.svy-line:disabled,
+.svy-area:disabled {
+  opacity: 0.35;
+}
+.svy-free {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin: 8px 0 0 var(--indent);
+}
+.svy-free > label {
+  flex-shrink: 0; /* 짧은 라벨은 줄지 않아 한 줄 그대로(nowrap 과 같은 모양) */
+  max-width: 100%; /* 한 줄 폭보다 긴 라벨(Q14 등)만 그 안에서 줄바꿈 — 375px 가로 넘침 방지 */
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---- 박스·경고·안내 ---- */
+.svy-box {
+  border: 1px solid var(--ink);
+  margin-bottom: 24px;
+}
+.svy-box-h {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.svy-box-b {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
+  padding: 8px 12px;
+}
+.svy-warn {
+  margin: 4px 0 16px var(--indent);
+  padding: 4px 12px;
+  border: 1px solid var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-warn::before {
+  content: "※ ";
+}
+.svy-notice {
+  margin: 24px 0;
+  padding: 12px 16px;
+  border: 1.5px solid var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-notice b {
+  display: block;
+}
+.svy-rule + .svy-notice {
+  margin-top: 32px;
+}
+
+/* ---- 버튼 (<button> 과 <a> 둘 다) ---- */
+.svy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  min-width: 112px;
+  padding: 0 24px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.svy-btn--primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.svy-btn:disabled,
+.svy-btn[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: default;
+}
+.svy-btn[aria-disabled="true"] {
+  pointer-events: none;
+}
+.svy-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* 라디오 그룹의 "선택 지우기" */
+.svy-clear {
+  display: block;
+  min-height: var(--tap);
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.svy-clear:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---- 하단 이동 ---- */
+.svy-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 3px double var(--ink);
+}
+
+/* ---- Q1 게시판 표 ---- */
+.svy-grp {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  margin: 16px 0 0 var(--indent);
+  padding: 4px 8px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.svy-grp span {
+  font-weight: 400;
+}
+.svy-brd {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 16px;
+  align-items: center;
+  margin-left: var(--indent);
+  padding: 8px 0;
+  border-bottom: 1px dotted #777;
+}
+.svy-brd-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.svy-brd-info {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-ch {
+  display: flex;
+  gap: 4px 16px;
+  flex-wrap: wrap;
+}
+.svy-ch .svy-opt {
+  grid-template-columns: 32px auto;
+  padding-right: 8px;
+}
+.svy-brd > .svy-ans,
+.svy-brd > .svy-clear {
+  grid-column: 1 / -1;
+}
+.svy-brd:has(input[value="merge"]:checked) > .svy-ans {
+  display: flex;
+}
+
+/* ---- 점선 리더 목록 (Q4 정보 목록, 관리자 요약) ---- */
+.svy-lead-box {
+  margin: 8px 0 8px var(--indent);
+  border: 1px solid var(--ink);
+}
+.svy-lead-box .svy-box-h {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+.svy-lead-box ul {
+  padding: 4px 12px 8px;
+  columns: 2;
+  column-gap: 32px;
+}
+.svy-lead-box li,
+.svy-agg-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  break-inside: avoid;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-lead-box li::after,
+.svy-agg-row::after {
+  content: "";
+  order: 2;
+  flex: 1;
+  border-bottom: 1.5px dotted #777;
+  transform: translateY(-4px);
+}
+.svy-lead-box li > :first-child,
+.svy-agg-row > :first-child {
+  order: 1;
+}
+.svy-lead-box li > :last-child,
+.svy-agg-row > :last-child {
+  order: 3;
+  font-variant-numeric: tabular-nums;
+}
+.svy-agg-row {
+  font-size: 16px;
+}
+
+/* ---- Q5 항목 상자 ---- */
+.svy-item {
+  margin: 16px 0 0 var(--indent);
+  border: 1px solid var(--ink);
+}
+.svy-item-h {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-item-h b {
+  font-size: 16px;
+  color: var(--ink);
+}
+.svy-item-b {
+  padding: 8px 12px;
+}
+.svy-item-b .svy-free,
+.svy-item-b .svy-opts {
+  margin-left: 0;
+}
+
+/* ---- 도장 ---- */
+.svy-stamp {
+  margin: 64px 0 32px;
+  text-align: center;
+}
+.svy-stamp > span {
+  display: inline-block;
+  padding: 8px 32px;
+  border: 3px double var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+}
+
+/* ---- 관리자 결과 화면 ---- */
+.svy-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin: 0 8px 8px 0;
+  padding: 0 16px;
+  border: 1.5px solid var(--ink);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.svy-toggle[aria-current="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.svy-toggle:focus-visible,
+.svy-toc a:focus-visible,
+.svy-more > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.svy-agg-brk {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-faint {
+  font-size: 14px;
+  color: var(--faint);
+}
+/* 항목 제목 + 우측 보조 건수(응답 N건 / 전체 M건). 제목이 없으면 건수만 오른쪽에 둔다 */
+.svy-sh--count {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
+}
+.svy-sh--count > .svy-faint {
+  margin-left: auto;
+  font-weight: 400;
+}
+/* 관리자 종이 바로 아래 요약 상자(응답 현황·구분별 건수)는 집계 기준 상자·바로가기와 같이 들여쓰지 않는다 */
+.svy-paper > .svy-lead-box {
+  margin-left: 0;
+}
+/* 관리자 Q1 행: 직접 쓴 답을 펼쳐 행이 길어져도 건수는 게시판명 줄에 둔다 */
+.svy-brd > .svy-qn {
+  align-self: start;
+}
+.svy-more {
+  margin: 8px 0;
+}
+.svy-more > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1.5px solid var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+.svy-more > summary::-webkit-details-marker {
+  display: none;
+}
+.svy-more > summary::marker {
+  content: "";
+}
+.svy-txt {
+  padding: 8px 0;
+  border-bottom: 1px dotted #777;
+}
+.svy-txt-body {
+  white-space: pre-wrap;
+}
+.svy-txt-meta {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+.svy-dup {
+  margin: 4px 0 0;
+  padding: 4px 12px;
+  border: 1.5px solid var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.svy-toc {
+  margin: 0 0 24px;
+  padding: 8px 12px;
+  border: 1px solid var(--ink);
+  font-size: 14px;
+}
+.svy-toc a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  margin-right: 16px;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #999;
+}
+.svy-resp {
+  padding: 8px 0;
+  border-bottom: 1px dotted #777;
+  font-size: 14px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 포인터 장치 전용 호버 (호버에 의존하는 정보 없음) ---- */
+@media (hover: hover) {
+  .svy-opt:hover .svy-opt-t {
+    text-decoration: underline;
+    text-decoration-color: #999;
+  }
+  .svy-btn:not(:disabled):not([aria-disabled="true"]):hover {
+    background: #ecebe4;
+  }
+  .svy-btn--primary:not(:disabled):not([aria-disabled="true"]):hover {
+    background: #333;
+  }
+}
+
+/* ---- 좁은 틀(≤ 560px): 컨테이너 쿼리 — 기준은 뷰포트가 아니라 .svy-frame 폭 ---- */
+@container (max-width: 560px) {
+  .svy-paper {
+    --pad: 16px;
+    --indent: 0px;
+    padding: 0 16px 32px;
+  }
+  .svy-ans {
+    margin-left: 0;
+  }
+  .svy-brd {
+    grid-template-columns: 1fr;
+  }
+  .svy-lead-box ul {
+    columns: 1;
+  }
+}
