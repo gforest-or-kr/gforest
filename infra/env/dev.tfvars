@@ -21,6 +21,12 @@ secret_parameters = {
   AUTH_SECRET  = "/gforest/dev/AUTH_SECRET"
 }
 
+# 설문 기간(GFM-97·98) 동안 dev RDS 에 실제 응답이 쌓인다 — 보존 30일·삭제 보호·최종 스냅샷을 켠다(GFM-101).
+# 설문이 끝나고 응답을 CSV 로 내려받은 뒤 1 / false / false 로 되돌린다.
+db_backup_retention_days = 30
+db_deletion_protection   = true
+db_final_snapshot        = true
+
 # RDS는 비공개가 기본. 비상 시에만 true + 본인 IP/32 로 잠깐 열고 즉시 되돌린다(docs/conventions/cicd-and-ops.md).
 db_publicly_accessible = false
 db_allowed_cidrs       = []

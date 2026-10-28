@@ -17,6 +17,10 @@ environment = {
   AWS_REGION           = "ap-northeast-2"
 }
 
+db_backup_retention_days = 7
+db_deletion_protection   = true
+db_final_snapshot        = true
+
 secret_parameters = {
   DATABASE_URL = "/gforest/prod/DATABASE_URL"
   AUTH_SECRET  = "/gforest/prod/AUTH_SECRET"
