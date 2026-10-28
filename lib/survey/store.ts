@@ -8,6 +8,7 @@ import type { AdminAnswerRow, AdminResponseRow, NormalizedSubmission } from "./t
 // 그래서 응답 id 는 클라이언트가 만든 제출 id 를 PK 로 넣고, 재전송은 PK 충돌(23505)로 알아낸다.
 
 export type NewResponse = NormalizedSubmission & {
+  surveyKey: string; // lib/survey/surveys.ts 의 slug
   hashes: { browser: string | null; ip: string | null };
 };
 
@@ -16,11 +17,10 @@ export type NewResponse = NormalizedSubmission & {
 // withUser 의 commit 은 aborted 트랜잭션에서 rollback 으로 끝난다(저장된 것 없음 = 기존 행 유지).
 export async function insertResponse(c: DbClient, r: NewResponse): Promise<"created" | "duplicate"> {
   try {
-    await c.query("insert into survey_responses (id, respondent_roles, respondent_other) values ($1, $2::text[], $3)", [
-      r.id,
-      r.roles,
-      r.roleOther,
-    ]);
+    await c.query(
+      "insert into survey_responses (id, survey_key, respondent_roles, respondent_other) values ($1, $2, $3::text[], $4)",
+      [r.id, r.surveyKey, r.roles, r.roleOther],
+    );
   } catch (e) {
     if (pgCode(e) === "23505") return "duplicate";
     throw e;
@@ -57,19 +57,28 @@ interface AnswerDbRow {
   value: unknown;
 }
 
-// 관리자 집계·CSV 용 전량 조회(수백 건 규모). 호출 측이 withUser(관리자 id, …) 를 소유하고,
+// 관리자 집계·CSV 용 한 설문 전량 조회(수백 건 규모). 호출 측이 withUser(관리자 id, …) 를 소유하고,
 // 관리자가 아니면 RLS 가 0행을 돌려준다 — 앱에서 권한을 다시 판정하지 않는다.
 export async function loadAdminRows(
   c: DbClient,
+  surveyKey: string,
 ): Promise<{ responses: AdminResponseRow[]; answers: AdminAnswerRow[] }> {
   const r = await c.query<ResponseDbRow>(
     `select r.id, r.response_no::int4 as no, r.submitted_at, r.respondent_roles, r.respondent_other,
             h.browser_hash, h.ip_hash
        from survey_responses r
        left join survey_response_hashes h on h.response_id = r.id
+      where r.survey_key = $1
       order by r.response_no`,
+    [surveyKey],
   );
-  const a = await c.query<AnswerDbRow>("select response_id, question_id, value from survey_answers");
+  const a = await c.query<AnswerDbRow>(
+    `select a.response_id, a.question_id, a.value
+       from survey_answers a
+       join survey_responses r on r.id = a.response_id
+      where r.survey_key = $1`,
+    [surveyKey],
+  );
   return {
     responses: r.rows.map((row) => ({
       id: row.id,

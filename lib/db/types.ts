@@ -528,6 +528,7 @@ export type Database = {
           respondent_roles: string[]
           response_no: number
           submitted_at: string
+          survey_key: string
         }
         Insert: {
           id: string
@@ -535,6 +536,7 @@ export type Database = {
           respondent_roles: string[]
           response_no?: never
           submitted_at?: string
+          survey_key: string
         }
         Update: {
           id?: string
@@ -542,6 +544,7 @@ export type Database = {
           respondent_roles?: string[]
           response_no?: never
           submitted_at?: string
+          survey_key?: string
         }
         Relationships: []
       }

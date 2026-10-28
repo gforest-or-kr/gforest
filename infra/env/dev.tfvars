@@ -1,4 +1,7 @@
-host          = "dev.gforest.or.kr"
+host = "dev.gforest.or.kr"
+# portal: 설문 등 사이트 바깥 화면용 호스트 — 같은 dev 서비스, 앱 proxy.ts 가 /portal 아래로만 응답(GFM-98).
+# cafe24 DNS 에 CNAME portal → ALB 를 사람이 넣어야 한다(NS 전환 전). 컷오버 때 prod 로 옮기고 여기서 뺀다.
+alias_hosts   = ["portal.gforest.or.kr"]
 cpu           = 256
 memory        = 512
 desired_count = 1

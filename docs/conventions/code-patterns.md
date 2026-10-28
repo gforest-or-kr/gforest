@@ -63,6 +63,8 @@ const rows = await withUser(userId, (c) => many<Row>(c, "select … where board_
 - **빌드 시점 DB 접근 금지**(`generateStaticParams` 등) — CI 빌드는 DB 없이 돈다.
 - 캐시 태그 표·무효화 지점·이력은 `docs/design/rendering.md`.
 
+- **라우트 그룹 = 셸**: `app/(site)`(헤더·푸터), `app/(proto)`(시안), `app/(portal)`(설문 등 사이트 바깥 화면, 답안지 스타일). `(portal)` 안은 `/portal/**`(공개, `portal.` 호스트에서 `proxy.ts` rewrite 로 노출)과 `/portal-admin/**`(관리자, 사이트 호스트에서만)로 나뉜다. 설문은 `lib/survey/surveys.ts` 레지스트리의 slug 로 구분(`/portal/survey/<slug>`, DB `survey_responses.survey_key`) — 새 설문 = `lib/survey/<slug>/` 문항 파일 + 레지스트리 한 줄, 라우트·proxy 는 안 고친다.
+
 ## 7. UI · 스타일
 
 - **모바일 퍼스트 단일 반응형** — 별도 모바일 마크업 금지. 탭 타겟 44px+, 호버 의존 금지(드롭다운은

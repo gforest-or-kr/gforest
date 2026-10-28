@@ -1,7 +1,7 @@
 // 질의서 5~10절(Q15–Q27, 자유 의견) 문항 정의. 조립·규칙 설명은 questions.ts 머리 주석 참조.
 // 문구는 원본을 그대로 옮긴다(마크다운 굵게·체크 칸·밑줄 빈칸만 제거, 보기 뒤 괄호 속 빈칸은 blank 로 분리).
 // 다중 선택 제목 끝의 원본 "(여러 개 선택 가능)"은 화면이 붙이므로 데이터에서는 뺀다.
-import type { Question } from "./types";
+import type { Question } from "../types";
 
 export const QUESTIONS_PART2: readonly Question[] = [
   // ---- 5. 공개 정보 ----

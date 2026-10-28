@@ -32,6 +32,8 @@
 - **develop push → dev 자동 배포**, **main push → prod 배포**(environment `prod` 승인 후) + 태그 `vYYYY.MM.DD` 자동. 수동 실행(workflow_dispatch)은 롤백·재배포용. 규칙은 [branching-and-release.md](./branching-and-release.md). 이미지 태그 `sha-<commit>` + `<env>-latest`.
 - ARM 러너(`ubuntu-24.04-arm`)에서 네이티브 빌드 → **DB 마이그레이션**(같은 이미지로 `gforest-<env>-migrate` 태스크를 VPC 안에서 `run-task`, `node db/migrate.mjs`, 종료 코드 0 필수) → 태스크 정의에 새 이미지 등록 → `update-service` → `services-stable` 대기 → ALB에 Host 헤더로 `/api/health` 스모크.
 - **호스트**: dev = `dev.gforest.or.kr`, prod = 컷오버 전까지 `prod.gforest.or.kr`(tfvars `host`, repo 변수 `PROD_SITE_URL`). 컷오버 때 `gforest.or.kr` + `www`(`alias_hosts`)로 바꾸고 `SITE_INDEXABLE="true"`. 그 전까지 모든 환경은 `X-Robots-Tag: noindex`(`proxy.ts`) + `robots.txt` 전체 차단으로 검색엔진에서 숨긴다.
+- **서브도메인 규칙(2026-10 결정)**: 서브도메인은 **환경**(dev·prod)과 **범주**(portal)에만 쓴다. 기능은 서브도메인이 아니라 경로로 늘린다(설문 1개마다 `survey.`·`vote.` 같은 호스트를 만들지 않는다 — 호스트마다 DNS 레코드·회수 부담이 생기고, 같은 서비스·같은 DB 라 보안 경계도 아니다).
+  `portal.gforest.or.kr` = 설문처럼 사이트 바깥에서 조합원에게 배포하는 화면의 호스트. 별도 서비스가 아니라 dev 서비스의 `alias_hosts`(컷오버 때 prod 로 옮긴다). 앱 `proxy.ts` 가 `portal.` 로 시작하는 호스트의 모든 경로를 `/portal` 아래로 rewrite 하므로 `app/(portal)/portal/**` 에 파일이 있는 경로만 열리고 사이트·`/portal-admin` 은 404 다(허용 목록 없음 — 파일 구조가 노출 범위). 바깥 주소 `portal…/survey/<slug>` = 안 `/portal/survey/<slug>`; 관리자는 dev 호스트에서 `/portal-admin/survey/<slug>`. DNS 는 cafe24 에 `portal` CNAME → ALB(`*.gforest.or.kr` 와일드카드 레코드가 cafe24 쪽을 가리키므로 명시 레코드 필요). 컷오버 후 설문 등은 본 도메인 경로로 흡수하고 `portal` 레코드를 **삭제**한다(남겨 두면 서브도메인 탈취 대상).
 - 마이그레이션이 실패하면 서비스는 이전 버전 그대로 남는다. 관리자 접속 문자열(`DATABASE_ADMIN_URL`)은 migrate 태스크에만 주입되고 web 태스크에는 없다(RLS 우회 방지).
 - 배포 실패 시 ECS 서킷 브레이커가 이전 태스크 정의로 자동 롤백한다.
 - PR 게이트는 `ci.yml`(tsc·eslint·`next build`). **빌드는 DB 없이 통과해야 한다** — 빌드 시점 DB 접근 금지.

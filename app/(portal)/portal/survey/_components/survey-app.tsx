@@ -15,6 +15,7 @@ import { SurveyForm } from "./survey-form";
 type View = "cover" | "form" | "done" | "revisit" | "closed";
 
 interface SurveyAppProps {
+  slug: string; // lib/survey/surveys.ts 의 설문 — 임시 저장 키·제출 액션에 쓴다
   initialView: "form" | "revisit";
   // 서버(page.tsx)가 계산한 표지의 응답 마감 라벨. 마감 설정이 없으면 null.
   deadlineLabel: string | null;
@@ -42,11 +43,11 @@ function FormShell() {
   );
 }
 
-export function SurveyApp({ initialView, deadlineLabel }: SurveyAppProps) {
+export function SurveyApp({ slug, initialView, deadlineLabel }: SurveyAppProps) {
   // initialView 는 마운트 때 한 번만 읽는다. 제출 뒤 쿠키가 생겨 서버가 "revisit" 을 다시 넘겨도 화면은 그대로.
   // "cover" 는 처음 방문의 진입 화면 — 임시 저장본이 없을 때만 실제로 표지를 그린다.
   const [view, setView] = useState<View>(initialView === "revisit" ? "revisit" : "cover");
-  const raw = useSyncExternalStore(subscribeDraft, readDraftRaw, serverDraftSnapshot);
+  const raw = useSyncExternalStore(subscribeDraft, () => readDraftRaw(slug), serverDraftSnapshot);
   // 새로 작성 = 폼을 새로 마운트(새 제출 id)
   const [formKey, setFormKey] = useState(0);
   const [closedAtLabel, setClosedAtLabel] = useState("");
@@ -65,6 +66,7 @@ export function SurveyApp({ initialView, deadlineLabel }: SurveyAppProps) {
     return (
       <SurveyForm
         key={formKey}
+        slug={slug}
         initialRaw={initialRaw}
         onDone={() => setView("done")}
         onClosed={(label) => {

@@ -2,7 +2,7 @@
 // 원본: gforest-analysis/docs/2026-09/99_배포용/99_이해관계자_의견요청서_배포용.md (Q1 표 31–65행, Q4 표 96–108행).
 // DB `boards` 테이블을 조회하지 않는다 — 글 수·최근 글은 2026-10-08 기준 고정 문자열, 회원 수는 2026-06-26 기준.
 // 행 key(b01..b35)는 원본 행 순서의 리터럴이다. 저장된 응답이 이 key 로 읽히므로 바꾸지 않는다.
-import type { BoardRow } from "./types";
+import type { BoardRow } from "../types";
 
 export const BOARDS_Q1: readonly BoardRow[] = [
   { key: "b01", name: "교류게시판", who: "누구나", posts: "6,661", recent: "2026.10.05", access: "public" },
