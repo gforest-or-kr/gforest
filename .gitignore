@@ -56,3 +56,6 @@ CLAUDE.local.md
 # XE 원본 덤프(개인정보 포함) — 절대 커밋 금지
 db/tools/xe/dump/
 .tmp-confluence/
+
+# infra/env/apply.sh 가 저장하는 plan 파일(비밀값 포함 가능)
+infra/**/.tfplan.*
