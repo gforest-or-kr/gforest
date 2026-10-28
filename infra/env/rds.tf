@@ -45,13 +45,15 @@ resource "aws_db_instance" "main" {
   parameter_group_name   = aws_db_parameter_group.pg17.name
   publicly_accessible    = var.db_publicly_accessible
 
-  multi_az                     = false
-  backup_retention_period      = local.env == "prod" ? 7 : 1
+  multi_az = false
+  # 보존·삭제 보호·최종 스냅샷은 tfvars 로(GFM-101). 자동 백업은 인스턴스를 지우면 함께 사라지므로
+  # 실제 데이터가 있는 동안(dev 의 설문 기간 등)은 셋을 같이 켠다. 보존 상한은 35일.
+  backup_retention_period      = var.db_backup_retention_days
   backup_window                = "17:00-18:00" # KST 02:00-03:00
   maintenance_window           = "sun:18:00-sun:19:00"
-  deletion_protection          = local.env == "prod"
-  skip_final_snapshot          = local.env != "prod"
-  final_snapshot_identifier    = local.env == "prod" ? "${local.name}-final" : null
+  deletion_protection          = var.db_deletion_protection
+  skip_final_snapshot          = !var.db_final_snapshot
+  final_snapshot_identifier    = var.db_final_snapshot ? "${local.name}-final" : null
   copy_tags_to_snapshot        = true
   auto_minor_version_upgrade   = true
   performance_insights_enabled = false
