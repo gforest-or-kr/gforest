@@ -23,7 +23,7 @@
 | `infra/shared` | `s3://gforest-tfstate-…/shared/` | OIDC 롤, ECR, Route 53 존, ACM, VPC(퍼블릭 2AZ, **NAT 없음**), ALB(호스트 라우팅), ECS 클러스터 |
 | `infra/env` (workspace `dev`/`prod`) | `…/env/<ws>/` | Fargate 서비스(ARM64), RDS Postgres 17, S3 미디어 버킷, SSM 파라미터, 로그 |
 
-- 적용은 사람이 로컬에서: `terraform workspace select dev && terraform apply -var-file=dev.tfvars`. CI(`infra.yml`)는 PR에서 fmt/validate + OIDC 확인만.
+- 적용은 사람이 승인한 plan 만. dev: 로컬 `terraform workspace select dev && terraform apply -var-file=dev.tfvars`, 또는 원격 제어 세션에서 `infra/env/apply.sh dev plan`(요약) → 읽고 지시 → `infra/env/apply.sh dev apply`(저장된 plan 파일만, 15분; 허용 규칙은 담당자 개인 `settings.local.json`). **prod 는 로컬 터미널에서만**. CI(`infra.yml`)는 PR에서 fmt/validate + OIDC 확인만.
 - 비밀값은 **SSM Parameter Store** `/gforest/<env>/{DATABASE_URL,DATABASE_ADMIN_URL,AUTH_SECRET}` → `secret_parameters`로 태스크에 주입. 평문 환경변수는 `*.tfvars`의 `environment`.
 - 리소스 크기·월 예산 근거: Confluence 02 리서치 "AWS 이전 예산·리소스 검토"(권장 월 ~$110).
 

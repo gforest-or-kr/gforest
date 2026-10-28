@@ -16,5 +16,7 @@ AWS_PROFILE=gforest terraform workspace select -or-create dev
 AWS_PROFILE=gforest terraform apply -var-file=dev.tfvars
 ```
 
+dev 는 두 단계 스크립트로도 된다(원격 제어에서 승인할 때, GFM-99): `infra/env/apply.sh dev plan` → 요약 확인 → `infra/env/apply.sh dev apply`(저장된 plan 파일만, 15분 안에). prod 는 위 명령을 터미널에서 직접.
+
 - 비밀값은 SSM Parameter Store `/gforest/<env>/<NAME>` (SecureString)에 CLI로 넣고 `secret_parameters`로 매핑한다.
 - 이미지 태그·태스크 정의는 배포 워크플로가 갱신한다 (`ignore_changes`). Terraform은 초기 생성·구조 변경만.
