@@ -30,7 +30,7 @@
 | `/task GFM-n` | 이슈 `진행 중` 전환 → develop 최신화 → `<type>/GFM-n-<slug>` 브랜치 → 이슈·인수인계 코멘트 요약 → 로컬 환경 확인 | 코드 수정 시작, stash |
 | `/pr` | `npm run check` → 커밋(트레일러) → push → **develop 대상 PR**(제목 규약) → Jira 인수인계 코멘트 + `검토 중` | 병합, check 실패 시 자동 수정 |
 | `/handover [GFM-n]` | 세션 끝: push 확인 + Jira 인수인계 코멘트(§5 템플릿) | 이슈 상태 변경 |
-| `/merge [n]` | (core·Owner) develop 대상 PR: `ci` 초록 확인 → squash 병합(`gh pr merge --admin`, 룰셋 bypass) → develop 최신화 → Jira `완료` | main 병합, 체크 미통과·권한 거부 시 강행 |
+| `/merge [n]` | (core·Owner) develop 대상 PR: `ci` 초록 확인 → squash 병합(`scripts/merge-develop.sh` = `gh pr merge --admin`, 룰셋 bypass) → develop 최신화 → Jira `완료` | main 병합, 체크 미통과·권한 거부 시 강행 |
 | `/release` | (Owner) `develop → main` 릴리스 PR, 포함 PR 목록·마이그레이션 여부 본문 | 병합, prod 승인 |
 
 명령은 절차를 고정할 뿐 판단을 대신하지 않는다 — 멈추고 묻는 지점(미커밋 변경, check 실패, 이슈 없음)이 의도된 것이다. 절차를 바꾸려면 명령 파일을 PR 로 고친다(규약 문서와 함께).
@@ -70,7 +70,7 @@
 | AWS (**인프라 담당만**) | `aws` CLI v2, Terraform ≥1.10, `~/.aws/config`에 `gforest` SSO 프로필 (`infra/shared/README.md`) | Identity Center 사용자는 Owner가 만들어 준다. 일반 개발자는 AWS 계정이 없다 |
 | `.env` | `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`(본인 계정 토큰) | Jira/Confluence MCP·스크립트 공용 |
 | Claude Code MCP | repo의 `.mcp.json`이 `atlassian-gforest` 서버를 정의(`.env`를 읽음). `uv` 설치 필요 | 회사 Atlassian 등 **다른 MCP는 이 프로젝트에서 쓰지 않는다** |
-| Claude Code 권한 | repo의 `.claude/settings.json`(공유 허용 목록 — 공용 명령이 쓰는 git/gh/npm 포함). 개인 추가는 `.claude/settings.local.json`(gitignore) | 위험 명령(rm -rf, terraform apply/destroy, git push --force, gh pr merge)은 허용 목록에 넣지 않는다 — 매번 확인창이 뜨는 것이 의도 |
+| Claude Code 권한 | repo의 `.claude/settings.json`(공유 허용 목록 — 공용 명령이 쓰는 git/gh/npm 포함). 개인 추가는 `.claude/settings.local.json`(gitignore) | 위험 명령(rm -rf, terraform apply/destroy, git push --force, gh pr merge)은 허용 목록에 넣지 않는다 — 매번 확인창이 뜨는 것이 의도. 원격 제어(자동 모드)에서는 확인창 대신 분류기가 막으므로, 검사가 들어 있는 래퍼만 개인 `settings.local.json` 에 허용한다: `infra/env/apply.sh dev plan/apply`(인프라 담당), `scripts/merge-develop.sh`(core) |
 
 ## 4. Claude Code를 쓸 때의 규칙
 
