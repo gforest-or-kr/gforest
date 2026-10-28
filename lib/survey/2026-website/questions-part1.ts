@@ -1,7 +1,7 @@
 // 질의서 1~4절(Q1–Q14) 문항 정의. 조립·규칙 설명은 questions.ts 머리 주석 참조.
 // 문구는 원본을 그대로 옮긴다(마크다운 굵게·체크 칸·밑줄 빈칸만 제거, 보기 뒤 괄호 속 빈칸은 blank 로 분리).
 import { BOARDS_Q1, MEMBER_GROUPS_Q4 } from "./questions-tables";
-import type { Question } from "./types";
+import type { Question } from "../types";
 
 export const QUESTIONS_PART1: readonly Question[] = [
   // ---- 1. 게시판 정리 ----

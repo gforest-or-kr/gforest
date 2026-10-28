@@ -6,8 +6,11 @@ import { isIP } from "node:net";
 // 원래 값(IP·쿠키 값)은 저장·로그하지 않고 서버 전용 키로 만든 HMAC 만 DB 에 둔다.
 // 소스에 고정 솔트를 두지 않는다 — IPv4 는 경우의 수가 적어 공개된 솔트로는 해시를 누구나 되돌릴 수 있다.
 
-// 쿠키 하나가 두 역할: 존재 = 이 브라우저는 제출한 적 있음(재방문 안내), 값의 HMAC = 브라우저 해시.
-export const BID_COOKIE = "svy_bid";
+// 쿠키 하나가 두 역할: 존재 = 이 브라우저는 그 설문을 제출한 적 있음(재방문 안내), 값의 HMAC = 브라우저 해시.
+// 설문마다 다른 이름(slug 포함) — 한 설문을 낸 브라우저가 다른 설문에서 "이미 제출" 로 보이지 않게.
+export function bidCookieName(slug: string): string {
+  return `svy_bid_${slug}`;
+}
 export const BID_COOKIE_MAX_AGE_S = 60 * 60 * 24 * 60; // 60일
 
 const DERIVE_LABEL = "gforest-survey-hash-v1";

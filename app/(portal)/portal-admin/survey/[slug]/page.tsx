@@ -10,13 +10,15 @@ import {
 } from "@/lib/survey/aggregate";
 import { requireAdminPage } from "@/lib/survey/admin-guard";
 import { formatKst, formatKstCompact, readClosesAt } from "@/lib/survey/config";
-import { QUESTIONS, RESPONDENT_ROLES, SECTIONS } from "@/lib/survey/questions";
 import { loadAdminRows } from "@/lib/survey/store";
-import { PaperHead } from "../_components/papers";
+import { getSurvey, type SurveyDef } from "@/lib/survey/surveys";
+import { notFound } from "next/navigation";
+import { PaperHead } from "@/app/(portal)/portal/survey/_components/papers";
 import { QuestionResults } from "./_components/question-results";
 import { ResponseList } from "./_components/response-list";
 
-// 질의서 결과(관리자). 요청마다 렌더하고, 가드는 이 페이지가 직접 건다(레이아웃 가드 없음).
+// 질의서 결과(관리자). 주소 /portal-admin/survey/<slug> — /portal 밖이라 portal 호스트에서는 닿지 않는다(proxy.ts rewrite → 404).
+// dev·prod 호스트에서 로그인해 쓴다. 요청마다 렌더하고, 가드는 이 페이지가 직접 건다(레이아웃 가드 없음).
 // 관리자 id 로 withUser — 관리자가 아니면 RLS 가 0행을 돌려준다. 사용자 글은 React 텍스트 노드로만 출력.
 export const dynamic = "force-dynamic";
 
@@ -64,7 +66,7 @@ function ModeBox({ mode }: { mode: DupMode }) {
             <a
               key={l.mode}
               className="svy-toggle"
-              href={`/survey/admin?dup=${l.mode}`}
+              href={`?dup=${l.mode}`}
               aria-current={l.mode === mode ? "true" : undefined}
             >
               {l.label}
@@ -116,11 +118,11 @@ function RoleCountsBox({ ov }: { ov: Overview }) {
 }
 
 // 평범한 <a download> — Next 의 Link 컴포넌트는 프리페치로 CSV 라우트를 미리 부른다.
-function CsvArea({ enabled }: { enabled: boolean }) {
+function CsvArea({ slug, enabled }: { slug: string; enabled: boolean }) {
   return (
     <div className="svy-center">
       {enabled ? (
-        <a className="svy-btn svy-btn--primary" href="/survey/admin/export" download>
+        <a className="svy-btn svy-btn--primary" href={`/portal-admin/survey/${slug}/export`} download>
           CSV 내려받기
         </a>
       ) : (
@@ -139,28 +141,38 @@ function CsvArea({ enabled }: { enabled: boolean }) {
   );
 }
 
-function Paper({ children }: { children: React.ReactNode }) {
+function Paper({ def, children }: { def: SurveyDef; children: React.ReactNode }) {
   return (
     <main className="svy-frame">
       <div className="svy-paper">
-        <PaperHead title={TITLE} subtitle={SUBTITLE} />
+        <PaperHead title={`${def.title} — ${TITLE}`} subtitle={SUBTITLE} />
         {children}
       </div>
     </main>
   );
 }
 
-export default async function SurveyAdminPage({ searchParams }: { searchParams: Promise<{ dup?: string | string[] }> }) {
-  const profile = await requireAdminPage();
+export default async function SurveyAdminPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ dup?: string | string[] }>;
+}) {
+  const { slug } = await params;
+  const def = getSurvey(slug);
+  if (!def) notFound();
+  const { questions: QUESTIONS, roles: RESPONDENT_ROLES, sections: SECTIONS } = def;
+  const profile = await requireAdminPage(`/portal-admin/survey/${def.slug}`);
   const mode: DupMode = (await searchParams).dup === "exclude" ? "exclude" : "include";
 
   let data: Awaited<ReturnType<typeof loadAdminRows>>;
   try {
-    data = await withUser(profile.id, loadAdminRows);
+    data = await withUser(profile.id, (c) => loadAdminRows(c, def.slug));
   } catch (e) {
     console.error("[survey-admin] load failed", pgCode(e) ?? "unknown"); // 내용·SQL 은 남기지 않는다
     return (
-      <Paper>
+      <Paper def={def}>
         <Notice alert head="결과를 불러오지 못했어요." body="잠시 뒤 새로고침해 주세요. 계속되면 개발 담당에게 알려 주세요." />
       </Paper>
     );
@@ -173,23 +185,23 @@ export default async function SurveyAdminPage({ searchParams }: { searchParams: 
 
   if (rows.length === 0) {
     return (
-      <Paper>
+      <Paper def={def}>
         <OverviewBox ov={ov} />
         <Notice
           head="아직 제출된 응답이 없어요."
-          body="응답이 들어오면 이 화면에 문항별로 집계됩니다. 응답 주소는 /survey 입니다."
+          body={`응답이 들어오면 이 화면에 문항별로 집계됩니다. 응답 주소는 포털의 /survey/${def.slug} 입니다.`}
         />
-        <CsvArea enabled={false} />
+        <CsvArea slug={def.slug} enabled={false} />
       </Paper>
     );
   }
 
   return (
-    <Paper>
+    <Paper def={def}>
       <ModeBox mode={mode} />
       <OverviewBox ov={ov} />
       <RoleCountsBox ov={ov} />
-      <CsvArea enabled />
+      <CsvArea slug={def.slug} enabled />
       {/* 응답이 1건 이상이면 counted 도 1건 이상이다("제외"도 묶음마다 가장 나중에 낸 응답은 남긴다) */}
       <QuestionResults
         sections={SECTIONS}

@@ -4,7 +4,7 @@
 // 의미가 바뀌면 새 키를 쓴다 — 이미 저장된 응답이 다른 뜻으로 읽히지 않게.
 import { QUESTIONS_PART1 } from "./questions-part1";
 import { QUESTIONS_PART2 } from "./questions-part2";
-import type { Question, RespondentRole, Section } from "./types";
+import type { Question, RespondentRole, Section } from "../types";
 
 export const SECTIONS: readonly Section[] = [
   { no: 0, title: "응답자 구분" },
